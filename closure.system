@@ -6,6 +6,7 @@
 (load "/home/gilbert/work/McCLIM.hacked4/Backends/CLX/medium.fasl")
 |#
 
+;; commit test
 
 (in-package :common-lisp-user)
 
