@@ -401,10 +401,11 @@
                                         :height height
                                         :depth depth))
             (gc     (xlib:create-gcontext :drawable pixmap)))
-       (xlib:put-image pixmap gc im 
-                       :src-x 0 :src-y 0
-                       :x 0 :y 0
-                       :width width :height height)
+       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
+	 (xlib:put-image pixmap gc im 
+			 :src-x 0 :src-y 0
+			 :x 0 :y 0
+			 :width width :height height))
        (xlib:free-gcontext gc)
        pixmap)
      (when (imagelib:aimage-alpha-p aim)
