@@ -177,6 +177,42 @@
   (declare (type abox box))
   (if (abox-border box) (border-bottom-width (abox-border box)) 0))
 
+
+(defsubst abox-border-top-style (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-top-style (abox-border box)) 0))
+
+(defsubst abox-border-right-style (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-right-style (abox-border box)) 0))
+
+(defsubst abox-border-left-style (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-left-style (abox-border box)) 0))
+
+(defsubst abox-border-bottom-style (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-bottom-style (abox-border box)) 0))
+
+
+(defsubst abox-border-top-color (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-top-color (abox-border box)) 0))
+
+(defsubst abox-border-right-color (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-right-color (abox-border box)) 0))
+
+(defsubst abox-border-left-color (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-left-color (abox-border box)) 0))
+
+(defsubst abox-border-bottom-color (box)
+  (declare (type abox box))
+  (if (abox-border box) (border-bottom-color (abox-border box)) 0))
+
+
+
 (defsubst bbox-twidth (x)
   (+ (abox-left-leading x)
      (bbox-width x)

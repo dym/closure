@@ -1812,7 +1812,9 @@ festmachen?]
               (inherited (style-text-decoration raw-style)
                          (computed-style-text-decoration parent-computed-style)
                          #'identity))
-             (background-color (inherited (style-background-color raw-style)
+             (background-color (or (style-background-color raw-style)
+                                   :transparent)
+               #+NIL (inherited 
                                           (background-color (computed-style-background parent-computed-style))
                                           #'identity))
              (background-image (inherited (style-background-image raw-style)
@@ -2728,7 +2730,7 @@ the bbox argument."
          (border     (bbox-border bbox))
          (background-color
           (let ((x (ignore-errors (clim-user::parse-x11-color (background-color background)))))
-            (and x (not (eq x clim:+white+))
+            (and x ;; (not (eq x clim:+white+))
                  x))))
     (when (or background-color
               background
@@ -2751,13 +2753,158 @@ the bbox argument."
                     x y w h))
                  (when (and (abox-border-top-width bbox)
                             (> (abox-border-top-width bbox) 0))
+                   #+NIL
                    (clim:draw-rectangle* clim-user::*medium*
                     x y (+ x w) (+ y h)
                     :filled nil
-                    :ink clim:+black+))
+                    :ink clim:+black+)
+                   (clim-draw-border clim-user::*medium*
+                                     x y (+ x w) (+ y h)
+                                     (abox-border-top-width bbox)
+                                     (abox-border-top-style bbox)
+                                     (abox-border-top-color bbox)
+                                     (abox-border-right-width bbox)
+                                     (abox-border-right-style bbox)
+                                     (abox-border-right-color bbox)
+                                     (abox-border-bottom-width bbox)
+                                     (abox-border-bottom-style bbox)
+                                     (abox-border-bottom-color bbox)
+                                     (abox-border-right-width bbox)
+                                     (abox-border-right-style bbox)
+                                     (abox-border-right-color bbox))
+                   )
                  )))
            (clim:delete-output-record new-record (clim:output-record-parent new-record))
            (clim:add-output-record new-record bg-record) ))))))
+
+;;; Border
+
+(defun css-color-ink (color)
+  (clim-user::parse-x11-color color))
+
+(defun 3d-light-color (base-color)
+  (multiple-value-bind (i h s) (clim:color-ihs base-color)
+    (clim:make-ihs-color 1.5 h s)))
+
+(defun 3d-dark-color (base-color)
+  (multiple-value-bind (i h s) (clim:color-ihs base-color)
+    (clim:make-ihs-color .8 h s)))
+
+(defun clim-draw-border (medium x1 y1 x2 y2
+                         border-top-width border-top-style border-top-color
+                         border-right-width border-right-style border-right-color
+                         border-bottom-width border-bottom-style border-bottom-color
+                         border-left-width border-left-style border-left-color)
+  (let* ((ix1 (+ x1 border-left-width))
+         (iy1 (+ y1 border-top-width))
+         (ix2 (- x2 border-right-width))
+         (iy2 (- y2 border-bottom-width))
+         (mx1 (/ (+ x1 ix1) 2))
+         (my1 (/ (+ y1 iy1) 2))
+         (mx2 (/ (+ x2 ix2) 2))
+         (my2 (/ (+ x2 iy2) 2))
+         )
+    (labels ((m (x1 y1 x2 y2 x3 y3 x4 y4 style ink ink2 ink3 w)
+               (case style
+                 ((:solid)
+                  (clim:draw-polygon* medium
+                   (list x1 y1 x2 y2 x3 y3 x4 y4)
+                   :filled t :ink ink))
+                 ((:dotted)
+                    (clim:draw-line* medium
+                     (/ (+ x1 x2) 2)
+                     (/ (+ y1 y2) 2)
+                     (/ (+ x3 x4) 2)
+                     (/ (+ y3 y4) 2)
+                     :ink ink
+                     :line-thickness w
+                     :line-cap-shape :round
+                     :line-dashes (vector w (* 3 w)))) 
+                 ((:dashed)
+                  ;; this triggers an CLX value-error
+                  #+NIL
+                  (clim:draw-line* medium
+                     (/ (+ x1 x2) 2)
+                     (/ (+ y1 y2) 2)
+                     (/ (+ x3 x4) 2)
+                     (/ (+ y3 y4) 2)
+                     :ink ink
+                     :line-thickness w
+                     :line-cap-shape :square
+                     :line-dashes (vector (* 3 w) (* 3 w)))) 
+                 ((:double)
+                  (clim:draw-polygon* medium
+                   (list x1 y1
+                    (/ (+ x1 x1 x2) 3)
+                    (/ (+ y1 y1 y2) 3)
+                    (/ (+ x3 x4 x4) 3)
+                    (/ (+ y3 y4 y4) 3)
+                    x4 y4)
+                   :filled t
+                   :ink ink)
+                  (clim:draw-polygon* medium
+                   (list 
+                    (/ (+ x1 x2 x2) 3) (/ (+ y1 y2 y2) 3)
+                    x2 y2
+                    x3 y3
+                    (/ (+ x3 x3 x4) 3) (/ (+ y3 y3 y4) 3))
+                   :filled t
+                   :ink ink))
+                 ((:groove)
+                  (clim:draw-polygon* medium
+                   (list x1 y1
+                    (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                    (/ (+ x3 x4) 2) (/ (+ y3 y4) 2)
+                     x4 y4)
+                   :filled t :ink ink2)
+                  (clim:draw-polygon* medium
+                   (list 
+                    (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                    x2 y2
+                    x3 y3
+                    (/ (+ x3 x4) 2) (/ (+ y3 y4) 2))
+                   :filled t :ink ink3)
+                  )
+                 ((:ridge)
+                  (clim:draw-polygon* medium
+                   (list x1 y1
+                    (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                    (/ (+ x3 x4) 2) (/ (+ y3 y4) 2)
+                     x4 y4)
+                   :filled t :ink ink3)
+                  (clim:draw-polygon* medium
+                   (list 
+                    (/ (+ x1 x2) 2) (/ (+ y1 y2) 2)
+                    x2 y2
+                    x3 y3
+                    (/ (+ x3 x4) 2) (/ (+ y3 y4) 2))
+                   :filled t :ink ink2))
+                 ((:inset)
+                  (clim:draw-polygon* medium
+                   (list x1 y1 x2 y2 x3 y3 x4 y4)
+                   :filled t :ink ink2))
+                 ((:outset)
+                  (clim:draw-polygon* medium
+                   (list x1 y1 x2 y2 x3 y3 x4 y4)
+                   :filled t :ink ink3))
+                 )))
+      (m  x1 y1  ix1 iy1  ix2 iy1  x2 y1 border-top-style
+          (css-color-ink border-top-color)
+          (3d-dark-color (css-color-ink border-top-color)) (3d-light-color (css-color-ink border-top-color))
+          border-top-width)
+      (m  x2 y1  ix2 iy1  ix2 iy2  x2 y2 border-right-style
+          (css-color-ink border-right-color)
+          (3d-dark-color (css-color-ink border-right-color)) (3d-light-color (css-color-ink border-right-color))
+          border-right-width)
+      (m  x2 y2  ix2 iy2  ix1 iy2  x1 y2 border-bottom-style
+          (css-color-ink border-bottom-color)
+          (3d-dark-color (css-color-ink border-bottom-color)) (3d-light-color (css-color-ink border-bottom-color))
+          border-bottom-width)
+      (m  x1 y2  ix1 iy2  ix1 iy1  x1 y1 border-left-style
+          (css-color-ink border-left-color)
+          (3d-dark-color (css-color-ink border-left-color)) (3d-light-color (css-color-ink border-left-color))
+          border-left-width) )))
+    
 
 (defun render-normal-block-content (rc pt res iy parent-width)
   ;; okay, now we are ready to render the contents
