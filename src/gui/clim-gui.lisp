@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.16  2005/03/13 21:17:28  emarsden
+;;  - Implement PageUp and PageDown support in the CLIM GUI.
+;;  - Add a Redraw command (with Ctrl-R accelerator)
+;;
 ;; Revision 1.15  2005/03/13 21:15:06  emarsden
 ;; Add zoom support to the renderer, accessible via the commands com-zoom-in,
 ;; com-zoom-out and com-zoom-100%.
@@ -640,4 +644,26 @@
   (write-status "Zooming out...")
   (setq closure::*zoom-factor* (* closure::*zoom-factor* 0.8))
   (send-closure-command 'com-reflow))
+
+(define-closure-command (com-page-up :name t
+                                     :keystroke :prior) ()
+  (let* ((pane (find-pane-named *frame* 'canvas))
+         (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar))
+         (current-y (gadget-value scrollbar))
+         (window-height (bounding-rectangle-height (pane-viewport-region pane))))
+    (scroll-extent pane 0 (max (gadget-min-value scrollbar) (- current-y (* 0.9 window-height))))))
+
+(define-closure-command (com-page-down :name t
+                                       :keystroke :next) ()
+  (let* ((pane (find-pane-named *frame* 'canvas))
+         (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar))
+         (current-y (gadget-value scrollbar))
+         (window-height (bounding-rectangle-height (pane-viewport-region pane))))
+    (scroll-extent pane 0
+                   (min (gadget-max-value scrollbar) (+ current-y (* 0.9 window-height))))))
+
+(define-closure-command (com-redraw :name t :keystroke (#\r :control)) ()
+  (let* ((*medium* (find-pane-named *frame* 'canvas)) )
+    (handle-repaint *medium* (sheet-region (pane-viewport *medium*))))
+  (xlib:display-finish-output (clim-clx::clx-port-display (find-port))))
 
