@@ -243,22 +243,26 @@
              ;; Parsing the Parameters
              (setq parameters (cut-from #\;))
              ;; Parsing the Path
-             ;; all what is left is the path
-             (multiple-value-bind (host port user password) (parse-net-loc net-loc)
-               (make-url :protocol   (if protocol (string-downcase protocol) protocol)
-                         :host       (unescape-string host)
-                         :port       port
-                         :user       (unescape-string user)
-                         :password   (unescape-string password)
-                         :parameters (unescape-string parameters)
-                         :path       (mapcar #'unescape-string (url-parse-path input))
-                         :query      (if plain-query-p query (parse-query query))
-                         :anchor     (unescape-string anchor)) ))))
-        ((eq input NIL)
-         (warn "Saw NIL as input to URL:PARSE-URL; fix your program.")
-         (parse-url "" :plain-query-p plain-query-p))
-        (t
-         (error "~S is a bad argument to URL:PARSE-URL." input)) ))
+             ;; all what is left is the path. If the path is missing
+             ;; but the net-loc is present, then the path is
+             ;; implicitly "/"
+             (let ((path (or (url-parse-path input)
+                             (if net-loc (list :absolute "") nil))))
+               (multiple-value-bind (host port user password) (parse-net-loc net-loc)
+                 (make-url :protocol   (if protocol (string-downcase protocol) protocol)
+                           :host       (unescape-string host)
+                           :port       port
+                           :user       (unescape-string user)
+                           :password   (unescape-string password)
+                           :parameters (unescape-string parameters)
+                           :path       (mapcar #'unescape-string path)
+                           :query      (if plain-query-p query (parse-query query))
+                           :anchor     (unescape-string anchor)) )))))
+         ((eq input NIL)
+          (warn "Saw NIL as input to URL:PARSE-URL; fix your program.")
+          (parse-url "" :plain-query-p plain-query-p))
+         (t
+          (error "~S is a bad argument to URL:PARSE-URL." input)) ))
 
 (defun url-parse-path (input)
   (cond ((equal input "")
