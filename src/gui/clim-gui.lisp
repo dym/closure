@@ -23,8 +23,11 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
-;; Revision 1.1  2002/07/22 02:27:22  gilbert
-;; Initial revision
+;; Revision 1.2  2002/07/24 04:11:51  gilbert
+;; Tex Mode On and Tex Mode Off commands
+;;
+;; Revision 1.1.1.1  2002/07/22 02:27:22  gilbert
+;; imported sources
 ;;
 
 (in-package :CLIM-USER)
@@ -576,3 +579,9 @@
   (com-visit-url (pop *test-urls*)))
 
 
+(define-closure-command com-tex-mode-on ()
+  (setf r2::*tex-mode-p* t)
+  (texpara::init-hyp))
+
+(define-closure-command com-tex-mode-off ()
+  (setf r2::*tex-mode-p* nil))
