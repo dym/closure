@@ -148,10 +148,10 @@
                               (opts (if (consp slot) (cdr slot) nil)))
                           (cons slot
                                 (append opts
-                                        (list
-                                         :initarg (intern (symbol-name slot) :keyword)
-                                         :initform nil
-                                         :accessor (intern (format nil "~A-~A" name slot)))))))
+                                        (list :initarg (intern (symbol-name slot) :keyword))
+                                        ;; emarsden2003-03-12
+                                        (unless (member :initform opts) (list :initform nil))
+                                        (list :accessor (intern (format nil "~A-~A" name slot)))))))
                       slots))
            ;;
            (defun ,(intern (format nil "CONS-~A" name))
@@ -4885,8 +4885,8 @@ border-spacing between the spaned columns is included."
                                  (make-instance 'disc-chunk
                                                 :%before nil :%after nil :%here nil :forcep t))
                                 nil)
-                            (tex-line-to-items line))))
-        res))))
+                            (tex-line-to-items line)))
+          res))
       items)))
 
 (defun items-to-tex-nodes (items)

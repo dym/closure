@@ -102,8 +102,8 @@ like:
 
 (defgeneric render (document-language document device element
                     width
-                    &optional (flag t) (h 0)
-                    &key (selected-style :default))
+                    &optional flag h 
+                    &key selected-style )
   )
 
 (defgeneric root-element-embedded-style (language root-element)
