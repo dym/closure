@@ -128,11 +128,13 @@
 			((:file "package")
 			 (:file "encodings"       :depends-on ("package"))
 			 (:file "encodings-data"  :depends-on ("package" "encodings"))
+			 (:file "sax-handler")
 			 (:file "dompack")
 			 (:file "dom-impl"        :depends-on ("dompack"))
+			 (:file "dom-builder"     :depends-on ("dom-impl" "sax-handler"))
 			 (:file "xml-stream"      :depends-on ("package"))
 			 (:file "xml-name-rune-p" :depends-on ("package"))
-			 (:file "xml-parse"       :depends-on ("package" "dompack"))
+			 (:file "xml-parse"       :depends-on ("package" "dompack" "sax-handler"))
 			 (:file "xml-canonic"     :depends-on ("package" "dompack" "xml-parse"))  ))
 
 	       ;; CLEX and LALR

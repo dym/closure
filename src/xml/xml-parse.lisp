@@ -1295,6 +1295,7 @@
         (collect d)
         (go state-1)))))
 
+#+(or) ;; FIXME: There is another definition below that looks more reasonable.
 (defun read-cdata (input initial-char &aux d)
   (cond ((not (data-rune-p initial-char))
          (error "Illegal char: ~S." initial-char)))
@@ -1903,92 +1904,74 @@
       (list :doctype name extid))))
 
 (defun p/misc*-2 (input)
-  (let ((res nil))
-    ;; Misc*
-    (while (member (peek-token input) '(:comment :pi :s))
-      (when (eq (peek-token input) :pi)
-        (push (dom:create-processing-instruction 
-               *document*
-               (car (nth-value 1 (peek-token input)))
-               (cdr (nth-value 1 (peek-token input))))
-              res))
-      (consume-token input))
-    (reverse res)))
+  ;; Misc*
+  (while (member (peek-token input) '(:comment :pi :s))
+    (when (eq (peek-token input) :pi)
+      (sax:processing-instruction 
+             *handler*
+             (car (nth-value 1 (peek-token input)))
+             (cdr (nth-value 1 (peek-token input)))))
+      (consume-token input)))
   
 
-(defvar *document*)
+(defvar *handler*)
 
-(defun p/document (input)
-  (let ((*document* #+(OR) nil
-                    #-(OR) (let ((d (make-instance 'dom-impl::document)))
-                             (setf (slot-value d 'dom-impl::owner) d)
-                             d)
-                    #+(OR) (let ((d (make-instance 'simple-document)))
-                             ;;(setf (slot-value d 'dom-impl::owner) d)
-                             d)))
+(defun p/document (input handler)
+  (let ((*handler* handler))
     (setf *entities* nil)
     (setf *dtd* (make-dtd))
     (define-default-entities)
+    (sax:start-document *handler*)
     ;; document ::= XMLDecl? Misc* (doctypedecl Misc*)? element Misc*
     ;; Misc ::= Comment | PI |  S
     ;; xmldecl::='<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
     ;; sddecl::= S 'standalone' Eq (("'" ('yes' | 'no') "'") | ('"' ('yes' | 'no') '"'))
     ;;
     ;; we will use the attribute-value parser for the xml decl.
-    (let ((*data-behaviour* :DTD)
-          (res nil))
+    (let ((*data-behaviour* :DTD))
       ;; optional XMLDecl?
       (cond ((eq (peek-token input) :xml-pi)
              (let ((hd (parse-xml-pi (cdr (nth-value 1 (peek-token input))) t)))
                (setup-encoding input hd))
-             (push (dom:create-processing-instruction 
-                    *document*
+	     ;; FIXME: Ceci n'est pas un pi. Should probably go away.
+	     ;; (hmot 30/06/03)
+             (sax:processing-instruction
+                    *handler*
                     (car (nth-value 1 (peek-token input)))
                     (cdr (nth-value 1 (peek-token input))))
-                   res)
              (read-token input)))
       (set-full-speed input)
-      (setf res (reverse res))
       ;; Misc*
-      (setf res (append res (p/misc*-2 input)))
+      (p/misc*-2 input)
       ;; (doctypedecl Misc*)?
       (when (eq (peek-token input) :<!doctype)
         (p/doctype-decl input)
-        (setf res (append res (p/misc*-2 input))))
+        (p/misc*-2 input))
       ;; element
       (let ((*data-behaviour* :doc))
-        (setf res (append res (list (p/element input)))))
+        (p/element input))
       ;; optional Misc*
-      (setf res (append res (p/misc*-2 input)))
+      (p/misc*-2 input)
       (unless (eq (peek-token input) :eof)
         (error "Garbage at end of document."))
-      (dolist (k res)
-        (dom:append-child *document* k))
-      *document*)))
+      (sax:end-document *handler*))))
 
 (defun p/element (input)
   ;;    [39] element ::= EmptyElemTag | STag content ETag
   (multiple-value-bind (cat sem) (read-token input)
     (cond ((eq cat :ztag)
-           (let ((res (dom:create-element *document* (car sem))))
-             (dolist (k (cdr sem))
-               (dom:set-attribute res (car k) (cdr k)))
-             res)
-           )
+	   (sax:start-element *handler* nil nil (car sem) (cdr sem))
+	   (sax:end-element *handler* nil nil (car sem)))
+
           ((eq cat :stag)
-           (let ((content (p/content input)))
-             (multiple-value-bind (cat2 sem2) (read-token input)
+	   (sax:start-element *handler* nil nil (car sem) (cdr sem))
+	   (p/content input)
+	   (multiple-value-bind (cat2 sem2) (read-token input)
                (unless (and (eq cat2 :etag)
                             (eq (car sem2) (car sem)))
                  (perror input "Bad nesting. ~S / ~S" (mu sem) (mu (cons cat2 sem2)))))
-             (let ((res (dom:create-element *document* (car sem))))
-               (dolist (k (cdr sem))
-                 (dom:set-attribute res (car k) (cdr k)))
-               (dolist (k content)
-                 (dom:append-child res k))
-               res)
-             
-             ))
+	   (sax:end-element *handler* nil nil (car sem)))
+
           (t
            (error "Expecting element.")))))
 
@@ -2005,10 +1988,12 @@
   (multiple-value-bind (cat sem) (peek-token input)
     (case cat
       ((:stag :ztag)
-       (cons (p/element input) (p/content input)))
+       (p/element input)
+       (p/content input))
       ((:cdata)
-       (consume-token input) 
-       (cons (dom:create-text-node *document* sem) (p/content input)))
+       (consume-token input)
+       (sax:characters *handler* sem)
+       (p/content input))
       ((:entity-ref)
        (let ((name sem))
          (consume-token input)
@@ -2033,14 +2018,15 @@
                        (rune= #/A (read-rune input))
                        (rune= #/\[ (read-rune input)))
             (error "After '<![', 'CDATA[' is expected."))
-          (dom:create-cdata-section *document* (read-cdata-sect input)))
+	  (sax:start-cdata *handler*)
+	  (sax:characters  *handler* (read-cdata-sect input))
+	  (sax:end-cdata *handler*))
         (p/content input)))
       ((:pi)
        (consume-token input)
-       (cons
-        (dom:create-processing-instruction *document* (car sem) (cdr sem))
-        (p/content input)))
-      ((:comment)
+       (sax:processing-instruction *handler* (car sem) (cdr sem))
+       (p/content input))
+      ((:comment) ;; FIXME: should call sax:comment. How does this work?
        (consume-token input)
        (p/content input))
       (otherwise
@@ -2146,7 +2132,7 @@
 
 ;;;; User inteface ;;;;
 
-(defun parse-file (filename)
+(defun parse-file (filename &optional (handler (make-instance 'dom-impl::dom-builder)))
   (with-open-xstream (input filename)
     (setf (xstream-name input)
       (make-stream-name
@@ -2156,9 +2142,9 @@
     (let ((zstream (make-zstream :input-stack (list input))))
       (peek-rune input)
       (progn 'time
-       (p/document zstream)))))
+       (p/document zstream handler)))))
 
-(defun parse-stream (stream)
+(defun parse-stream (stream &optional (handler (make-instance 'dom-impl::dom-builder)))
   (let* ((xstream 
           (make-xstream 
            stream
@@ -2169,12 +2155,12 @@
                                  *default-pathname-defaults*))
            :initial-speed 1))
          (zstream (make-zstream :input-stack (list xstream))))
-    (p/document zstream)))
+    (p/document zstream handler)))
 
-(defun parse-string (string)
+(defun parse-string (string &optional (handler (make-instance 'dom-impl::dom-builder)))
   (let* ((x (string->xstream string))
          (z (make-zstream :input-stack (list x))))
-    (p/document z)))
+    (p/document z handler)))
 
 (defun string->xstream (string)
   (make-rod-xstream (string-rod string)))
@@ -2549,6 +2535,7 @@
          (lambda (zinput)
            (muffle (car (zstream-input-stack zinput))))) ))))
 
+#+(or) ;; Do we need this? Not called anywhere
 (defun ff (name)
   (let ((input (make-zstream)))
     (let ((*data-behaviour* :doc)

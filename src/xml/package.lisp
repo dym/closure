@@ -29,4 +29,8 @@
    
    ;; xstream controller protocol
    #:read-octects
-   #:xstream/close) )
+   #:xstream/close
+
+   #:parse-file
+   #:parse-stream
+   #:parse-string) )
