@@ -31,6 +31,11 @@
    #:read-octects
    #:xstream/close
 
+   #:attribute-namespace-uri
+   #:attribute-local-name
+   #:attribute-qname
+   #:attribute-value
+   
    #:parse-file
    #:parse-stream
    #:parse-string) )

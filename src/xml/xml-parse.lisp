@@ -882,6 +882,9 @@
                     (values :xml-pi (cons target content)))
                    ((rod-equal target '#.(string-rod "XML"))
                     (error "You lost -- no XML processing instructions."))
+		   ((and sax:*namespace-processing* (position #/: target))
+		    (error "Processing instruction target ~S is not a valid NcName."
+			   (mu target)))
                    (t
                     (values :pi (cons target content))))))
           ((rune= #// d)
@@ -1917,7 +1920,8 @@
 (defvar *handler*)
 
 (defun p/document (input handler)
-  (let ((*handler* handler))
+  (let ((*handler* handler)
+	(*namespace-bindings* *default-namespace-bindings*))
     (setf *entities* nil)
     (setf *dtd* (make-dtd))
     (define-default-entities)
@@ -1957,14 +1961,19 @@
       (sax:end-document *handler*))))
 
 (defun p/element (input)
+  (if sax:*namespace-processing*
+      (p/element-ns input)
+      (p/element-no-ns input)))
+    
+(defun p/element-no-ns (input)
   ;;    [39] element ::= EmptyElemTag | STag content ETag
   (multiple-value-bind (cat sem) (read-token input)
     (cond ((eq cat :ztag)
-	   (sax:start-element *handler* nil nil (car sem) (cdr sem))
+	   (sax:start-element *handler* nil nil (car sem) (build-attribute-list-no-ns (cdr sem)))
 	   (sax:end-element *handler* nil nil (car sem)))
 
           ((eq cat :stag)
-	   (sax:start-element *handler* nil nil (car sem) (cdr sem))
+	   (sax:start-element *handler* nil nil (car sem) (build-attribute-list-no-ns (cdr sem)))
 	   (p/content input)
 	   (multiple-value-bind (cat2 sem2) (read-token input)
                (unless (and (eq cat2 :etag)
@@ -1975,6 +1984,30 @@
           (t
            (error "Expecting element.")))))
 
+(defun p/element-ns (input)
+  (destructuring-bind (cat (name &rest attrs))
+      (multiple-value-list (read-token input))
+    (let ((ns-decls (declare-namespaces attrs)))
+      (multiple-value-bind (ns-uri prefix local-name) (decode-qname name)
+	(declare (ignore prefix))
+	(let ((attlist (build-attribute-list-ns attrs)))
+	  (cond ((eq cat :ztag)
+		 (sax:start-element *handler* ns-uri local-name name attlist)
+		 (sax:end-element *handler* ns-uri local-name name))
+		
+		((eq cat :stag)
+		 (sax:start-element *handler* ns-uri local-name name attlist)
+		 (p/content input)
+		 (multiple-value-bind (cat2 sem2) (read-token input)
+		   (unless (and (eq cat2 :etag)
+				(eq (car sem2) name))
+		     (perror input "Bad nesting. ~S / ~S" (mu name) (mu (cons cat2 sem2)))))
+		 (sax:end-element *handler* ns-uri local-name name))
+		
+		(t
+		 (error "Expecting element.")))))
+      (undeclare-namespaces ns-decls))))
+      
 (defun perror (stream format-string &rest format-args)
   (when (zstream-p stream)
     (setf stream (car (zstream-input-stack stream))))
@@ -2579,6 +2612,165 @@
                 (t
                  (collect c))))))))
 
+;;;;;;;;;;;;;;;;;
+
+;;; Namespace stuff
+
+(defvar *namespace-bindings* ())
+(defvar *default-namespace-bindings*
+  '((#"" . nil)
+    (#"xmlns" . #"http://www.w3.org/2000/xmlns/")
+    (#"xml" . #"http://www.w3.org/XML/1998/namespace")))
+    
+;; We already know that name is part of a valid XML name, so all we
+;; have to check is that the first rune is a name-start-rune and that
+;; there is not colon in it.
+(defun nc-name-p (name)
+  (and (name-start-rune-p (rune name 0))
+       (notany #'(lambda (rune) (rune= #/: rune)) name)))
+
+(defun split-qname (qname)
+  (declare (type glisp:simple-rod qname))
+  (let ((pos (position  #/: qname)))
+    (if pos
+	(let ((prefix (subseq qname 0 pos))
+	      (local-name (subseq qname (1+ pos))))
+	  (if (nc-name-p local-name)
+	      (values prefix local-name)
+	      (error "~S is not a valid NcName." local-name)))
+	(values () qname))))
+		 
+(defun decode-qname (qname)
+  "decode-qname name => namespace-uri, prefix, local-name"
+  (declare (type glisp:simple-rod qname))
+  (multiple-value-bind (prefix local-name) (split-qname qname)
+    (let ((uri (find-namespace-binding prefix)))
+      (if uri
+	  (values uri prefix local-name)
+	  (values nil nil nil)))))
+
+
+(defun find-namespace-binding (prefix)
+  (cdr (or (assoc prefix *namespace-bindings* :test #'rod=)
+	   (error "Undeclared namespace prefix: ~A" (rod-string prefix)))))
+
+;; FIXME: Should probably be refactored by adding :start and :end to rod=/rod-equal
+(defun rod-starts-with (prefix rod)
+  (and (<= (length prefix) (length rod))
+       (dotimes (i (length prefix) t)
+         (unless (rune= (rune prefix i) (rune rod i))
+           (return nil)))))
+
+(defun xmlns-attr-p (attr-name)
+  (rod-starts-with #.(string-rod "xmlns") attr-name))
+
+(defun attrname->prefix (attrname)
+  (if (< 5 (length attrname))
+      (subseq attrname 6)
+      nil))
+
+(defun find-namespace-declarations (attr-alist)
+  (mapcar #'(lambda (attr)
+	      (cons (attrname->prefix (car attr)) (cdr attr)))
+	  (remove-if-not #'xmlns-attr-p attr-alist :key #'car)))
+
+(defun declare-namespaces (attr-alist)
+  (let ((ns-decls (find-namespace-declarations attr-alist)))
+    (dolist (ns-decl ns-decls )
+      ;; check some namespace validity constraints
+      ;; FIXME: Would be nice to add "this is insane, go ahead" restarts
+      (let ((prefix (car ns-decl))
+	    (uri (if (rod= #"" (cdr ns-decl))
+		     nil
+		     (cdr ns-decl))))
+	(cond
+	  ((and (rod= prefix #"xml")
+		(not (rod= uri #"http://www.w3.org/XML/1998/namespace")))
+	   (error "Attempt to rebind the prefix \"xml\" to ~S." (mu uri)))
+	  ((and (rod= uri #"http://www.w3.org/XML/1998/namespace")
+		(not (rod= prefix #"xml")))
+	   (error "The namespace URI \"http://www.w3.org/XML/1998/namespace\" ~
+                   may not be bound to the prefix ~S, only \"xml\" is legal."
+		  (mu prefix)))
+	  ((and (rod= prefix #"xmlns")
+		(rod= uri #"http://www.w3.org/2000/xmlns/"))
+	   (error "Attempt to bind the prefix \"xmlns\" to its predefined ~
+                   URI \"http://www.w3.org/2000/xmlns/\", which is ~
+                   forbidden for no good reason."))
+	  ((rod= prefix #"xmlns")
+	   (error "Attempt to bind the prefix \"xmlns\" to the URI ~S, ~
+                   but it may not be declared." (mu uri)))
+	  ((rod= uri #"http://www.w3.org/2000/xmlns/")
+	   (error "The namespace URI \"http://www.w3.org/2000/xmlns/\" may ~
+                   not be bound to prefix ~S (or any other)." (mu prefix)))
+	  ((and (rod= uri #"") prefix)
+	   (error "Only the default namespace (the one without a prefix) may ~
+                   be bound to an empty namespace URI, thus undeclaring it."))
+	  (t
+	   (push (cons prefix uri) *namespace-bindings*)
+	   (sax:start-prefix-mapping *handler* (car ns-decl) (cdr ns-decl))))))
+    ns-decls))
+
+(defun undeclare-namespaces (ns-decls)
+  (dolist (ns-decl ns-decls)
+    (setq *namespace-bindings* (delete ns-decl *namespace-bindings*))
+    (sax:end-prefix-mapping *handler* (car ns-decl))))
+
+(defstruct attribute
+  namespace-uri
+  local-name
+  qname
+  value)
+
+(defun build-attribute-list-no-ns (attr-alist)
+  (mapcar #'(lambda (pair) (make-attribute :qname (car pair) :value (cdr pair)))
+	  attr-alist))
+
+;; FIXME: Use a non-braindead way to enforce attribute uniqueness
+(defun build-attribute-list-ns (attr-alist)
+  (let (attributes)
+    (dolist (pair attr-alist)
+      (when (or (not (xmlns-attr-p (car pair)))
+		sax:*include-xmlns-attributes*)
+	(push (build-attribute (car pair) (cdr pair)) attributes)))
+    
+    ;; 5.3 Uniqueness of Attributes
+    ;; In XML documents conforming to [the xmlns] specification, no
+    ;; tag may contain two attributes which:
+    ;; 1. have identical names, or
+    ;; 2. have qualified names with the same local part and with
+    ;; prefixes which have been bound to namespace names that are
+    ;; identical.
+    ;;
+    ;; 1. is checked by read-tag-2, so we only deal with 2 here
+    (do ((sublist attributes (cdr sublist)))
+	((null sublist) attributes)
+      (let ((attr-1 (car sublist)))
+	(when (and (attribute-namespace-uri attr-1)
+		   (find-if #'(lambda (attr-2)
+				(and (rod= (attribute-namespace-uri attr-1)
+					   (attribute-namespace-uri attr-2))
+				     (rod= (attribute-local-name attr-1)
+					   (attribute-local-name attr-2))))
+		       (cdr sublist)))
+	  (error "Multiple definitions of attribute ~S in namespace ~S."
+		 (mu (attribute-local-name attr-1))
+		 (mu (attribute-namespace-uri attr-1))))))))
+    
+(defun build-attribute (name value)
+  (multiple-value-bind (prefix local-name) (split-qname name)
+    (declare (ignorable local-name))
+    (if (or (not prefix) ;; default namespace doesn't apply to attributes
+	    (and (rod= #"xmlns" prefix) (not sax:*use-xmlns-namespace*)))
+	(make-attribute :qname name :value value)
+	(multiple-value-bind (uri prefix local-name)
+	    (decode-qname name)
+	  (declare (ignore prefix))
+	  (make-attribute :qname name
+			  :value value
+			  :namespace-uri uri
+			  :local-name local-name)))))
+    
 ;;; Faster constructors
 
 ;; Since using the general DOM interface to construct the parsed trees

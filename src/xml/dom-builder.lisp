@@ -25,7 +25,7 @@
     (let ((element (dom:create-element document qname))
 	  (parent (car element-stack)))
       (dolist (attr attributes)
-	(dom:set-attribute element (car attr) (cdr attr)))
+	(dom:set-attribute element (xml::attribute-qname attr) (xml::attribute-value attr)))
       (setf (slot-value element 'dom-impl::parent) parent)
       (push element (slot-value parent 'dom-impl::children))
       (push element element-stack))))
