@@ -683,7 +683,8 @@
    (equal (url-host url1) (url-host url2))
    (equal (url-port url1) (url-port url2))
    (equal (url-user url1) (url-user url2))
-   (equal (url-path url1) (url-path url2))))
+   (equal (url-path url1) (url-path url2))
+   (equal (url-query url1) (url-query url2))))
 
 (defun parse-path (string)
   (let ((path (url-parse-path string)))
