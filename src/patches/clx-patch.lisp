@@ -2,9 +2,10 @@
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: Some CLX patches
 ;;;   Created: 1999-05-10 23:42
-;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;    Author: Gilbert Baumann <gilbert@base-engineering.com>
 ;;; ---------------------------------------------------------------------------
 ;;; (c) copyright 1999 by Gilbert Baumann
+;;;
 ;;; Portions Copyright (C) 1987 Texas Instruments Incorporated.
 ;;;
 
