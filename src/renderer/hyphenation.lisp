@@ -59,7 +59,7 @@
 
 (defmethod insert-hyphenation-pattern ((hyphenation-table simple-hyphenation-table) string pattern)
   (with-slots (hash-table max-pattern-length) hyphenation-table
-    (setf (gethash hyphenation-table string) pattern
+    (setf (gethash string hash-table) pattern
           max-pattern-length (max max-pattern-length (length string)))))
 
 (defmethod hyphen-points ((hyphen-table simple-hyphenation-table) string)
@@ -188,6 +188,9 @@
 ;; new:   .57s    2.400,000 bytes [technically zero]
 
 ;; $Log$
+;; Revision 1.2  2003/06/15 16:54:30  gilbert
+;; Patches by Christophe Rhodes to get it going with SBCL.
+;;
 ;; Revision 1.1  2003/03/13 19:30:56  gilbert
 ;; imported
 ;;

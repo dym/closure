@@ -39,7 +39,7 @@
             (:print-function print-aimage))
   (width  0 :type fixnum)
   (height 0 :type fixnum)
-  (data   nil :type (or nil (simple-array (unsigned-byte 32) (* *))))
+  (data   nil :type (or null (simple-array (unsigned-byte 32) (* *))))
   alpha-p
   plist)
 

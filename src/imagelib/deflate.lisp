@@ -66,8 +66,9 @@
   "Order in which code lengths for the code length alphabet are written.")
 
 (defstruct bit-stream
-  (octets nil :type (vector (unsigned-byte 8))) ;a vector of octects
-  (pos 0 :type fixnum))                         ;bit position within octect stream
+  (octets (error "missing-argument")
+	  :type (vector (unsigned-byte 8))) ;a vector of octets
+  (pos 0 :type fixnum))                         ;bit position within octet stream
 
 (declaim (inline bit-stream-read-bit))
 (declaim (inline bit-stream-read-byte))
