@@ -11,7 +11,7 @@
 (defparameter *pre-tolerance* 100)
 (defparameter *tolerance* 200)
 
-(defparameter *tolerance* 400)
+(defparameter *tolerance* 4000)
 
 (defparameter *precision* 1
   "Resolution of your device.")
@@ -112,7 +112,16 @@
        ;; now pretend we would not break here
        (cond ((discretionary-p box)
               (decf nw ddw)             ;cancel effect of pre
-              (mapc (lambda (box) (incf ddw (box-width box))) (discretionary-no box))))
+              (mapc (lambda (box)
+                      (cond ((box-p box)
+                             (incf ddw (box-width box)))
+                            ((glue-p box)
+                             (incf nw (glue-width box))
+                             (incf w+ (glue-stretch box))
+                             (incf w- (glue-shrink box)))
+                            (t
+                             (error "Barf! no ~S in discretionary-no please." box) )))
+                    (discretionary-no box))))
        (cond ((glue-p box)
               (incf nw (glue-width box))
               (incf w+ (glue-stretch box))
@@ -229,9 +238,9 @@
 
 (defun make-white-space-glue (w)
   (make-glue :width w
-             :shrink (/ w 2)
+             :shrink (* 1/2 w)
              :shrink-unit 0
-             :stretch (* w 2)
+             :stretch (* 2/3 w)
              :stretch-unit 0))
 
 (defun format-paragraph (boxen width)
@@ -249,13 +258,18 @@
     (let ((sps ))
       (setf boxen (coerce boxen 'vector))
       (setf sps (minimum-split boxen width))
-      (let ()
-        (do ((p0 0 p1)
-             (p1 (pop sps) (pop sps)))
-            ((null p1))
-          (let ((ln (line-subseq boxen p0 (min (length boxen) (+ p1 1)))))
-            (assign-glue ln width)
-            (push ln res)) )))
+      (when r2::*debug-tex-p*
+        (format *trace-output* "==== sps = ~S.~%" sps))
+      #+NIL
+      (when (null sps)
+        ;; ### don't know why this happens.
+        (setf sps (list (length boxen))))
+      (do ((p0 0 p1)
+           (p1 (pop sps) (pop sps)))
+          ((null p1))
+        (let ((ln (line-subseq boxen p0 (min (length boxen) (+ p1 1)))))
+          (assign-glue ln width)
+          (push ln res)) ))
     (reverse res)))
 
 (defun minimum-split (boxen width)

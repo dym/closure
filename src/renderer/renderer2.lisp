@@ -1,4 +1,28 @@
-(in-package :r2)
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: R2; -*-
+;;; ---------------------------------------------------------------------------
+;;;     Title: The Core of the Renderer
+;;;   Created: somewhen late 2002
+;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+;;;   License: GPL (See file COPYING for details).
+;;;       $Id$
+;;; ---------------------------------------------------------------------------
+;;;  (c) copyright 1997-2003 by Gilbert Baumann
+
+;;; This program is free software; you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation; either version 2 of the License, or
+;;; (at your option) any later version.
+;;;
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program; if not, write to the Free Software
+;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ 
+(in-package :R2)
 
 ;;;; --------------------------------------------------------------------------------
 
@@ -278,6 +302,10 @@ used by the table renderer.")
 
 (defun make-text-indent-chunk (amount)
   (make-instance 'text-indent-chunk :amount amount))
+
+(defmethod print-object ((object kern-chunk) stream)
+  (with-slots (amount) object
+  (format stream "#<kern:~D>" amount)))
 
 (defmethod disc-chunk-before (chunk)
   (let ((b (disc-chunk-%before chunk)))
@@ -2405,7 +2433,9 @@ border-spacing between the spaned columns is included."
         (dolist (x (block-box-content item))
           (when (block-box-p x)
             (case (cooked-style-display (block-box-style x))
-              (:table-row-group
+              ((:table-row-group
+                :table-header-group
+                :table-footer-group)
                (push (collect-row-group x) row-groups))
               (:table-column-group
                (flush-cur-col-group)
@@ -4183,7 +4213,7 @@ border-spacing between the spaned columns is included."
                        (cooked-style-width (slot-value style 'css::%containing-block)))
                       value))))))
 
-;;; ### hmm we still wind up with superfluous cern-chunks ...
+;;; ### hmm we still wind up with superfluous kern-chunks ...
 ;;; ### this is because we still wind up with letter-spacing =0
 
 ;;; ### height
@@ -4751,6 +4781,13 @@ border-spacing between the spaned columns is included."
 ;; That is the line is probably closed. Especially the </P:firstline> is missing.
 ;; This is kind of "fixed".
 
+;; ### we fail with more than one TBODY, or a present THEAD/TFOOT.
+
+;; ### strange lossage with <http://saphir.local:8000/~gilbert/>
+;;     
+
+;;
+
 ;;; Solved
 
 ;; test44: a few problems with inline images:
@@ -4826,6 +4863,11 @@ border-spacing between the spaned columns is included."
 
 ;;;;
 
+(defparameter *debug-tex-p* nil
+  "Whether to debug the so called 'Tex Mode'.")
+
+(defparameter *visible-hyphens-p* nil)
+
 (defvar *hyphenation-table* nil)
 
 (defun hyphenation-table ()
@@ -4862,36 +4904,110 @@ border-spacing between the spaned columns is included."
               (otherwise
                )))
       (spill-word)
-      '(dolist (word words)
-        (let* ((s (map 'string (lambda (x) (code-char (third x))) word))
-               (hps (hyphen-points (hyphenation-table) s)))
-          (dolist (hp (reverse hps))
-            (destructuring-bind (i j c) (elt word hp)
-              (declare (ignore c))
-              (let ((chunk (elt items i)))
-                (setf items (append (subseq items 0 i)
-                                    (list (cons-black-chunk :style (black-chunk-style chunk)
-                                                            :data  (subseq (black-chunk-data chunk) 0 j))
+      ;; #+NIL
+      (let ((hps nil))
+        (dolist (word words)
+          (let* ((s (map 'string (lambda (x) (code-char (third x))) word))
+                 (z (hyphen-points (hyphenation-table) s)))
+            (dolist (k (reverse z)) (push (elt word k) hps))))
+        ;; an assert a day keeps the surprise away.
+        (assert (every #'<= (mapcar #'first hps) (cdr (mapcar #'first hps))))
+        ;;(setf hps (reverse hps))
+        ;; aha, bug! bug! bug!
+        (let ((res nil)
+              (ss nil))
+          (print hps)
+          (loop for i from 0
+                for item in items do
+                (typecase item
+                  (black-chunk
+                   (cond ((eql i (caar hps))
+                          (labels ((foo (j)
+                                     (cond ((not (eql i (caar hps)))
+                                            (push (cons-black-chunk :style (black-chunk-style item)
+                                                                    :data  (subseq (black-chunk-data item) j))
+                                                  res))
+                                           (t
+                                            (let ((j2 (second (pop hps))))
+                                              (push (cons-black-chunk :style (black-chunk-style item)
+                                                                      :data  (subseq (black-chunk-data item) j j2))
+                                                    res)
+                                              (push
+                                               (make-instance 'disc-chunk
+                                                              :%before (cons
+                                                                        (cons-black-chunk :style (black-chunk-style item)
+                                                                                          :data  (rod "-"))
+                                                                        (mapcar (lambda (k)
+                                                                                  (make-half-close-chunk (bounding-chunk-pt k)
+                                                                                                         (bounding-chunk-style k)))
+                                                                                ss))
+                                                              :%after (mapcar (lambda (k)
+                                                                                (make-half-open-chunk (bounding-chunk-pt k)
+                                                                                                      (bounding-chunk-style k)))
+                                                                              (reverse ss))
+                                                              :%here (if *visible-hyphens-p*
+                                                                         (list
+                                                                          (cons-black-chunk :style (black-chunk-style item)
+                                                                                            :data  (rod "-")))
+                                                                         nil))
+                                               res)
+                                              (foo j2))))))
+                            (foo 0)))
+                         (t
+                          (push item res))))
+                  (open-chunk
+                   (push item ss)
+                   (push item res))
+                  (close-chunk
+                   (pop ss)
+                   (push item res))
+                  (t
+                   (push item res))))
+          (setf items (reverse res))))
+
+
+      #||                               ;
+      (dolist (hp (reverse hps))
+      (destructuring-bind (i j c) (elt word hp)
+      (declare (ignore c))
+      (let ((chunk (elt items i)))
+      (setf items (append (subseq items 0 i)
+      (list (cons-black-chunk :style (black-chunk-style chunk)
+      :data  (subseq (black-chunk-data chunk) 0 j))
+      (make-instance 'disc-chunk
+      :%before (list
+      (cons-black-chunk :style (black-chunk-style chunk)
+      :data  (rod "-")))
+      :%after nil
+      :%here nil)
+      (cons-black-chunk :style (black-chunk-style chunk)
+      :data  (subseq (black-chunk-data chunk) j)))
+      (subseq items (+ i 1)) )))))
+      ||#
+
+      ;;;
+      (when *debug-tex-p*
+        (format *trace-output* "#### orig items = ~S.~%" items))
+      (let* ((tex-nodes (items-to-tex-nodes items))
+             (tex-items (texpara::format-paragraph tex-nodes w)))
+        (when *debug-tex-p*
+          (format *trace-output* "#### tex nodes = ~S.~%" tex-nodes))
+        (cond ((not (null tex-items))
+               (let (res)
+                 (dolist (line tex-items)
+                   (when *debug-tex-p*
+                     (format *trace-output* "#### output line = ~S.~%" line))
+                   (setf res (append res
+                                     (if (not (null res))
+                                         (list
                                           (make-instance 'disc-chunk
-                                                         :%before (list
-                                                                   (cons-black-chunk :style (black-chunk-style chunk)
-                                                                                     :data  (rod "-")))
-                                                         :%after nil
-                                                         :%here nil)
-                                          (cons-black-chunk :style (black-chunk-style chunk)
-                                                            :data  (subseq (black-chunk-data chunk) j)))
-                                    (subseq items (+ i 1)) )))))))
-      (let ((res nil))
-        (dolist (line (texpara::format-paragraph (items-to-tex-nodes items) w))
-          (setf res (append res
-                            (if (not (null res))
-                                (list
-                                 (make-instance 'disc-chunk
-                                                :%before nil :%after nil :%here nil :forcep t))
-                                nil)
-                            (tex-line-to-items line)))
-          res))
-      items)))
+                                                         :%before nil :%after nil :%here nil :forcep t))
+                                         nil)
+                                     (tex-line-to-items line))))
+                 res))
+              (t
+               ;; paragraph typesetter was not happy with the result.
+               items))) )))
 
 (defun items-to-tex-nodes (items)
   (remove nil
@@ -4904,10 +5020,11 @@ border-spacing between the spaned columns is included."
                                  (texpara::make-box :width (chunk-width item) :data item))))
                          ((or bounding-chunk replaced-object-chunk kern-chunk)
                           (texpara::make-box :width (chunk-width item) :data item))
-                         ( floating-chunk
+                         (floating-chunk
                           )
                          (disc-chunk
-                          (cond ((and (black-chunk-p (car (disc-chunk-here item)))
+                          (cond #+NIL
+                                ((and (black-chunk-p (car (disc-chunk-here item)))
                                       (null (cdr (disc-chunk-here item)))
                                       (equalp (black-chunk-data (car (disc-chunk-here item))) (rod " ")))
                                  (texpara::make-white-space-glue (chunk-width (car (disc-chunk-here item)))))
@@ -4929,4 +5046,15 @@ border-spacing between the spaned columns is included."
        line))
 
 
+;;; Now what needs to be done is:
 
+;; - texpara should be able to cope with more general \discretionary nodes
+;;   That is one of those which contain glue nodes itself.
+;;
+
+
+;; $Log$
+;; Revision 1.5  2003/03/16 17:48:43  gilbert
+;; Kludged hyphenation and tex-mode in. It sort of works now. But consider
+;; this still a hack.
+;;
