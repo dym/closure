@@ -5,7 +5,7 @@
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: GPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 1997-1999 by Gilbert Baumann
+;;;  (c) copyright 1997-2002 by Gilbert Baumann
 
 ;;; This program is free software; you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -22,6 +22,99 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 (in-package :R2)
+
+;;;; TODO
+
+;; . we should rethink spilling lines since currently we have drawing
+;;   order problem as we draw the background and border after the
+;;   content, in fact we misuse drawing the content to also keep track
+;;   of the horizontal layout.
+
+;; . support for letter spacing and word spacing is currently missing.
+
+;; . letter spacing and word spacing should _not_ been done by KERN
+;;   chunks but by appropriate white space chunks; that is support
+;;   white space chunks which do not have the default width. And
+;;   support NBSP chunks. Prefered would be to have new chunk types
+;;   altogether and later extend them to actual \hfil chunks for the
+;;   TeX-mode.
+
+;; . we need to rework our »walking interface«. On current word are
+;;   kind of chunks, but when reissueing these to need to completly
+;;   reexamine style, which means that even stuff like 'display' might
+;;   be different. Currently this reexamination breaks on replaced
+;;   elements.
+
+;; . tex mode breaks bitterly when we have replaced elements in the
+;;   line -- why?
+
+;; . on replaced elements: maybe also copy over width and height into
+;;   the actual style.
+
+;; . test height on block-level elements.
+
+;; . vertical align on inline replaced elements does not seem to work.
+
+;; . we need modify the replaced element protocol to also contain a
+;;   predicate has-baseline-p since the glorious CSS1 spec seems to
+;;   assume that images have no baseline and them move it to the outer
+;;   box bottom (which is in IMHO very bad).
+
+;; . floating »inline« replaced elements seems to work modulo correct
+;;   border.
+
+;; . display on replaced elements
+
+;; . line height calculation for replaced elements is kind of wrong.
+
+;; . IMG.width and IMG.height should probably map to css attributes.
+
+;; . width/height of inline replaced elements must be taken into
+;;   account.
+
+;; . choose a representation for inline replaced elements
+
+;; . implement the weird rules about text decorating replaced inline
+;;   elements.
+
+;; . padding top/bottom on oc chunks
+
+;; . text-decoration is currently faked because we cannot easily
+;;   access the font metrics when text decoration is due.
+
+;; . disallow negative padding
+
+;; . [maybe] use special element for the border-left/right half of
+;;   inline elements?
+
+;; . add-oc/add-cc should not peek at old style style.
+
+;; . inline box decoration: same as with normal boxen, we need to draw
+;;   it before the content! The interesting question is now how to
+;;   accomplish this? we can either do another output record trick or
+;;   we can peek ahead in the chunk vector to find the right x
+;;   cooridnate for the decoration. Also: look into the specification
+;;   if it specifies an exact drawing order.
+
+;; . while we hack output records, we also should have a look at
+;;   z-index. Is it global? If yes, we can probably implement it by
+;;   twiddleing with the medium argument having it point to different
+;;   »top-level« output records.
+;;
+;;   That is we think as if we had initially:
+;;   (loop for i in ... do (setf (aref zplanes i) (with-new-output-record ...))
+;;   and then
+;;   (»with-output-to-record« (aref zplanes i) ...)
+
+;; . background images on inline elements; also: does
+;;   background-position apply to those?
+
+;; . really somehow unify the decoration drawing between inline
+;;   elements and block elements. And let the unified interface peek
+;;   at computed style, so that when we implement the fancier options
+;;   from CSS3 we get that automatically right for both.
+
+;; . also: look at 'clip'.
 
 ;;;; NOTES
 
@@ -82,9 +175,6 @@
  
 ;; - The borders are not yet correct 
 ;; - background images are still kind of fragile 
-;; - sometimes the last line is missing (e.g. heise online) 
-;; - underline and other text decoration 
-;; - border of inline elements 
 ;; - from time to time we have broken images probably due to bogus mime type 
 ;; - the points at list items are missing 
 ;; - does clear work? 
@@ -2038,6 +2128,9 @@ festmachen?]
   height        ;the height of this element
   depth         ;the depth of this element
   dy            ;absolute vertical align (offset from baseline)
+  ro                                    ;possible replaced object -- kludge!
+  margin-top                            ;only used for ro
+  margin-bottom                         ;only used for ro
   )
 
 ;;; close chunk
@@ -2100,7 +2193,8 @@ festmachen?]
   ;; xxx why not (= eword espc)
   (let ((res
          (dotimes (i (pc-eword pc) t)
-           (when (integerp (aref (pc-data pc) i))
+           (when (or (integerp (aref (pc-data pc) i))
+                     (ro-chunk-p (aref (pc-data pc) i)))
              (return nil)))))
     res))
 
@@ -2156,12 +2250,45 @@ festmachen?]
   (and (eq (css:display pt) :block)
        (neq (css:style-attr pt 'css:@float) :none)))
 
+(defvar *replaced-object* nil)          ;xxx kludge!
+
+(defun resize-replaced-element-according-to-style (re pt)
+  (let ((width (maybe-resolve-percentage (css:style-attr pt 'css:@width)
+                                         600)) ;xxx
+        (height (maybe-resolve-percentage (css:style-attr pt 'css:@height)
+                                          600)))
+    ;;
+    (cond ((and (realp width) (realp height))
+           (ro/resize re width height))
+          ((and (realp width) (eq height :auto))
+           (ro/resize re width (if (zerop (+ (nth-value 1 (ro/intrinsic-size re))
+                                             (nth-value 2 (ro/intrinsic-size re))))
+                                   0
+                                   (* width (/ (nth-value 0 (ro/intrinsic-size re))
+                                               (+ (nth-value 1 (ro/intrinsic-size re))
+                                                  (nth-value 2 (ro/intrinsic-size re))))))))
+          ((and (eq width :auto) (realp height))
+           (ro/resize re
+                      (if (zerop (nth-value 0 (ro/intrinsic-size re)))
+                          0
+                          (* height (/ (+ (nth-value 1 (ro/intrinsic-size re))
+                                          (nth-value 2 (ro/intrinsic-size re)))
+                                       (nth-value 0 (ro/intrinsic-size re)))))
+                      height))
+          ((and (eq width :auto) (eq height :auto))
+           ;; nothing to do
+           ) )))
+
 (defun walk/replaced-element (rc pc pt re re-map)
   (declare (ignore re-map))
+  ;; care about the elements geometry
+  (resize-replaced-element-according-to-style re pt)
+  ;;
   (cond ((sgml::pt-p re)
          (mapc (curry #'walk rc pc) (sgml:pt-children re)))
         (t
-         (walk/add-oc rc pc pt)
+         (let ((*replaced-object* re))  ;kludge
+           (walk/add-oc rc pc pt re))
          (walk/add-ro rc pc re)
          (walk/add-cc rc pc pt) )))
 
@@ -2192,37 +2319,30 @@ festmachen?]
   (end-current-word rc pc)
   (spill-line rc pc) )
 
-(defun walk/add-oc (rc pc pt)
+(defun walk/add-oc (rc pc pt &optional ro)
   (let ((margin-left (maybe-resolve-percentage 
                       (css:style-attr pt 'css:@margin-left)
                       (pc-parent-width pc)))
         (padding-left (maybe-resolve-percentage
                        (css:style-attr pt 'css:@padding-left)
                        (pc-parent-width pc)))
-        (padding-right (maybe-resolve-percentage
-                        (css:style-attr pt 'css:@padding-right)
-                        (pc-parent-width pc)))
-        (margin-right (maybe-resolve-percentage
-                       (css:style-attr pt 'css:@margin-right)
-                       (pc-parent-width pc))))
+        (border-left-width (css:style-attr pt 'css:@border-left-width))
+        )
     (when (realp margin-left) (add-kern pc margin-left))
     (add-oc rc pc pt)                   ;open chunk dazu
+    (unless (zerop border-left-width) (add-kern pc border-left-width))
     (when (realp padding-left) (add-kern pc padding-left)) ))
 
 (defun walk/add-cc (rc pc pt)
-  (let ((margin-left (maybe-resolve-percentage 
-                      (css:style-attr pt 'css:@margin-left)
-                      (pc-parent-width pc)))
-        (padding-left (maybe-resolve-percentage
-                       (css:style-attr pt 'css:@padding-left)
-                       (pc-parent-width pc)))
-        (padding-right (maybe-resolve-percentage
+  (let ((padding-right (maybe-resolve-percentage
                         (css:style-attr pt 'css:@padding-right)
                         (pc-parent-width pc)))
         (margin-right (maybe-resolve-percentage
                        (css:style-attr pt 'css:@margin-right)
-                       (pc-parent-width pc))))
+                       (pc-parent-width pc)))
+        (border-right-width (css:style-attr pt 'css:@border-right-width)))
     (when (realp padding-right) (add-kern pc padding-right))
+    (unless (zerop border-right-width) (add-kern pc border-right-width))
     (add-cc rc pc pt)                   ;close chunk dazu
     (when (realp margin-right) (add-kern pc margin-right)) ))
 
@@ -2424,7 +2544,11 @@ festmachen?]
   (incf (the fixnum (pc-word-width pc)) amount))
 
 (defun walk/add-ro (rc pc ro)
-  (add-to-word pc (make-ro-chunk :ro ro))
+  (let ((c (make-ro-chunk :ro ro)))
+    (add-to-word pc c)
+    (vector-push-extend c (pc-current-word pc)))
+  (setf (pc-last-was-word-space-p pc) nil)
+  (setf (pc-last-was-space-p pc) nil)
   (incf (the fixnum (pc-word-width pc)) (ro/size ro)))
 
 (defun add-fbox (rc pc fd flag)
@@ -2743,10 +2867,10 @@ the bbox argument."
        (multiple-value-bind (x y w h) (bbox-border-coordinates bbox)
          (let ((new-record 
                 (clim:with-new-output-record (clim-user::*medium*)
-                 (when background-color
-                   (clim:draw-rectangle* clim-user::*medium*
-                    x y (+ x w) (+ y h)
-                    :ink background-color))
+                 (when background
+                   (clim-draw-background clim-user::*medium*
+                                         x y (+ x w) (+ y h)
+                                         (background-color background)))
                  (when background
                    (closure/clim-device::x11-draw-background
                     (rc-document rc) clim-user::*medium* background
@@ -2776,6 +2900,13 @@ the bbox argument."
                  )))
            (clim:delete-output-record new-record (clim:output-record-parent new-record))
            (clim:add-output-record new-record bg-record) ))))))
+
+(defun clim-draw-background (medium x1 y1 x2 y2
+                             background-color)
+  (when (and background-color (not (eql background-color :transparent)))
+    (clim:draw-rectangle* medium
+     x1 y1 x2 y2
+     :ink (css-color-ink background-color))))
 
 ;;; Border
 
@@ -2894,11 +3025,11 @@ the bbox argument."
           border-top-width)
       (m  x2 y1  ix2 iy1  ix2 iy2  x2 y2 border-right-style
           (css-color-ink border-right-color)
-          (3d-dark-color (css-color-ink border-right-color)) (3d-light-color (css-color-ink border-right-color))
+          (3d-light-color (css-color-ink border-right-color)) (3d-dark-color (css-color-ink border-right-color))
           border-right-width)
       (m  x2 y2  ix2 iy2  ix1 iy2  x1 y2 border-bottom-style
           (css-color-ink border-bottom-color)
-          (3d-dark-color (css-color-ink border-bottom-color)) (3d-light-color (css-color-ink border-bottom-color))
+          (3d-light-color (css-color-ink border-bottom-color)) (3d-dark-color (css-color-ink border-bottom-color))
           border-bottom-width)
       (m  x1 y2  ix1 iy2  ix1 iy1  x1 y1 border-left-style
           (css-color-ink border-left-color)
@@ -3146,15 +3277,28 @@ the bbox argument."
       (let ((oc (make-oc :pt pt :ts ts
                          :border-width (setq w (if b (border-left-width b) 0))
                          :border-style (if b (border-left-style b) :none)
-                         :border-color (if b (border-left-color b) :none)
+                         :border-color (if b (border-left-color b) "black") ;xx??
                          :border-top-width (if b (border-top-width b) 0)
                          :border-top-style (if b (border-top-style b) :none)
-                         :border-top-color (if b (border-top-color b) :none)
+                         :border-top-color (if b (border-top-color b) "black")
                          :border-bottom-width (if b (border-bottom-width b) 0)
                          :border-bottom-style (if b (border-bottom-style b) :none)
-                         :border-bottom-color (if b (border-bottom-color b) :none)
+                         :border-bottom-color (if b (border-bottom-color b) "black")
+                         :padding-top (maybe-resolve-percentage
+                                       (css:style-attr pt 'css:@padding-top)
+                                       (pc-parent-width pc))
+                         :padding-bottom (maybe-resolve-percentage
+                                          (css:style-attr pt 'css:@padding-bottom)
+                                          (pc-parent-width pc))
                          :color (style-stack-color (pc-style-stack pc))
                          :style-stack (pc-style-stack pc)
+                         :ro *replaced-object*
+                         :margin-top (maybe-resolve-percentage
+                                       (css:style-attr pt 'css:@margin-top)
+                                       (pc-parent-width pc))
+                         :margin-bottom (maybe-resolve-percentage
+                                          (css:style-attr pt 'css:@margin-bottom)
+                                          (pc-parent-width pc))
                          )))
         (funcall adder oc)))
     (incf (the fixnum (pc-word-width pc)) w) ))
@@ -3169,7 +3313,7 @@ the bbox argument."
     (let ((cc (make-cc :pt pt
                              :border-width (setq w (if b (border-right-width b) 0))
                              :border-style (if b (border-right-style b) :none)
-                             :border-color (if b (border-right-color b) :none) )))
+                             :border-color (if b (border-right-color b) "black") )))
       (vector-push-extend cc (pc-current-word pc))
       (add-to-word pc cc))
     (pop (pc-ts-stack pc))
@@ -3181,21 +3325,36 @@ the bbox argument."
 ;; Justifying lines works by wraping a justify box around the relevant
 ;; parts.
 
+(defun draw-text-decoration (xx1 yy xx text-decoration color)
+  (when (consp text-decoration)
+    (dolist (deco text-decoration)
+      (case deco
+        (:underline
+         (clim:draw-line* clim-user::*medium*
+          xx1 (+ yy 2) xx (+ yy 2) :ink (clim-user::parse-x11-color color)))
+        (:overline
+         ;; xxx hack
+         (clim:draw-line* clim-user::*medium*
+          xx1 (- yy 12) xx (- yy 12) :ink (clim-user::parse-x11-color color)))
+        (:line-through
+         (clim:draw-line* clim-user::*medium*
+          xx1 (- yy 6) xx (- yy 6) :ink (clim-user::parse-x11-color color)))
+        ))))
+
 (defun spill-line-aux (rc pc &aux first-line-was-here
                        (yet-flushed-p nil))
+  ;; To get all this somewhat more regular, we concatenate the danging
+  ;; open chunks and the rest of the line together into a new line. 
+  ;; That way we could use a simple recursive procedure to maintain
+  ;; the stack.
   ;;
-  ;; Um das ganze etwas regelmaessiger hinzubekommen kopieren wir
-  ;; zunaechst die dangling open chunks mit dem rest der zeile
-  ;; zusammen; dann koennen wir auch eine rekursive procedure
-  ;; benutzen, um unseren stack zu pflegen.
+  ;; also it would be a nice idea if we could have an extra open chunk
+  ;; for the line itself.
   ;;
-  ;; desweiteren waere es gut, wenn man noch einen open chunk fuer die
-  ;; zeile selbst hat.
-  ;;
-  ;;(debug/show-current-line pc)
   (let ((line-chunks (make-array (+ (* 1 (length (pc-dangling-ocs pc)))
                                     (pc-eline pc))
-                                 :initial-element :unset)))
+                                 :initial-element :unset))
+        (number-of-dangling-ocs (length (pc-dangling-ocs pc))))
     (declare (type (simple-array t (*)) line-chunks))
     (let ((i 0))
       (declare (type fixnum i))
@@ -3278,7 +3437,6 @@ the bbox argument."
                                         (oc-ts (car ocs))
                                         (computed-style-text-style
                                          (style-computed (car (last (pc-style-stack pc))))) )))
-                            ;;(dprint "XX = ~S, ROD = ~S." xx rod)
                             (clim-draw-runes
                              clim-user::*medium* xx (+ yy dy) rod 0 (length rod)
                              ts
@@ -3287,37 +3445,84 @@ the bbox argument."
                      (setf i j))
                    i)
                  ;;
+                 ;;
+                 ;;
                  (foo-oc (x i)
                    (declare (type fixnum i))
-                   (push x ocs)
-                   (let* ((style (style-computed (car (oc-style-stack x))))
-                          (text-decoration (computed-style-text-decoration style))
-                          (color           (if ocs
-                                               (oc-color (car ocs))
-                                               (computed-style-color
-                                                (style-computed
-                                                 (car (last (pc-style-stack pc))))))))
-                     (let ((xx1 xx))
-                       (cond ((maybe-pt-imap rc (oc-pt x))
-                              (setq **x1* xx)
-                              (let ()
-                                (clim:with-output-as-presentation
-                                 (clim-user::*medium*
-                                  (url:unparse-url (hyper-link-url (imap-area-link (maybe-pt-imap rc (oc-pt x)))))
-                                  'clim-user::url)
-                                 (incf dy (oc-dy x))
-                                 (setf i (foo (+ i 1))))))
-                             (t
-                              (incf dy (oc-dy x))
-                              (setf i (foo (+ i 1)))))
-                       #+NIL
-                       (when (consp text-decoration)
-                         (dolist (deco text-decoration)
-                           (case deco
-                             (:underline
-                              (clim:draw-line* clim-user::*medium*
-                               xx1 (+ yy dy 2) xx (+ yy dy 2) :ink (clim-user::parse-x11-color color))))))))
-                           
+                   (let ((this-is-dangling-oc-p (< i number-of-dangling-ocs))
+                         ;; kludge!
+                         (replaced-element (oc-ro x)))
+                     (push x ocs)
+                     (let* ((style (style-computed (car (oc-style-stack x))))
+                            (text-decoration (computed-style-text-decoration style))
+                            (color           (if ocs
+                                                 (oc-color (car ocs))
+                                                 (computed-style-color
+                                                  (style-computed
+                                                   (car (last (pc-style-stack pc))))))))
+                       (let ((xx1 xx))
+                         (cond ((maybe-pt-imap rc (oc-pt x))
+                                (setq **x1* xx)
+                                (let ()
+                                  (clim:with-output-as-presentation
+                                   (clim-user::*medium*
+                                    (url:unparse-url
+                                     (hyper-link-url (imap-area-link (maybe-pt-imap rc (oc-pt x)))))
+                                    'clim-user::url)
+                                   (incf dy (oc-dy x))
+                                   (setf i (foo (+ i 1))))))
+                               (t
+                                (incf dy (oc-dy x))
+                                (setf i (foo (+ i 1)))))
+                         (draw-text-decoration xx1 (+ yy dy) xx text-decoration color)
+                         (let* ((cc (let ((cc (svref (the (simple-array t (*)) line-chunks)
+                                                     (the fixnum (1- i)))))
+                                      (and (cc-p cc)
+                                           (eq (cc-pt cc) (oc-pt x))
+                                           cc)))
+                                (border-top-width    (oc-border-top-width x))
+                                (border-top-style    (oc-border-top-style x))
+                                (border-top-color    (oc-border-top-color x))
+                                (border-bottom-width (oc-border-bottom-width x))
+                                (border-bottom-style (oc-border-bottom-style x))
+                                (border-bottom-color (oc-border-bottom-color x))
+                                (border-left-width   (oc-border-width x))
+                                (border-left-style   (oc-border-style x))
+                                (border-left-color   (oc-border-color x))
+                                (border-right-width  (if cc (cc-border-width cc) 0))
+                                (border-right-style  (if cc (cc-border-style cc) :none))
+                                (border-right-color  (if cc (cc-border-color cc) "black"))
+                                (padding-top         (oc-padding-top x))
+                                (padding-bottom      (oc-padding-bottom x))
+                                )
+                           (multiple-value-bind (x1 y1 x2 y2)
+                               (if replaced-element
+                                   (values
+                                    xx1 (+ yy (- dy) (- (nth-value 1 (ro/size replaced-element)))
+                                           (- border-top-width)
+                                           (- border-bottom-width)
+                                           (- padding-bottom)
+                                           (- padding-top)
+                                           (- (oc-margin-bottom x))
+                                           (- (oc-margin-top x)))
+                                    xx  (+ yy (- dy) (nth-value 2 (ro/size replaced-element))
+                                           )
+                                    )
+                                   (values xx1 (- yy dy (text-style-ascent (oc-ts x))
+                                                  border-top-width padding-top)
+                                           xx  (+ (- yy dy) (text-style-descent (oc-ts x))
+                                                  border-bottom-width padding-bottom)))
+                             (clim-draw-background clim-user::*medium*
+                                                   x1 y1 x2 y2
+                                                   (background-color (computed-style-background style)))
+                             (clim-draw-border clim-user::*medium*
+                                               x1 y1 x2 y2
+                                               BORDER-TOP-WIDTH BORDER-TOP-STYLE BORDER-TOP-COLOR
+                                               BORDER-RIGHT-WIDTH BORDER-RIGHT-STYLE BORDER-RIGHT-COLOR
+                                               ;; 0 :none "black"
+                                               BORDER-BOTTOM-WIDTH BORDER-BOTTOM-STYLE BORDER-BOTTOM-COLOR
+                                               (if this-is-dangling-oc-p 0 BORDER-LEFT-WIDTH)
+                                               BORDER-LEFT-STYLE BORDER-LEFT-COLOR) )))))
                    i)
                  ;;
                  (foo (i)
@@ -3348,13 +3553,18 @@ the bbox argument."
                           (incf xx (kern-chunk-amount x))
                           (incf i 1))
                          (RO-CHUNK
+                          ;; hmm what is this?
                           (unless yet-flushed-p
                             (flush-vertical-margin rc)
                             (setf yy (+ (rc-y rc) line-height))
                             (setf yet-flushed-p t))
                           (closure/clim-device::medium-draw-ro*
                            clim-user::*medium*
-                           (ro-chunk-ro x) xx yy)
+                           (ro-chunk-ro x) xx (- yy
+                                                 (oc-margin-bottom (car ocs))
+                                                 (oc-padding-bottom (car ocs))
+                                                 (oc-border-bottom-width (car ocs))
+                                                 ))
                           (incf xx (ro/size (ro-chunk-ro x)))
                           (incf i 1))
                          (t
@@ -3369,6 +3579,7 @@ the bbox argument."
           (do ()
               ((null ocs))
             (let ((x (copy-oc (pop ocs))))
+              ;; clear the open chunks border
               (cond ((eq (oc-pt x) css::*first-line-element*)
                      ;; This is the :first-line pseudo element.
                      ;; we leave that out
@@ -3464,9 +3675,14 @@ the bbox argument."
              (cond ((integerp x)
                     (add-rune* rc pc x :normal)) ;xxx
                    ((oc-p x)
-                    (add-oc rc pc (oc-pt x)))
+                    ;; still not correct wrt to replaced elements,
+                    ;; display attribute and stuff.
+                    (let ((*replaced-object* (oc-ro x))) ;kludge
+                      (walk/add-oc rc pc (oc-pt x))))
+                   ((ro-chunk-p x)
+                    (walk/add-ro rc pc (ro-chunk-ro x)) )
                    ((cc-p x)
-                    (add-cc rc pc (cc-pt x)))
+                    (walk/add-cc rc pc (cc-pt x)))
                    (t
                     (error "oops")))))
      )
@@ -3547,20 +3763,38 @@ the bbox argument."
    (style-computed
     (car (oc-style-stack oc)))))
 
+(defun text-style-ascent (text-style)
+  (font-desc-ascent (text-style-font text-style)))
+
+(defun text-style-descent (text-style)
+  (font-desc-descent (text-style-font text-style)))
+
 (defun oc-text-height-and-depth (oc)
-  (let* ((ts (text-style-font (oc-ts oc)))
-         (as (font-desc-ascent ts))
-         (ds (font-desc-descent ts))
-         (lh ;;(oc-line-height oc)
-             (pt-effective-line-height (oc-pt oc)))
-         (hl-1 (floor   (- lh (+ as ds)) 2))) ;DEVRND
+  (cond ((oc-ro oc)
+         ;; hmm... css1 does not considere replaced objects to have a baseline
+         (values (+ (nth-value 1 (ro/size (oc-ro oc)))
+                    (oc-padding-top oc)
+                    (oc-border-top-width oc)
+                    (oc-margin-top oc)
+                    (oc-padding-bottom oc)
+                    (oc-border-bottom-width oc)
+                    (oc-margin-bottom oc))
+                 (+ (nth-value 2 (ro/size (oc-ro oc)))
+                    )))
+        (t
+         (let* ((ts (text-style-font (oc-ts oc)))
+                (as (font-desc-ascent ts))
+                (ds (font-desc-descent ts))
+                (lh;;(oc-line-height oc)
+                 (pt-effective-line-height (oc-pt oc)))
+                (hl-1 (floor   (- lh (+ as ds)) 2))) ;DEVRND
     
-    (let* ((ds2 (max 0 (+ ds hl-1)))
-           (as2 (- lh ds2)))
-      (assert (= lh (+ as2 ds2)))
-      ;; wir müssen hier leider negative werte vermeiden, deswegen
-      ;; dieser hack mit 'max' oben.
-      (values as2 ds2) )))
+           (let* ((ds2 (max 0 (+ ds hl-1)))
+                  (as2 (- lh ds2)))
+             (assert (= lh (+ as2 ds2)))
+             ;; wir müssen hier leider negative werte vermeiden, deswegen
+             ;; dieser hack mit 'max' oben.
+             (values as2 ds2) )))))
 
 (defun vertically-align-line-2 (rc pc chunks end
                                 &aux text-seen-p
@@ -3569,6 +3803,7 @@ the bbox argument."
   (declare (type (simple-array t (*)) chunks)
            (type rc rc)
            (type pc pc))
+
   ;; This still fails because the line-height of the surrounding block
   ;; is not taken into account.
 
@@ -3578,7 +3813,6 @@ the bbox argument."
                (not (find-if #'integerp chunks :end end)))
   ;;
 
- 
   (multiple-value-bind (total-height total-depth)
       ;; xxx hack
       (if no-line-height-mode-p
@@ -3611,11 +3845,13 @@ the bbox argument."
                    (typecase item
                      (oc
                       (setf (values (oc-height item) (oc-depth item))
-                            (if no-line-height-mode-p
+                            (if (and no-line-height-mode-p (null (oc-ro item)))
                                 (values 0 0)
                                 (oc-text-height-and-depth item)))
                       (push item oc-stack))
                      (ro-chunk
+                      ;; NOTE: these are now handled at the corresponding OC.
+                      #||
                       ;; Now ro-chunks are somewhat special, since the padding
                       ;; and border of its containing element should influence
                       ;; the line height (indirectly by affecting the
@@ -3629,7 +3865,9 @@ the bbox argument."
                               (max 0 (+ (oc-height (car oc-stack))
                                         h)))
                         (setf (oc-depth (car oc-stack))
-                              (max 0 (oc-depth (car oc-stack)) d))))
+                              (max 0 (oc-depth (car oc-stack)) d)))
+                      ||#
+                      )
                      (cc
                       (let ((oc (pop oc-stack)))
                         (unless oc
