@@ -23,6 +23,23 @@
 
 (in-package :NETLIB)
 
+;;; TODO
+
+;; . I would a higher level interface to making POST request which
+;;   abstracts from the correct method needed to encode the data and
+;;   stuff.
+
+;; . Also: there is some interface needed with abstracts above the
+;;   POST/GET methods. Maybe we would just handle that adding gaining
+;;   the posted values from the url and gaining the exact encoding
+;;   method used for such a POST from some url parameter.
+;;
+;;   That is we something like a REQUEST object which denotes a
+;;   complete request to be made.
+;;
+;;   Also take a peek into HTTP/1.1 and see what is needed for e.g. 
+;;   PUT and stuff.
+
 ;; For extra confusion there is both MAKE-HTTP-REQUEST and
 ;; HTTP-MAKE-REQUEST.
 
