@@ -31,8 +31,7 @@
 (defclass clim-device ()
   ((medium :accessor clim-device-medium :initarg :medium)
    (font-database :initform nil)
-   (zoom-factor :initform 1.2 :initarg :zoom-factor)
-   ))
+   (zoom-factor :initform closure::*zoom-factor* :initarg :zoom-factor)))
 
 (defmethod device-dpi ((device clim-device))
   (with-slots (zoom-factor) device
