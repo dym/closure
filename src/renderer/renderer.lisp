@@ -239,7 +239,7 @@
 
 (defvar *default-style-sheet*)
 
-(defparameter *tex-mode-p* t
+(defparameter *tex-mode-p* nil
   "Whether we use the TeX-like algorithm.")
 
 ;;;;
