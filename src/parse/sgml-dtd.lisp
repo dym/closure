@@ -426,6 +426,7 @@
 
 ;;;; ------------------------------------------------------------------------------------------
 
+#+(OR)					;seems to be buggy
 (defun sgml-resource-as-string (name)
   (with-open-stream (in (apply #'open-sgml-resource name))
     (let ((buffer (g/make-string 32 :adjustable t)))
@@ -435,6 +436,15 @@
 	  ((= j i) (subseq buffer 0 j))
         (princ "%") (finish-output)
 	(adjust-array buffer (list (+ j 4000))) ))))
+
+(defun sgml-resource-as-string (name)
+  (with-output-to-string (bag)
+    (with-open-stream (in (apply #'open-sgml-resource name))
+      (do ((x (read-char in nil nil) (read-char in nil nil)))
+          ((null x))
+        (write-char x bag)))))
+
+
 
 ;;;; ------------------------------------------------------------------------------------------
 ;;;;  Calculating the resolve information
@@ -664,69 +674,6 @@
       (princ " '" sink)
       (dump-dtd user::*html-dtd* sink)
       (princ ")" sink))))
-
-#||
-(defun sgml-resource-as-string (name)
-  (with-open-stream (input (apply #'open-sgml-resource name))
-    (let ((strs nil))
-      (loop
-        (let* ((buf (g/make-string 4096))
-               (i (glisp:read-char-sequence buf input)))
-          (princ "%") (finish-output)
-          (cond ((= i 0) (return))
-                (t (push (cons i buf) strs)))))
-      (setf strs (nreverse strs))
-      (let ((n (reduce #'+ (mapcar #'car strs))))
-        (let ((res (g/make-string n)))
-          (do ((q strs (cdr q))
-               (i 0 (+ i (caar q))))
-              ((null q))
-            (declare (type fixnum i))
-            (let ((end (caar q))
-                  (s (cdar q)))
-              (declare (fixnum end))
-              (do ((j 0 (the fixnum (+ j 1))))
-                  ((= j end))
-                (declare (type fixnum j))
-                (setf (schar res (+ j i)) (schar s j)))))
-          res)))))
-||#
-
-#||
-#+CLISP
-(defun glisp::read-char-sequence (sequence input &key (start 0) (end (length sequence)))
-  (let (c (i start))
-    (loop
-      (cond ((= i end) (return i)))
-      (setq c (read-char input nil :eof))
-      (cond ((eql c :eof) (return i)))
-      (setf (aref sequence i) c)
-      (incf i) )))
-||#
-
-#||
-    (let ((buffer (g/make-string 32 :fill-pointer 0 :adjustable t)))
-      (do* ((i 0 j)
-	    (j (glisp:read-char-sequence buffer in :start 0 :end 32)
-               (glisp:read-char-sequence buffer in :start i :end (+ i 40000)) ))
-	  ((= j i) (copy-seq buffer))
-        (princ "%") (finish-output)
-	(setf (fill-pointer buffer) j)
-	(adjust-array buffer (list (+ j 40000))) ))))
-||#
-
-#+(OR) ;;CLISP
-(progn
-  ;; read-char-sequence is buggy under CLISP
-  (defun sgml-resource-as-string (name)
-    (with-open-stream (in (apply #'open-sgml-resource name))
-    (let ((res nil))
-      (do* ((ch (read-char in nil :eof) (read-char in nil :eof)))
-           ((eql ch :eof))
-        (push ch res))
-      (nreverse (coerce res 'string))))))
-
-
 
 ;;; --------------------------------------------------------------------------------
 ;;;  dumping DTDs
