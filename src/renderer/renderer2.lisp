@@ -2431,18 +2431,22 @@ border-spacing between the spaned columns is included."
                   ;; we enter a new row, so decrement the row-allocation
                   (setf row-allocation (mapcar (lambda (x) (max 0 (- x 1))) row-allocation))
                   ;;
-                  (labels ((allocate-row (cells row-allocation col-index)
+                  (labels ((safe-subseq (seq start &optional end)
+			     (let ((l (length seq)))
+			       (subseq seq (min start l) (and end (min end (length seq))))))
+			   (allocate-row (cells row-allocation col-index)
                              "Allocate cells, returns the new row allocation vector"
                              (cond ((null cells)
                                     row-allocation)
                                    ;; does the cell fit?
-                                   ((every #'zerop (subseq row-allocation 0 (table-cell-colspan (car cells))))
+                                   ((every #'zerop
+					   (safe-subseq row-allocation 0 (table-cell-colspan (car cells))))
                                     (let ((cell (car cells)))
                                       ;; It does, so store col-index and stuff the rowspan into the vector.
                                       (setf (table-cell-col-index cell) col-index)
                                       (append (make-list (table-cell-colspan cell) :initial-element (table-cell-rowspan cell))
                                               (allocate-row (cdr cells)
-                                                            (subseq row-allocation (table-cell-colspan cell))
+                                                            (safe-subseq row-allocation (table-cell-colspan cell))
                                                             (+ col-index (table-cell-colspan cell))))))
                                    (t
                                     ;; It does not fit, try the next column
