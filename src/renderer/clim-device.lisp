@@ -390,6 +390,7 @@
                    :actual-width  (or width (r2::aimage-width aim))
                    :actual-height (or height (r2::aimage-height aim)))))
 
+#+NIL
 (climi::def-grecording draw-ro (() ro x y)
         (values x
                 (- y (nth-value 1 (r2::ro/size ro)))
@@ -430,6 +431,7 @@
                          (xlib:copy-area pixmap gcontext 0 0 actual-width actual-height
                           da x (- y actual-height) ))))))))))))
 
+#+NIL
 (climi::def-grecording draw-pm3-tiled (() pixmap mask x1 y1 w h x0 y0)
                        (values x1 y1 (+ x1 w) (+ y1 h)))
 

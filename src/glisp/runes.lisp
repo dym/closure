@@ -345,13 +345,13 @@
   #+CMU
   (unless (really-really-rod-p rod)
     (push (ext:make-weak-pointer rod)
-          (aref *rod-hash-table* (mod (cl::pointer-hash rod)
+          (aref *rod-hash-table* (mod (lisp::pointer-hash rod)
                                       (length *rod-hash-table*)))))
   rod)
 
 (defun really-really-rod-p (rod)
   #+CMU
-  (find rod (aref *rod-hash-table* (mod (cl::pointer-hash rod)
+  (find rod (aref *rod-hash-table* (mod (lisp::pointer-hash rod)
                                         (length *rod-hash-table*)))
         :key #'ext:weak-pointer-value))
 
@@ -364,7 +364,7 @@
             (loop for item in bucket do
                   (let ((v (ext:weak-pointer-value item)))
                     (when v
-                      (push item (aref new (mod (cl::pointer-hash v) n)))))))
+                      (push item (aref new (mod (lisp::pointer-hash v) n)))))))
       (setf *rod-hash-table* new)))
 
   (defun rod-hash-after-gc-hook ()

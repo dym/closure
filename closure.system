@@ -154,19 +154,19 @@
          (:file "css-support")))
 
      ;;; Libraries
-     
+
        (:module xml
         :source-pathname "xml"
         :components
         ((:file "package")
          (:file "encodings"       :depends-on ("package"))
          (:file "encodings-data"  :depends-on ("package" "encodings"))
-         (:file "dompack")
-         (:file "dom-impl"        :depends-on ("dompack"))
+         #+NIL(:file "dompack")
+         #+NIL(:file "dom-impl"        :depends-on ("dompack"))
          (:file "xml-stream"      :depends-on ("package"))
-         (:file "xml-name-rune-p" :depends-on ("package"))
-         (:file "xml-parse"       :depends-on ("package" "dompack"))
-         (:file "xml-canonic"     :depends-on ("package" "dompack" "xml-parse"))  ))
+         #+NIL (:file "xml-name-rune-p" :depends-on ("package"))
+         #+NIL(:file "xml-parse"       :depends-on ("package" "dompack"))
+         #+NIL(:file "xml-canonic"     :depends-on ("package" "dompack" "xml-parse"))  ))
 
      ;;; CLEX and LALR
      

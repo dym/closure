@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.13  2005/03/13 19:24:14  gbaumann
+;; make it at least compile and show a window with CMUCL 19a and cvs mcclim.
+;;
 ;; Revision 1.12  2005/03/13 18:01:37  gbaumann
 ;; Gross license change
 ;;
@@ -163,7 +166,7 @@
            wholine
            2
            (200 status)))))
-  (:top-level (closure-frame-top-level . nil))
+  ;; (:top-level (closure-frame-top-level . nil))
   )
 
 
@@ -262,7 +265,7 @@
 (define-closure-command com-hide-listener ()
   (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) nil))
 
-(define-closure-command com-visit-url ((url 'url)) ;;; :gesture :select))
+(define-closure-command (com-visit-url :name t) ((url 'url)) ;;; :gesture :select))
   (let ((*standard-output* *query-io*)) ;;(find-pane-named *frame* 'interactor)))
     (with-text-style (*standard-output* (make-text-style :sans-serif :roman :normal))
       (format t "You are visiting "))
@@ -450,18 +453,15 @@
           :very-large 18
           :huge 24))
   (gui::init-closure)
-  #+NIL
-  (loop for port in climi::*all-ports*
-        do (destroy-port port))
-  (setq climi::*all-ports* nil)
   ;;
-  (setf *frame* (make-application-frame 'closure))
-  (setf *pane*  (find-pane-named *frame* 'canvas))
   (setf *closure-process*
         (clim-sys:make-process
          (lambda ()
            (unwind-protect
-                (run-frame-top-level *frame*)
+                (progn
+                  (setf *frame* (make-application-frame 'closure))
+                  (setf *pane*  (find-pane-named *frame* 'canvas))
+                  (run-frame-top-level *frame*))
              (ignore-errors (ws/netlib::commit-cache))
              (setf *closure-process* nil)))
          :name "Closure")))
