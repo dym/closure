@@ -23,6 +23,9 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
+;; Revision 1.7  2003/03/14 14:14:36  gilbert
+;; adjusted frame-top-level loop
+;;
 ;; Revision 1.6  2003/03/13 20:17:23  gilbert
 ;; CLX bug: xlib:put-image grind to halt when the image is widther than 2048 pixels.
 ;;
@@ -204,16 +207,6 @@
                 (*command-unparser* command-unparser)
                 (*partial-command-parser* partial-command-parser)
                 (prompt-style (make-text-style :sans-serif :bold :normal)))
-            (map-over-sheets #'(lambda (pane)
-                                 (if (and (typep pane 'clim-stream-pane)
-                                          (eq (climi::pane-display-time pane) :command-loop)
-                                          (climi::pane-display-function pane))
-                                     (let ((func (climi::pane-display-function pane)))
-                                       (window-clear pane)
-                                       (funcall func frame pane) ; XXX other arguments
-                                        ; XXX incremental redisplay
-                                       )))
-                             (frame-top-level-sheet frame))
             (let ((*application-frame* frame))
               (when *initial-url*
                 (com-visit-url *initial-url*))
