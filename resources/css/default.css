@@ -1,0 +1,254 @@
+/*
+ *    Title: Another default style sheet for the Closure Browser
+ *  Created: Tue Apr 28 15:53:45 1998
+ *   Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
+ */
+
+I { font-style: italic }
+
+EM { font-style: italic }
+B { font-weight: bold }
+STRONG { font-weight: bold }
+  
+H1 { font-size: 18pt; }
+H2 { font-size: 14pt; }
+H3 { font-size: 12pt; }
+H4 { font-size: 10pt; }
+H5 { font-size: 10pt; }
+H6 { font-size: 10pt; }
+  
+/* default text color */
+
+HTML { color: black }
+  
+/* default attributes for things that inherit */
+HTML { text-align: left;
+       text-indent: 0;
+       list-style-type: disc;
+       white-space: normal; }			/* hugh? */
+
+BODY { padding: 10px 20px 10px 20px }
+
+/* Background */
+/*BODY { background-image: url(file:paper2.png); background-color: transparent; } */
+HTML { background-image: none; background-color: transparent; }
+
+
+CENTER { text-align: center }
+/*
+ * Acid Test Alert
+ * ADDRESS { text-align: right }  
+ */
+
+MENU, DIR, OL, UL { margin: 1em 0 1em 2em; }
+OL { list-style-type: decimal; }
+OL LI OL { list-style-type: lower-alpha }
+
+UL { list-style-type: disc }
+UL LI UL { list-style-type: circle }
+    
+/*UL LI UL	{ list-style-type: hollow-triangle }*/
+/*UL		{ list-style-type: filled-triangle }*/
+
+H1, H2, H3, H4 { margin-top: 0.5em; margin-bottom: 0.25em; }    
+
+SUB { vertical-align: sub; font-size: 66%; margin-left: 1px; margin-right: 1px; line-height: 0.9 }
+SUP { vertical-align: super; font-size: 66%; margin-left: 1px; margin-right: 1px; line-height: 0.9; }
+
+BIG { font-size: larger }
+SMALL { font-size: smaller }
+
+TD { border-width: 0px; border-style: solid; padding: 0px; }
+TH { border-width: 0px; border-style: solid; padding: 0px; }
+
+A:link { text-decoration: underline; /*font-weight: bold; font-style: italic;*/ }
+U { text-decoration: underline }
+STRIKE, S { text-decoration: line-through }
+
+P { margin: 1em 0; text-indent: 0; }    
+
+PRE { margin: 7px 0; white-space: pre; }
+DD { margin-left: 20px; }
+LI { margin: 0.5ex 0px 0.5ex 0px; }
+DT { margin: 5px 0px; }
+IMG { margin: 2px 2px; }
+
+
+/* ----------------------------------------------------------------------------
+ *  Display
+ */
+
+/* inline */
+    A, ABBR, ACRONYM, B, BIG, CODE, DFN, EM, FONT, I, IMG, INPUT, KBD,
+    Q, S, SAMP, SMALL, SPAN, STRIKE, STRONG, SUB, SUP, TT, U, VAR, CITE, BDO, LABEL
+            { display: inline; }
+    
+/* block */
+    BR, ADDRESS, BLOCKQUOTE, BODY, CENTER, DD, DIR, DIV, DL, DT, FORM, H1, H2,
+    H3, H4, H5, H6, HR, IFRAME, MENU, OL, P, PRE, TD, TH, UL, NOFRAMES
+            { display: block; }
+    
+/* special */
+    LI  { display: list-item; }
+    /* TABLE, TBODY, TFOOT, THEAD, TR */
+    
+/* HEAD only */
+    /* HEAD, HTML, STYLE, TITLE, LINK, META, MAP, PARAM, */
+    
+/* none  */
+    AREA, BASE, BASEFONT, COL, COLGROUP, ISINDEX, SCRIPT, OPTION,
+    STYLE, PARAM, LEGEND, CAPTION, OPTGROUP
+            { display: none; }
+    
+/* don't know (have to look up) */
+APPLET   {display: none; } /* ??? */
+TEXTAREA { display: block; }  /* ?? */
+NOSCRIPT { display: block; } /* ?? */
+FIELDSET { display: block; }
+
+SCRIPT { display: none; }
+
+/* OBJECT is probably an inline element?! */
+OBJECT { display: inline; }
+
+/* INS, DEL are special; they adopt to its parents.
+ */
+INS, DEL { display: inline; }
+
+SELECT { display: inline; }
+
+TABLE { display: block; padding: 1em; }
+
+INPUT { margin: 3px; }
+
+
+TD { border-width: 0px; border-style: solid; padding: 0px; margin: 0; text-align: left; }
+TH { border-width: 0px; border-style: solid; padding: 0px; margin: 0; text-align: center; }
+TABLE { display: block; padding: 0; border-width: 0; margin: 0; }
+HTML { line-height: 1.2; }
+IMG { padding: 0px; }
+
+/*
+ 24 116 205             DodgerBlue3
+ @define DodgerBlue3 #1874CD;
+*/
+
+INPUT { display: inline; }
+TD { border: 1px inset; padding: 0px; margin: 0px; }
+
+/* Das hier sollte nicht noetig sein! */
+HTML { list-style-position: outside; }
+HTML { list-style-image: none; }
+
+HR 
+{ border-width: 1px; 
+  border-style: solid; 
+  margin-top: 1em; 
+  margin-bottom: 1em; 
+  margin-right: auto; 
+  margin-left: auto; }
+
+HR { border-style: inset;  }
+
+
+      DL { margin: 1em 0; }
+      DD { margin: .5em 0 .5em 4em; }
+/*      H1, H2, H3, H4, H5, H6 { margin: 1em 0 0.5em; } */
+
+IMG { padding: 0; margin: 0; border: 0; }
+
+
+
+
+
+A:link { color: #00009a;
+         padding: 3px;
+         margin: -3px;
+       } 
+A:hover { background-color: #ccc; text-decoration: none; }
+
+
+/*A:hover { border: 1px solid; text-decoration: none; }*/
+INPUT { margin: 0px; }
+
+/*BODY { text-align: justify; }*/
+
+/** FONTS **/
+
+HTML { font: normal 400 12pt /*times new roman,*/ times, symbol, serif, symbol, sans }
+
+H1, H2, H3, H4, H5, H6 { 
+  font-family: helvetica, arial, verdana, sans-serif; 
+  font-weight: bold; 
+}
+
+PRE, CODE, TT, TEXTAREA 
+{ font-family: lucidatypewriter, fixed, courier, courier new, symbol, 
+               mono-space; 
+  font-size: 80%; }
+
+BODY { background: white; } /* hmm */
+
+HEAD { display: none; }
+
+BLOCKQUOTE {
+  margin: 1em 2em;
+  /* Too many people misuse BLOCKQUOTE */
+  /* font-style: italic; */
+}
+
+FIELDSET { margin: 1em 0; 
+           padding: 1em; 
+           border: 2px inset; 
+           display: block; }
+LEGEND { display: block; 
+         margin: -1em -1em 1em -1em;
+         background: #008;
+         color: white;
+         padding: 0 .5em; 
+         font-family: helvetica, verdana, symbol;
+         font-weight: bold; }
+
+INPUT { vertical-align: middle; margin: 2px; }
+SELECT { vertical-align: middle; margin: 2px; }
+
+
+CAPTION { display: block; text-align: center; }
+BUTTON { display: inline; }
+
+IMG { border: 0px solid; }
+A:link IMG { border: 2px blue solid; }
+
+
+INPUT[type="IMAGE"]
+    /* Let graphical submit button appear like button */
+    { border: 2px blue outset; 
+      background: #aaa; padding: 2px; }
+
+INPUT[type="TEXT"] 
+    { font-family: lucidatypewriter, fixed, courier, courier new, symbol, 
+                   mono-space; 
+      font-size: 80%; }
+
+/*
+INPUT[type="SUBMIT"]
+    { font-family: helvetica, arial, verdana, sans-serif, symbol;
+      font-size: 80%; 
+      font-weight: bold;
+    }
+*/
+
+/*TABLE { clear: both; }*/
+
+A:link { text-decoration: none; /*font-weight: bold; font-style: italic;*/ }
+
+MAP { display: none; }
+BODY { margin: 0; }
+
+/* This is a hack -- what are the precise rules? */
+CENTER TABLE { margin-left: auto; margin-right: auto; }
+TABLE TABLE { margin-left: 0; margin-right: 0; }
+
+
+STYLE { display: none; }
+.illegalstyle { display: none; color: red; }

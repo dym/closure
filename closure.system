@@ -1,0 +1,223 @@
+;; hack, hack
+#|
+(load "/home/gilbert/work/McCLIM.hacked4/Experimental/pixel-format.fasl")
+(load "/home/gilbert/work/McCLIM.hacked4/Experimental/clx-pixel-format.fasl")
+(load "/home/gilbert/work/McCLIM.hacked4/Backends/CLX/port.fasl")
+(load "/home/gilbert/work/McCLIM.hacked4/Backends/CLX/medium.fasl")
+|#
+
+
+(in-package :common-lisp-user)
+
+;;; Random early Lisp Implementation-specific fix ups:
+
+#+EXCL
+(progn
+  (require :clx)
+  ;(load "~/../gilbert-neu/lisp/clx-acl/macros.cl")
+  ;(load "~/../gilbert-neu/lisp/clx-acl/bufmac.cl")
+  (unuse-package :excl)
+  ;;(load "~/lisp/defsystem/defsystem.lisp")
+  )
+#+EXCL
+(progn
+  (setq mk::*bother-user-if-no-binary* nil)
+  (setq mk::*compile-during-load* t) )
+
+#+CMU
+(setq ext:*GC-VERBOSE* nil) ;das merk ich schon selbst.
+
+(pushnew :DEBUG-CLOSURE *features*)
+
+;;;;
+;;;; Optimization levels:
+;;;;
+
+;; FIXME: This is not exactly the right place!
+
+;; We choose to make them constants for read-time evaluation, since we
+;; want the presence of the :DEBUG-CLOSURE feature to override any
+;; (saftey 0) declaration.
+
+(defparameter +optimize-very-fast+
+  '(optimize (safety #.(or #+:DEBUG-CLOSURE 3 0)) (speed 3) #+:DEBUG-CLOSURE (debug 3)))
+
+(defparameter +optimize-very-fast-trusted+
+  '(optimize (safety #.(or #+:DEBUG-CLOSURE 3 0)) (speed 3) #+:DEBUG-CLOSURE (debug 3)))
+
+(defparameter +optimize-fast+
+  '(optimize (safety #.(or #+:DEBUG-CLOSURE 3 1)) (speed 3) #+:DEBUG-CLOSURE (debug 3)))
+
+(defparameter +optimize-normal+
+  '(optimize (safety #.(or #+:DEBUG-CLOSURE 3 2)) (speed 3) #+:DEBUG-CLOSURE (debug 3)))
+
+(export '+optimize-very-fast-trusted+)
+(export '+optimize-very-fast+)
+(export '+optimize-fast+)
+(export '+optimize-normal+)
+
+;; Finally declaim normal optimization level
+(declaim #.+optimize-normal+)
+
+(load (merge-pathnames "clue.system" *load-pathname*))
+(load (merge-pathnames "glisp.system" *load-pathname*))
+(load (merge-pathnames "graphics-utilities.system" *load-pathname*))
+
+;;;
+
+(mk:defsystem closure
+	      :source-pathname #.(make-pathname :name nil :type nil
+						:defaults (truename *load-pathname*) )
+	      :source-extension "lisp"
+	      :depends-on (:clx
+                           :clue
+                           :clim
+                           :clim-clx
+                           ;;
+                           :glisp
+                           ;;
+                           :graphics-utilities)
+	      :components
+	      ((:module xml
+                        :source-pathname "src/xml"
+                        :components
+                        ((:file "package")
+                         (:file "encodings"
+                                :depends-on ("package"))
+                         (:file "encodings-data"
+                                :depends-on ("package" "encodings"))
+                         (:file "dompack")
+                         (:file "dom-impl"
+                                :depends-on ("dompack"))
+                         (:file "xml-stream"
+                                :depends-on ("package"))
+                         (:file "xml-name-rune-p"
+                                :depends-on ("package"))
+                         (:file "xml-parse"
+                                :depends-on ("package" "dompack"))
+                         (:file "xml-canonic"
+                                :depends-on ("package" "dompack" "xml-parse"))  ))
+               (:module clex
+                        :source-pathname "src/util"
+                        :components
+                        ((:file "clex") ))
+               (:module lalr
+                        :source-pathname "src/util"
+                        :components
+                        ((:file "lalr") ))
+               (:module netlib
+                        :source-pathname "src/net"
+                        :components
+                        ((:file "package"       :depends-on ("url"))
+                         (:file "common-parse"  :depends-on ("package"))
+                         (:file "mime"          :depends-on ("package"))
+                         (:file "url"           :depends-on ())
+                         (:file "http"          :depends-on ("package" "url"))
+                         (:file "ftp"           :depends-on ("package" "url")) ))
+
+               (:module sgml-parse
+                        :source-pathname "src/parse"
+                        :components
+                        ((:file "package")
+                         (:file "pt"
+                                :depends-on ("package"))
+                         (:file "sgml-dtd"
+                                :depends-on ("package"))
+                         (:file "sgml-parse"
+                                :depends-on ("package" "sgml-dtd")) ))
+               #+CMU
+	       (:module cmu-fix
+			:source-pathname "src/lisp-dep/cmucl"
+			:components
+			(:serial
+			 "fd-stream"))
+	       ;;
+	       (:module patches
+			:source-pathname "src/patches"
+			:components
+			(:serial "clx-patch"))
+	       ;;
+	       (:module glue
+			:source-pathname "src/glue"
+			:components
+			(:serial
+			 "clue-patch"
+			 "package"
+			 "glue-draw"
+			 "glue"
+			 "glue-scrollbar"
+			 "glue-progress-bar"
+			 "glue-sle"
+			 "glue-list"
+			 "glue-mle"))
+	       ;;
+	       (:module imagelib
+			:source-pathname "src/imagelib"
+			:components
+			(:serial
+			 "package"
+			 "basic"
+			 "deflate"
+			 "png"))
+	       (:module main
+			:source-pathname "src"
+			:components
+			(:serial
+			 "defpack"
+			 ;;
+			 (:module clx-ext
+				  :source-pathname "clx-ext"
+				  :components
+				  (:serial
+				   #-CMU;; still has problems with DEF-EXTENSION o.ae.
+				   "shape"))
+			 ;;
+			 (:module util
+				  :source-pathname "util"
+				  :components
+				  (:parallel "character-set"
+					     "xterm"))
+                         (:module css
+                          :source-pathname "css"
+                          :components
+                          (:serial
+                           "package"
+                           "css-parse"
+                           "css-selector"
+                           "css-setup"
+                           "css-properties"))
+			 ;;
+			 (:module renderer
+				  :source-pathname "renderer"
+				  :components
+				  (:serial
+                                   "texpara"
+				   "fonts"
+				   "images"
+				   "x11"
+				   "r-struct"
+				   "html-style"
+				   "raux"
+				   "document"
+				   "renderer"
+				   "rminmax"
+				   "tables"
+				   "r-x11"
+				   "clim-device"))
+			 ;;
+			 (:module gui
+				  :source-pathname "gui"
+				  :components
+				  (:serial
+				   "gui" "clue-basic" "clue-gui" "dce-and-pce" "clue-input"
+				   ;;
+				   "clim-gui") ) ))
+               (:module :post-adjustments
+                        :components
+                        (:serial
+                         "path"
+                         "patch"
+                         "user"))
+               ))
+
+
