@@ -3,7 +3,7 @@
 (defclass clim-device ()
   ((medium :accessor clim-device-medium :initarg :medium)
    (font-database :initform nil)
-   (zoom-factor :initform 1.1 :initarg :zoom-factor)
+   (zoom-factor :initform 1.0 :initarg :zoom-factor)
    ))
 
 (defmethod device-dpi ((device clim-device))
@@ -56,7 +56,7 @@
                 (loop
                     for family      in '("Times" "Helvetica" "Courier")
                     for clim-family in '(:serif  :sans-serif :fixed) 
-                    for size-adjust in '(-2 0 -2) do 
+                    for size-adjust in '(-2 -2 -2) do 
                     (loop
                         for weight+style in '((400 :normal) (400 :italic) (700 :normal) (700 :italic))
                         for clim-face    in '(:roman       :italic       :bold         (:bold :italic))  do
@@ -80,7 +80,7 @@
     (incf size
           (if (eql (nth-value 0 (text-style-components (font-desc-ddp r)))
                    :sans-serif)
-              -2
+              0 ;;-2
               0))
     (setf (font-desc-size r) size
           (font-desc-ddp  r) (make-text-style (nth-value 0 (text-style-components (font-desc-ddp r)))
@@ -422,3 +422,28 @@
       ;;;
       (let ((gcontext (xlib:create-gcontext :drawable da)))
         (ws/x11::x11-put-pixmap-tiled da gcontext pixmap mask x1 y1 w h x0 y0) ))))
+
+
+#+NIL
+(setf clim-clx::*clx-text-family+face-map*
+  '(:fix
+    ("*-courier new"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-o"
+      :bold-italic         "bold-o"
+      :italic-bold         "bold-o"))
+    :sans-serif
+    ("*-verdana"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-i"
+      :bold-italic         "bold-i"
+      :italic-bold         "bold-i"))
+    :serif
+    ("*-times new roman"
+     (:roman               "medium-r"
+      :bold                "bold-r"
+      :italic              "medium-i"
+      :bold-italic         "bold-i"
+      :italic-bold         "bold-i")) ))
