@@ -74,7 +74,9 @@
                                               :defaults
                                               (truename *load-pathname*))))))
 
-(load (merge-pathnames "system.lisp" (rel-path "other" "mcclim")))
+;; Make this build with the CVS tree also ...
+(ignore-errors
+  (load (merge-pathnames "system.lisp" (rel-path "other" "mcclim"))))
 
 (mk:defsystem glisp
     :source-pathname #.(rel-path "src" "glisp")
