@@ -501,7 +501,7 @@
     ;;canon clauses -- each element of rule-defs becomes (start expr end action)
     (setq rule-defs
       (mapcar #'(lambda (x)
-                  (cond ((and (consp (car x)) (eq (caar x) 'in))
+                  (cond ((and (consp (car x)) (string-equal (caar x) :in))
                          (list (cadar x) (sublis macros (caddar x)) (progn (incf n-fin) n-fin) (cdr x)))
                         ((list 'initial (sublis macros (car x)) (progn (incf n-fin) n-fin) (cdr x)))))
               (reverse rule-defs)))
