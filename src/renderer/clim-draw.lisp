@@ -66,6 +66,7 @@
                    (list x1 y1 x2 y2 x3 y3 x4 y4)
                    :filled t :ink ink))
                  ((:dotted)
+                  (let ((sw (max w 1)))
                     (clim:draw-line* medium
                      (/ (+ x1 x2) 2)
                      (/ (+ y1 y2) 2)
@@ -74,11 +75,10 @@
                      :ink ink
                      :line-thickness w
                      :line-cap-shape :round
-                     :line-dashes (vector w (* 3 w)))) 
+                     :line-dashes (vector sw (* 3 sw)))))
                  ((:dashed)
-                  ;; this triggers an CLX value-error
-                  #+NIL
-                  (clim:draw-line* medium
+                  (let ((sw (max 1 w)))
+                    (clim:draw-line* medium
                      (/ (+ x1 x2) 2)
                      (/ (+ y1 y2) 2)
                      (/ (+ x3 x4) 2)
@@ -86,7 +86,7 @@
                      :ink ink
                      :line-thickness w
                      :line-cap-shape :square
-                     :line-dashes (vector (* 3 w) (* 3 w)))) 
+                     :line-dashes (vector (* 3 sw) (* 3 sw)))))
                  ((:double)
                   (clim:draw-polygon* medium
                    (list x1 y1
