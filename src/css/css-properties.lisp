@@ -663,6 +663,9 @@
     :applicable-if (numberp value)
     :value         (cons '* value))
 
+(define-percentage-cooking line-height
+    :base (prop font-size))
+
 (define-cooking orig-width
     :applicable-if t
     :value         (prop width))
@@ -778,6 +781,9 @@
 (generate-setup-style)
 
 ;; $Log$
+;; Revision 1.4  2002/07/27 18:01:47  gilbert
+;; provided percentage cooking for line-height
+;;
 ;; Revision 1.3  2002/07/24 04:10:14  gilbert
 ;; Whole file is now wraped into (eval-when (eval compile load) ...)
 ;; Fixing cold built.
