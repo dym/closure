@@ -4,8 +4,9 @@
 ;;;   Created: 1998-06-18
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: GPL (See file COPYING for details).
+;;;       $Id$
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 1998,1999 by Gilbert Baumann
+;;;  (c) copyright 1998-2002 by Gilbert Baumann
 
 ;;; This program is free software; you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -596,25 +597,21 @@
 	   (case unit
 	     (:px (* 1 a))
 	     (:em 
-              (cond ((and pt (not (style-attr pt '@font-size)))
-                     (warn "In ~S: (style-attr pt '@font-size) not available -- fix your programm."
-                           'interpret-length/low)
+              (cond ((and pt (not (realp font-size)))
+                     (warn "In ~S: font-size not available -- fix your programm."
+                           'new-interpret-length)
                      (round (* a dpi 12) 72))
-                    (pt
-                     (* a (style-attr pt '@font-size)))
+                    (t
+                     (* a font-size))
                     (t
                      (round (* a dpi 12) 72))))
 	     (:ex 
-              (cond ((null pt)
-                     (warn "In ~S: Oops ex without having an pt? -- fix your programm."
-                           'interpret-length/low)
-                     (round (* a dpi 8) 72))
-                    ((not (style-attr pt '@font-size))
-                     (warn "In ~S: Oops ex without having a font? -- fix your programm."
-                           'interpret-length/low)
+              (cond ((and pt (not (realp font-size)))
+                     (warn "In ~S: font-size not available -- fix your programm."
+                           'new-interpret-length)
                      (round (* a dpi 8) 72))
                     (t
-                     (* 1/2 (style-attr pt '@font-size) a) ))) ;xxx
+                     (* 2/3 a font-size) ))) ;xxx
 	     (:in (* dpi a))
 	     (:cm (* (round (* a dpi) 2.54))) ;DEVRND
 	     (:mm (* (round (* a dpi) 25.4))) ;DEVRND
@@ -658,7 +655,8 @@
 (defmacro define-length-cooking (prop)
   `(define-cooking ,prop
     :applicable-if (and (consp value)
-                    (member (car value) '(:px :em :ex :in :cm :mm :pt :pc :canvas-h-percentage :canvas-v-percentage)))
+                    (member (car value)
+                     '(:px :em :ex :in :cm :mm :pt :pc :canvas-h-percentage :canvas-v-percentage)))
     :value         (new-interpret-length value
                     device (prop font-size) pt dpi)))
 
@@ -667,3 +665,8 @@
     :applicable-if (and (consp value) (eql (car value) ':%))
     :value         (* 1/100 ,base (cdr value))))
 
+
+;; $Log$
+;; Revision 1.2  2002/07/29 12:42:30  gilbert
+;; - NEW-INTERPRET-LENGTH no actually uses its 'font-size' argument
+;;
