@@ -23,6 +23,9 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
+;; Revision 1.10  2003/06/15 16:47:44  gilbert
+;; OpenMCL patches by Patrik Nordebo
+;;
 ;; Revision 1.9  2003/03/16 17:46:19  gilbert
 ;; we call xlib:display-finish-output when a page is finished.
 ;;
@@ -365,7 +368,11 @@
   (ensure-closure)
   #+sbcl
   (error "unimplemented")
-  #-sbcl
+  #+openmcl
+  (with-closure ()
+    (glisp::process-interrupt *closure-process*
+                          #'(lambda () (apply command args)))))
+  #-(or sbcl openmcl)
   (with-closure ()
     (mp:process-interrupt *closure-process*
                           #'(lambda () (apply command args)))))

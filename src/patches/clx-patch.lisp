@@ -111,7 +111,7 @@
 (progn
 
   (defun authority-pathname ()
-    (or (let ((xauthority (sys:getenv "XAUTHORITY")))
+    (or (let ((xauthority (glisp:getenv "XAUTHORITY")))
           (and xauthority
                (pathname xauthority)))
         (merge-pathnames (user-homedir-pathname) (make-pathname :name ".Xauthority"))))
@@ -160,6 +160,10 @@
             (ignore-errors (read-line input)))
         (when input
           (close input)))))
+
+  #+(and openmcl clx)
+  (defun get-hostname ()
+    (get-host-name))
   
 ;;; GET-BEST-AUTHORIZATION
 

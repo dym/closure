@@ -341,7 +341,6 @@
       "STREAM-FINISH-OUTPUT"
       "STREAM-FORCE-OUTPUT"
       "STREAM-ADVANCE-TO-COLUMN"
-      "STREAM-CLEAR-INPUT"
 
       "STREAM-READ-BYTE"
       "STREAM-WRITE-BYTE" ))
@@ -353,6 +352,7 @@
       #+:sbcl                   ,@'(:sb-gray)
       #+:ALLEGRO               ,@'(:common-lisp :excl :stream)
       #+:HARLEQUIN-COMMON-LISP ,@'(:stream)
+      #+:OPENMCL               ,@'(:ccl)
       ))
 
   (defun seek-symbol (name packages)
@@ -363,7 +363,7 @@
                         (list sym)
                       nil)))
               packages)
-        (progn (format T "~&There is no ~A." name)
+        (progn (format T "~&There is no ~A in ~A." name packages)
                (finish-output)
                nil)))
 

@@ -693,7 +693,7 @@ Hmm unter PCL geht das nicht            ;-(
                (merge-pathnames (make-pathname
                                  :type type
                                  :name
-                                 (let ((*print-base* 36))
+                                 (let ((*print-base* 35))
                                    (format nil "ws_~S" (random (expt 36 7)))))
                                 temp-dir)))
       (unwind-protect

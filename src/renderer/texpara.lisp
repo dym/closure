@@ -15,8 +15,8 @@
 
 (defparameter *precision* 1
   "Resolution of your device.")
-
-(defconstant +badness-infinite+ 10000)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+	   (defconstant +badness-infinite+ 10000))
 
 (eval-when (compile eval load)
 
