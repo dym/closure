@@ -63,10 +63,12 @@
         (rs (css:style-attr pt 'css:@border-right-style))
         (bs (css:style-attr pt 'css:@border-bottom-style))
         (ls (css:style-attr pt 'css:@border-left-style))
+
         (tw (css:style-attr pt 'css:@border-top-width))
         (rw (css:style-attr pt 'css:@border-right-width))
         (bw (css:style-attr pt 'css:@border-bottom-width))
         (lw (css:style-attr pt 'css:@border-left-width))
+
         (tc (css:style-attr pt 'css:@border-top-color))
         (rc (css:style-attr pt 'css:@border-right-color))
         (bc (css:style-attr pt 'css:@border-bottom-color))
@@ -439,15 +441,11 @@
         ((realp x)              (round x))
         (t                      x)))
 
-
-
 (defun resolve-width/1 (document device pt ml wd mr width-left)
   ;; Es gilt
   (assert (or (numberp ml) (eq ml :auto)))
   (assert (or (numberp wd) (eq wd :auto)))
   (assert (or (numberp mr) (eq mr :auto)))
-
-  
   
   ;; Bei replaced elements nimm die intrinsic width
   (let ((re (replaced-element-p document device pt)))
