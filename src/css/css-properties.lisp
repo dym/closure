@@ -34,9 +34,18 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;;  Some Default Values
 
+#||
 (defparameter *thin-border*		'(:px . 1))
 (defparameter *medium-border*		'(:px . 2))
 (defparameter *thick-border*		'(:px . 5))
+||#
+
+;; unfortunatly we lost cooking on default values:
+(defparameter *thin-border*		1)
+(defparameter *medium-border*		2)
+(defparameter *thick-border*		5)
+
+
 (defparameter *normal-line-height*	'1.2)
 (defparameter *initial-font-family*	'("times"))
 (defparameter *initial-color*		'"#000")
@@ -536,22 +545,6 @@
     :applicable-if (not (eql (prop float) :none))
     :value         :block)
 
-(define-cooking border-top-width
-    :applicable-if (eql (prop border-top-style) :none)
-    :value         0)
-
-(define-cooking border-right-width
-    :applicable-if (eql (prop border-right-style) :none)
-    :value         0)
-
-(define-cooking border-bottom-width
-    :applicable-if (eql (prop border-bottom-style) :none)
-    :value         0)
-
-(define-cooking border-left-width
-    :applicable-if (eql (prop border-left-style) :none)
-    :value         0)
-
 (define-cooking (background-image list-style-image)
     :applicable-if (stringp value)
     :value         (url:parse-url value))
@@ -648,12 +641,18 @@
 (define-percentage-cooking letter-spacing
     :base (prop font-size))
 
+#||
+;; this one is bogus
 (define-cooking vertical-align
     :applicable-if (percentage-p value)
     :value         (let ((lh (prop line-height)))
                      (if (and (consp lh) (eq (car lh) '*))
                          (* (cdr lh) (prop font-size))
                          lh)))
+||#
+
+(define-percentage-cooking vertical-align
+    :base (prop font-size))
 
 (define-cooking line-height
     :applicable-if (eql value :normal)
@@ -695,6 +694,24 @@
 
 (define-simple-short-hand-property border
     :value <the-border>)
+
+;;;;;
+
+(define-cooking border-top-width
+    :applicable-if (eql (prop border-top-style) :none)
+    :value         0)
+
+(define-cooking border-right-width
+    :applicable-if (eql (prop border-right-style) :none)
+    :value         0)
+
+(define-cooking border-bottom-width
+    :applicable-if (eql (prop border-bottom-style) :none)
+    :value         0)
+
+(define-cooking border-left-width
+    :applicable-if (eql (prop border-left-style) :none)
+    :value         0)
 
 ;;; ---------------------------------------------------------------------------
 
@@ -781,6 +798,11 @@
 (generate-setup-style)
 
 ;; $Log$
+;; Revision 1.5  2002/07/29 12:41:25  gilbert
+;; - cooking for 'border-*-width' on '(eql (prop border-*-style) :none)'
+;;   must come late.
+;; - border default values are now uncooked.
+;;
 ;; Revision 1.4  2002/07/27 18:01:47  gilbert
 ;; provided percentage cooking for line-height
 ;;
