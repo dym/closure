@@ -753,7 +753,14 @@
   (let ((pn (mungle-pathname-to-directory pathname)))
     (probe-file (merge-pathnames pn (make-pathname :name ".")))))
 
-#-(OR CLISP CMU ALLEGRO)
+#+sbcl
+(defun is-directory-p (pathname)
+  (multiple-value-bind (success? dev ino mode)
+      (sb-unix:unix-stat (namestring pathname))
+    (declare (ignore dev ino))
+    (and success? (logbitp 14 mode))))
+
+#-(OR CLISP CMU ALLEGRO SBCL)
 (progn
   #.(warn "Define IS-DIRECTORY-P for your flavour of LISP.")
   (defun is-directory-p (pathname)
