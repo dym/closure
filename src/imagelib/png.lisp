@@ -222,7 +222,7 @@
                            (map 'string #'code-char 
                                 (png::rfc1951-uncompress-octects (subseq data (+ p 4))) ))))
                 ((string= type "IDAT")
-                 (setf idat (concatenate '(simple-array (unsigned-byte 8)) idat data)))
+                 (setf idat (concatenate '(simple-array (unsigned-byte 8) (*)) idat data)))
                 (t
                  ) ))))
     (make-png-image :plte plte
