@@ -588,8 +588,9 @@
         (if (> (aref idata x y) #x80000000)
             (setf (aref xdata x y) 0)
           (setf (aref xdata x y) 1))))
-    (xlib:put-image bitmap gc im :src-x 0 :src-y 0 :x 0 :y 0 :width width :height height
-                    :bitmap-p nil)
+    (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
+      (xlib:put-image bitmap gc im :src-x 0 :src-y 0 :x 0 :y 0 :width width :height height
+		      :bitmap-p nil))
     (xlib:free-gcontext gc)
     bitmap))
 
