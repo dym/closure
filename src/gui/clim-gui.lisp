@@ -23,6 +23,9 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
+;; Revision 1.4  2002/08/16 17:20:50  gilbert
+;; url-entry fix
+;;
 ;; Revision 1.3  2002/07/29 12:39:08  gilbert
 ;; - we pass more tests now
 ;;
@@ -290,7 +293,6 @@
   (clim-sys:make-process
    (lambda ()
      (window-clear *pane*)
-     (setf (gadget-value (find-pane-named *frame* 'url-entry)) url)
      (progn;;with-sheet-medium (medium *pane*)
        (let ((*medium* *pane*))
          (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
