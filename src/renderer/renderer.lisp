@@ -25,6 +25,30 @@
 
 ;;;; TODO
 
+;; . test clear on tables.
+
+;; . setting borders on list-item results in funny effects.
+
+;; . we still fail on percentage values on line-height (due to
+;;   css-properties not defining the new infra-structure). Bad!
+
+;; . we still fail on :lighter and :bolder.
+
+;; . although we have the TeX mode, justify does not work.
+
+;; . when creating the first line pseudo element we probably should
+;;   not copy its HTML style attr style, should we?
+
+;; . the first line of PRE element looks too small; looks like an
+;;   inhertance bug wrt the first-line pseudo element.
+
+;; . <tt>a</tt>, <tt>b</tt> is rendered as "a,b" instead of "a, b"
+;;   correct? might be some HTML property.
+
+;; . (oops) it looks like we have a new CSS bug: when the style says
+;;   'margin: 20px; margin-left: auto' margin-left winds up as being
+;;   But this only happens with style from the HTML style attribute.
+
 ;; . we should rethink spilling lines since currently we have drawing
 ;;   order problem as we draw the background and border after the
 ;;   content, in fact we misuse drawing the content to also keep track
@@ -54,6 +78,9 @@
 ;; . test height on block-level elements.
 
 ;; . vertical align on inline replaced elements does not seem to work.
+
+;; . and to boot we still need to implement 'top' and 'bottom'
+;;   vertical alignment.
 
 ;; . we need modify the replaced element protocol to also contain a
 ;;   predicate has-baseline-p since the glorious CSS1 spec seems to
@@ -787,21 +814,8 @@
         (t
          nil)))
 
-(defun render-inline-robj (rc pt ro new-box)
-  (let ((wd (css:style-attr pt 'css:@width)))
-    (when (css::percentage-p wd)
-      ;;xxx
-      (setq wd (maybe-resolve-percentage wd (- (rc-x1 rc) (rc-x0 rc))))
-      (css:set-style-attr pt 'css:@width wd) )
-    (ro/resize ro
-               (and (realp wd) 
-                    wd)
-               (and (realp (css:style-attr pt 'css:@height))
-                    (css:style-attr pt 'css:@height)))
-    (setf (abox-contents new-box) 
-      (list (make-rbox :obj ro)) )))
-
 (defun nuke-white-space (pt first? last?)
+  ;; Only used in rminmax.lisp
   "Handles white space nukeing for PCDATA elements; 'first-p' and 'last-p'
    should indicate, wheter this element is the first/last child of its 
    parent; Returns two values: 
@@ -2214,7 +2228,12 @@ festmachen?]
       (add-fbox rc pc (render-floating-box rc pt) nil))
      ;; Replaced Element?
      ((not (null re))
-      (walk/replaced-element rc pc pt re re-map))
+      (case (css:display pt)
+        ((:INLINE)
+         (walk/replaced-element rc pc pt re re-map))
+        ((:BLOCK :LIST-ITEM)
+         (walk/block-level-element rc pc pt))))
+     ;;
      ;; Forced line break?
      ((eq (sgml:gi pt) :BR)
       (walk/br rc pc) )
@@ -2798,49 +2817,97 @@ festmachen?]
          (warn "Bad CSS image value: ~S." value)
          :none)))
 
-(defun render-normal-block (rc pt parent-box &optional (res nil))
-  (let (result)
-    (progn
-     (or res (setf res (make-skeleton-bbox-for-pt rc pt (- (rc-x1 rc) (rc-x0 rc)))))
-     (let ((bg-record
-            (clim:with-new-output-record (clim-user::*medium*)
-             )))
-       (setf (bbox-decoration-output-record res) bg-record)
-       (let (iy parent-width)
-         ;;
-         (setf parent-width (- (rc-x1 rc) (rc-x0 rc))) ;xxx right?
-    
-         ;; setup new margins
-         (setf (bbox-ix res) (+ (rc-x0 rc) (bbox-margin-left res)))
-         (with-new-margins (rc (+ (rc-x0 rc)
-                                  (abox-left-leading res))
-                               (+ (rc-x0 rc)
-                                  (abox-left-leading res) (bbox-width res)))
-           ;; care for clear
-           (handle-clear rc pt (css:style-attr pt 'css:@clear)) ;why doesn't this work?!
-           (when (member (sgml:gi pt) `(:hr :table))
-             (handle-clear rc pt :both))
-           ;; register margin
-           (add-vertical-margin rc
-                                (bbox-margin-top res) 
-                                (lambda (y)
-                                  (setf (bbox-iy res) 
-                                        (or (bbox-iy res) y)) ))
-           ;; ???
-           (setf iy (rc-y rc))
-           ;; care for border or padding:
-           (when (or (not (zerop (abox-border-top-width res)))
-                     (not (zerop (abox-padding-top res))))
-             (flush-vertical-margin rc)
-             (setf iy (setf (bbox-iy res) (rc-y rc)))
-             (incf (rc-y rc) (abox-border-top-width res))
-             (incf (rc-y rc) (bbox-padding-top res)) )
-           ;;
-           (progn ;;clim:with-output-as-presentation (clim-user::*medium* pt 'pt)
-            (setf result
-             (render-normal-block-content rc pt res iy parent-width)))
-           (render-block-border-and-background rc res bg-record) ))))
-    result))
+(defun render-normal-block (rc pt parent-box &optional (res nil)
+                                             &aux result)
+  (declare (ignore parent-box))
+  (or res (setf res (make-skeleton-bbox-for-pt rc pt (- (rc-x1 rc) (rc-x0 rc)))))
+  (let ((bg-record
+         (clim:with-new-output-record (clim-user::*medium*)
+          )))
+    (setf (bbox-decoration-output-record res) bg-record)
+    (let (iy parent-width)
+      ;;
+      (setf parent-width (- (rc-x1 rc) (rc-x0 rc))) ;xxx right?
+      
+      ;; setup new margins
+      (setf (bbox-ix res) (+ (rc-x0 rc) (bbox-margin-left res)))
+      (with-new-margins (rc (+ (rc-x0 rc)
+                               (abox-left-leading res))
+                            (+ (rc-x0 rc)
+                               (abox-left-leading res) (bbox-width res)))
+        ;; care for clear
+        (handle-clear rc pt (css:style-attr pt 'css:@clear)) ;why doesn't this work?!
+        (when (member (sgml:gi pt) `(:hr :table))
+          (handle-clear rc pt :both))
+        ;; register margin
+        (add-vertical-margin rc
+                             (bbox-margin-top res) 
+                             (lambda (y)
+                               (setf (bbox-iy res) 
+                                     (or (bbox-iy res) y)) ))
+        ;; ???
+        (setf iy (rc-y rc))
+        ;; care for border or padding:
+        (when (or (not (zerop (abox-border-top-width res)))
+                  (not (zerop (abox-padding-top res))))
+          (flush-vertical-margin rc)
+          (setf iy (setf (bbox-iy res) (rc-y rc)))
+          (incf (rc-y rc) (abox-border-top-width res))
+          (incf (rc-y rc) (bbox-padding-top res)) )
+        ;;
+        (progn;;clim:with-output-as-presentation (clim-user::*medium* pt 'pt)
+          (multiple-value-bind (re re-map) (replaced-element-p (rc-document rc) (rc-device rc) pt)
+            (cond ((not (null re))
+                       re-map
+                   (flush-vertical-margin rc)
+                   (resize-replaced-element-according-to-style re pt)
+                   (incf (rc-y rc) (nth-value 1 (ro/size re)))
+                   (closure/clim-device::medium-draw-ro*
+                    clim-user::*medium*
+                    re (rc-x0 rc) (rc-y rc))
+                   (incf (rc-y rc) (nth-value 2 (ro/size re)))
+                   )
+                  (t
+                   (setf result (render-normal-block-content rc pt res iy parent-width))))
+            
+            ;; bottom padding
+            (when (or (not (zerop (bbox-padding-bottom res)))
+                      (not (zerop (abox-border-bottom-width res))))
+              (flush-vertical-margin rc))
+
+            ;; iy
+            (when (null (bbox-iy res))
+              (setf (bbox-iy res) iy))  ;xxx
+
+            ;; eventuelles height
+            (let (y-unten)
+              (incf (rc-y rc) (bbox-padding-bottom res))
+              (incf (rc-y rc) (abox-border-bottom-width res))
+
+              (cond ((not (eq :auto (css:style-attr pt 'css:@height)))
+                     (let* ((aheight (- (- (rc-y rc) (bbox-iy res))
+                                        (bbox-padding-top res)
+                                        (abox-border-top-width res)
+                                        (bbox-padding-bottom res)
+                                        (abox-border-bottom-width res)))
+                            (delta (- (css:style-attr pt 'css:@height) aheight)))
+                       (cond ((< delta 0)
+                              (warn "height delta is negative."))
+                             (t
+                              (incf (rc-y rc) delta))))) )
+            
+              (setf y-unten (rc-y rc))
+            
+              (setf (bbox-iheight res) 
+                    (- (- y-unten (bbox-iy res))
+                       (bbox-padding-top res)
+                       (abox-border-top-width res)
+                       (bbox-padding-bottom res)
+                       (abox-border-bottom-width res))))
+            ;; bottom margin
+            (add-vertical-margin rc (bbox-margin-bottom res))
+            (render-block-border-and-background rc res bg-record) )))))
+  res)
 
 (defun render-block-border-and-background (rc bbox &optional (bg-record (bbox-decoration-output-record bbox)))
   "Render the border and background of an block element, the border and background is taken form
@@ -2859,10 +2926,11 @@ the bbox argument."
     (when (or background-color
               background
               (and border
-                   (not (zerop (border-top-width border)))
-                   (not (zerop (border-left-width border)))
-                   (not (zerop (border-bottom-width border)))
-                   (not (zerop (border-right-width border)))))
+                   (or
+                    (not (zerop (border-top-width border)))
+                    (not (zerop (border-left-width border)))
+                    (not (zerop (border-bottom-width border)))
+                    (not (zerop (border-right-width border))))))
       (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
        (multiple-value-bind (x y w h) (bbox-border-coordinates bbox)
          (let ((new-record 
@@ -2875,29 +2943,23 @@ the bbox argument."
                    (closure/clim-device::x11-draw-background
                     (rc-document rc) clim-user::*medium* background
                     x y w h))
-                 (when (and (abox-border-top-width bbox)
+                 (when t #+NIL
+                       (and (abox-border-top-width bbox)
                             (> (abox-border-top-width bbox) 0))
-                   #+NIL
-                   (clim:draw-rectangle* clim-user::*medium*
-                    x y (+ x w) (+ y h)
-                    :filled nil
-                    :ink clim:+black+)
                    (clim-draw-border clim-user::*medium*
                                      x y (+ x w) (+ y h)
                                      (abox-border-top-width bbox)
                                      (abox-border-top-style bbox)
-                                     (abox-border-top-color bbox)
+                                     (if (abox-border-top-width bbox) (abox-border-top-color bbox) "black")
                                      (abox-border-right-width bbox)
                                      (abox-border-right-style bbox)
-                                     (abox-border-right-color bbox)
+                                     (if (abox-border-right-width bbox) (abox-border-right-color bbox) "black")
                                      (abox-border-bottom-width bbox)
                                      (abox-border-bottom-style bbox)
-                                     (abox-border-bottom-color bbox)
-                                     (abox-border-right-width bbox)
-                                     (abox-border-right-style bbox)
-                                     (abox-border-right-color bbox))
-                   )
-                 )))
+                                     (if (abox-border-bottom-width bbox) (abox-border-bottom-color bbox) "black")
+                                     (abox-border-left-width bbox)
+                                     (abox-border-left-style bbox)
+                                     (if (abox-border-left-width bbox) (abox-border-left-color bbox) "black"))))))
            (clim:delete-output-record new-record (clim:output-record-parent new-record))
            (clim:add-output-record new-record bg-record) ))))))
 
@@ -2911,7 +2973,10 @@ the bbox argument."
 ;;; Border
 
 (defun css-color-ink (color)
-  (clim-user::parse-x11-color color))
+  ;; xxx, we still sometimes wind up with bogus values here
+  (if (stringp color)
+      (clim-user::parse-x11-color color)
+      clim:+black+))
 
 (defun 3d-light-color (base-color)
   (multiple-value-bind (i h s) (clim:color-ihs base-color)
@@ -3147,48 +3212,8 @@ the bbox argument."
                  (spill-line rc pc)
                  (unless (zerop (length (pc-current-word pc))) ;xxx condition right?
                    (end-current-word rc pc)
-                   (spill-line rc pc))))
-          ))
-      ;; nachdem das erledigt ist:
-          
-      ;; bottom padding
-      (when (or (not (zerop (bbox-padding-bottom res)))
-                (not (zerop (abox-border-bottom-width res))))
-        (flush-vertical-margin rc))
-
-      ;; iy
-      (when (null (bbox-iy res))
-        (setf (bbox-iy res) iy))        ;xxx
-
-      ;; eventuelles height
-      (let (y-unten)
-        (incf (rc-y rc) (bbox-padding-bottom res))
-        (incf (rc-y rc) (abox-border-bottom-width res))
-
-        (cond ((not (eq :auto (css:style-attr pt 'css:@height)))
-               (let* ((aheight (- (- (rc-y rc) (bbox-iy res))
-                                  (bbox-padding-top res)
-                                  (abox-border-top-width res)
-                                  (bbox-padding-bottom res)
-                                  (abox-border-bottom-width res)))
-                      (delta (- (css:style-attr pt 'css:@height) aheight)))
-                 (cond ((< delta 0)
-                        (warn "height delta is negative."))
-                       (t
-                        (incf (rc-y rc) delta))))) )
-            
-        (setf y-unten (rc-y rc))
-            
-        (setf (bbox-iheight res) 
-          (- (- y-unten (bbox-iy res))
-             (bbox-padding-top res)
-             (abox-border-top-width res)
-             (bbox-padding-bottom res)
-             (abox-border-bottom-width res))))
-      
-      ;; bottom margin
-      (add-vertical-margin rc (bbox-margin-bottom res))
-      res)))
+                   (spill-line rc pc)))) ))
+      nil)))
 
 (defun tex-break-para (rc pc)
   (let ((end (pc-eline pc))
@@ -3392,9 +3417,9 @@ the bbox argument."
         (declare (type fixnum i))
 
         (unless yet-flushed-p
-                         (flush-vertical-margin rc)
-                         (setf yy (+ (rc-y rc) line-height))
-                         (setf yet-flushed-p t))
+          (flush-vertical-margin rc)
+          (setf yy (+ (rc-y rc) line-height))
+          (setf yet-flushed-p t))
 
         (labels ((foo-int (i)
                    (declare (type fixnum i))
@@ -3451,7 +3476,9 @@ the bbox argument."
                    (declare (type fixnum i))
                    (let ((this-is-dangling-oc-p (< i number-of-dangling-ocs))
                          ;; kludge!
-                         (replaced-element (oc-ro x)))
+                         (replaced-element (oc-ro x))
+                         (bg-record(clim:with-new-output-record (clim-user::*medium*)
+                                    )))
                      (push x ocs)
                      (let* ((style (style-computed (car (oc-style-stack x))))
                             (text-decoration (computed-style-text-decoration style))
@@ -3474,7 +3501,8 @@ the bbox argument."
                                (t
                                 (incf dy (oc-dy x))
                                 (setf i (foo (+ i 1)))))
-                         (draw-text-decoration xx1 (+ yy dy) xx text-decoration color)
+                         (unless replaced-element
+                           (draw-text-decoration xx1 (+ yy dy) xx text-decoration color))
                          (let* ((cc (let ((cc (svref (the (simple-array t (*)) line-chunks)
                                                      (the fixnum (1- i)))))
                                       (and (cc-p cc)
@@ -3504,25 +3532,34 @@ the bbox argument."
                                            (- padding-bottom)
                                            (- padding-top)
                                            (- (oc-margin-bottom x))
-                                           (- (oc-margin-top x)))
+                                           ;;(- (oc-margin-top x))
+                                           )
                                     xx  (+ yy (- dy) (nth-value 2 (ro/size replaced-element))
+                                           (- (oc-margin-bottom x))
                                            )
                                     )
                                    (values xx1 (- yy dy (text-style-ascent (oc-ts x))
                                                   border-top-width padding-top)
                                            xx  (+ (- yy dy) (text-style-descent (oc-ts x))
                                                   border-bottom-width padding-bottom)))
-                             (clim-draw-background clim-user::*medium*
-                                                   x1 y1 x2 y2
-                                                   (background-color (computed-style-background style)))
-                             (clim-draw-border clim-user::*medium*
-                                               x1 y1 x2 y2
-                                               BORDER-TOP-WIDTH BORDER-TOP-STYLE BORDER-TOP-COLOR
-                                               BORDER-RIGHT-WIDTH BORDER-RIGHT-STYLE BORDER-RIGHT-COLOR
-                                               ;; 0 :none "black"
-                                               BORDER-BOTTOM-WIDTH BORDER-BOTTOM-STYLE BORDER-BOTTOM-COLOR
-                                               (if this-is-dangling-oc-p 0 BORDER-LEFT-WIDTH)
-                                               BORDER-LEFT-STYLE BORDER-LEFT-COLOR) )))))
+
+                             (let ((new-record
+                                    (clim:with-new-output-record (clim-user::*medium*)
+                                     (clim-draw-background clim-user::*medium*
+                                      x1 y1 x2 y2
+                                      (background-color (computed-style-background style)))
+                                     (clim-draw-border clim-user::*medium*
+                                      x1 y1 x2 y2
+                                      BORDER-TOP-WIDTH BORDER-TOP-STYLE BORDER-TOP-COLOR
+                                      BORDER-RIGHT-WIDTH BORDER-RIGHT-STYLE BORDER-RIGHT-COLOR
+                                      ;; 0 :none "black"
+                                      BORDER-BOTTOM-WIDTH BORDER-BOTTOM-STYLE BORDER-BOTTOM-COLOR
+                                      (if this-is-dangling-oc-p 0 BORDER-LEFT-WIDTH)
+                                      BORDER-LEFT-STYLE BORDER-LEFT-COLOR) )))
+                               (clim:delete-output-record new-record (clim:output-record-parent new-record))
+                               (clim:add-output-record new-record bg-record)
+                               )
+                             )))))
                    i)
                  ;;
                  (foo (i)
@@ -3569,45 +3606,44 @@ the bbox argument."
                           (incf i 1))
                          (t
                           (incf i)) )))) )
-          (foo 0))
+          (let ((xx1 xx))
+            (foo 0)
+
+            ;;
+            ;; setup new dangling open chunks
+            ;;
+            (setf (pc-dangling-ocs pc) nil)
+            (let ((dangling-ocs nil))
+              (do ()
+                  ((null ocs))
+                (let ((x (copy-oc (pop ocs))))
+                  ;; clear the open chunks border
+                  (cond ((eq (oc-pt x) css::*first-line-element*)
+                         ;; This is the :first-line pseudo element.
+                         ;; we leave that out
+                         (setf first-line-was-here t))
+                        (t
+                         (setf (oc-border-width x) 0
+                               (oc-border-style x) :none
+                               (oc-border-color x) :none)
+                         (push x dangling-ocs)))))
+              ;;
+              (setf (pc-dangling-ocs pc) dangling-ocs) )
+      
+
+            ;; kludge for the containing block element's text-decoration
+            (unless first-line-was-here
+              (draw-text-decoration xx1 (+ yy dy) xx
+                                    (css:style-attr (pc-block-pt pc) 'css:@text-decoration)
+                                    (css:style-attr (pc-block-pt pc) 'css:@color)))
+            ))
 
         ;;
-        ;; setup new dangling open chunks
+        (incf (rc-y rc) line-height)
+        (incf (rc-y rc) line-depth)
         ;;
-        (setf (pc-dangling-ocs pc) nil)
-        (let ((dangling-ocs nil))
-          (do ()
-              ((null ocs))
-            (let ((x (copy-oc (pop ocs))))
-              ;; clear the open chunks border
-              (cond ((eq (oc-pt x) css::*first-line-element*)
-                     ;; This is the :first-line pseudo element.
-                     ;; we leave that out
-                     (setf first-line-was-here t))
-                    (t
-                     (setf (oc-border-width x) 0
-                           (oc-border-style x) :none
-                           (oc-border-color x) :none)
-                     (push x dangling-ocs)))))
-          ;;
-          (setf (pc-dangling-ocs pc) dangling-ocs) )
-      
-        ;; horizontally align line
-        (let* ((line-width (pc-line-width pc))
-               (lack (- (- (pc-x1 pc) (pc-x0 pc)) line-width))
-               (line-box-x
-                (+ (pc-x0 pc)
-                   (case (pc-justify pc)
-                     (:left     0)
-                     (:right    lack)
-                     (:center   (floor lack 2))
-                     (otherwise 0)))))
-          ;;
-          (incf (rc-y rc) line-height)
-          (incf (rc-y rc) line-depth)
-          ;;
-          (values
-           first-line-was-here))) )))
+        (values
+         first-line-was-here))) ))
 
 (defun spill-line (rc pc &aux first-line-was-here)
    ;;#+CMU (mp:process-yield)
@@ -3925,9 +3961,13 @@ the bbox argument."
                 (- (oc-depth oc)
                    (font-desc-descent (text-style-font (oc-ts parent-oc))))))
              (:TOP
-              (push oc *tops*) :top)
+              (push oc *tops*)
+              :top
+              0)
              (:BOTTOM
-              (push oc *btms*) :bottom) )))))
+              (push oc *btms*)
+              :bottom
+              0) )))))
 
 ;;;;
 ;;;; Marker Boxen
