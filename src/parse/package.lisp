@@ -9,7 +9,6 @@
            #:PT-CHILDREN 
            #:PT-PARENT 
            #:PT-ATTRS 
-           #:PT-CACHE
            #:SLURP-CATALOG
            ;; in pt-utils:
            #:map-pt

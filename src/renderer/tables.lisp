@@ -44,6 +44,8 @@
     ;;fixme: doc
     nil)
 
+(defparameter *debug-tables* t)
+
 ;; We need to distinguish two models:
 ;;  a. tables with fixed width
 ;;  b. tables with dynamic width (width = :auto)
@@ -124,9 +126,9 @@
   ;;This is not checked below, so do it here.
   (assert (every (rcurry #'member '(:THEAD :TBODY :TFOOT :COL :COLGROUP :CAPTION)) 
                  (mapcar #'sgml:gi (sgml:pt-children pt))))
-  (when (> (count :CAPTION (sgml:pt-children pt) :key #'sgml:gi) 1)
+  (when (> (count :table-caption (element-children pt) :key #'css:display) 1)
     (warn "A TABLE element may only contain one CAPTION element."))
-  (when (member :CAPTION (cdr (sgml:pt-children pt)) :key #'sgml:gi)
+  (when (member :table-caption (cdr (element-children pt)) :key #'css:display)
     (warn "The CAPTION element is only permitted immediately after the TABLE start tag."))
   (let* ((colgroups (parse-colgroups-from-table pt))
          (rowgroups (parse-rowgroups-from-table pt colgroups))
@@ -163,7 +165,7 @@
 
     ;; caption
     (dolist (k (sgml:pt-children pt))
-      (cond ((eql (sgml:gi k) :caption)
+      (cond ((eql (css:display k) :table-caption)
              (setf (table-caption table) k))))
 
     (when (table-caption table)
@@ -182,6 +184,22 @@
      (patch-caption/left table))
     ((:RIGHT)
      (patch-caption/right table)) ))
+
+(defun patch-caption-to-table (table)
+  table
+  ;; xxx
+  #||
+  (case (style-attr (table-caption table) 'css:@caption-side)
+    ((:TOP)
+     (patch-caption/top table))
+    ((:BOTTOM)
+     (patch-caption/bottom table))
+    ((:LEFT)
+     (patch-caption/left table))
+    ((:RIGHT)
+     (patch-caption/right table)) )
+  ||#
+  )
 
 (defun patch-caption/top (table)
   (setf (table-rowgroups table)
@@ -255,7 +273,9 @@
   ;; attribute, emit warning. (This also catches multiple conflicting `width'
   ;; definitions for TD elements -- the first seen wins).
   ;; xxx this is now handled differently
-  '(map-table-cells 
+  table
+  #+NIL
+  (map-table-cells 
     (lambda (cell)
       (let ((w (pt-attr/length (cell-content cell) :width nil)))
         (when (and *treat-100%-special-p* 
@@ -270,9 +290,6 @@
                                          (r2::device-canvas-width 
                                           (rc-device *rcontext*)))
                                       100)))
-            '(print (list 'fetch-td/th-width-attribute 
-                    'nw= nw
-                    'w= w))
             (setf w nw)
             ))
         (when w
@@ -591,6 +608,7 @@
     (dolist (cell (rowgroup-cells rg))
       (funcall fun cell))))
 
+#||
 (defun calc-table-column-max/min-widthen (table what)
   (let ((n (table-number-of-columns table)))
     (let ((res (make-array n :initial-element 0)))
@@ -604,6 +622,7 @@
                                        (max (aref res (+ (cell-col-index cell) i)) m))))))
                              table))
       res)) )
+||#
 
 (defun calc-table-column-max/min-widthen (table what)
   (let ((n (table-number-of-columns table)))
@@ -753,7 +772,7 @@
 
 (defun set-cell-border (cell bw top right bottom left)
   (let ((pt (cell-content cell)))
-    (cond ((eq (sgml:gi pt) :caption)
+    (cond ((eql (css:display pt) :table-caption)
            nil)                         ;nothing to do.
           (t
            (css:set-style-attr pt 'css:@border-top-width    (if top bw 0))
@@ -937,7 +956,7 @@
           (setf (cell-height cell) 
             (max (cell-height cell)
                  (cell-user-specified-height cell)))) )))
-  
+
   ;; So nun noch um baseline kuemmern:
   (dotimes (y (rowgroup-number-of-rows rowgroup))
     (let ((cells (let ((res nil))
@@ -946,25 +965,25 @@
                        (push cell res))))))
       ;; `cells' now contains all cells in the `y' row
       ;; find the baseline
-      (let ((baseline-soll (reduce #'max* (mapcar (lambda (cell)
-                                               (bbox-baseline (cell-bbox cell)))
-                                             cells)
-                              :initial-value nil)))
-        (when baseline-soll
-          (dolist (cell cells)
-            (when (eq :baseline (cell-valign cell))
-                   (let ((baseline-ist (bbox-baseline (cell-bbox cell))))
-                     (when baseline-ist
-                       (let ((dy (- baseline-soll baseline-ist)))
-                         ;; now finally move the content down
-                         (mapc (lambda (x)
-                                 (nmove-box x 0 dy))
-                               (bbox-contents (cell-bbox cell)))
-                         (incf (bbox-iheight (cell-bbox cell)) dy)
-                         (incf (cell-height cell) dy))))))))))
-  
-  ;; BUG: Die Floats, die in TD elemenet erzeugt werden fallen unter
-  ;; den Tisch. -- Stimmt ja gar nicht!
+
+      (cond ((find :baseline cells :key #'cell-valign)
+             (let ((baseline-soll (reduce #'max* (mapcar (lambda (cell)
+                                                           (bbox-baseline (cell-bbox cell)))
+                                                         cells)
+                                          :initial-value nil)))
+               (when baseline-soll
+                 (dolist (cell cells)
+                   (when (eq :baseline (cell-valign cell))
+                     (let ((baseline-ist (bbox-baseline (cell-bbox cell))))
+                       (when baseline-ist
+                         (let ((dy (- baseline-soll baseline-ist)))
+                           ;; now finally move the content down
+                           (mapc (lambda (x)
+                                   (nmove-box x 0 dy))
+                                 (bbox-contents (cell-bbox cell)))
+                           (incf (bbox-iheight (cell-bbox cell)) dy)
+                           (incf (cell-height cell) dy))))))))))))
+
   ;; Each cell now knows its width as well as its height.
   (let* ((nrows (loop for c in (rowgroup-cells rowgroup) 
                     maximize (+ (cell-row-index c) (cell-row-span c))))
@@ -1003,9 +1022,6 @@
     ;; return value: the y increment
     (+ (vreduce* #'+ rhs)) )) 
 
-(defun render-all-table-cells (rc table www)
-)
-
 (defun render-table (rc pt parent-box)
   ;; Now, while we render a table, we unfortunatly have to disable
   ;; drawing.
@@ -1023,6 +1039,8 @@
   (let ((table (parse-table pt))
         (x0 (find-x0-at rc (rc-y rc) (rc-x0 rc)))
         (x1 (find-x1-at rc (rc-y rc) (rc-x1 rc))))
+    (when *debug-tables*
+      (describe table))
     ;; alles erstmal aufsetzen:
     (setup-cell-attrs table)
     (table-setup-min/max-widthen rc table)
@@ -1042,60 +1060,35 @@
                   (- x1 x0))))
         ;; nun die bbox bauen
         ;; dazu:
-        (let* ((b.width (reduce #'+ cws))
-               (b.x0 
-                (case table.align
-                  ((:CENTER)
-                   (+ x0 (floor (- (- x1 x0) b.width) 2)))
-                  (otherwise
-                   x0)))
-               (b.x1 (+ x0 b.width)))
-          (css:set-style-attr pt 'css:@width b.width)
-          (let ((box (make-skeleton-bbox-for-pt rc pt (- x1 x0))))
-            ;;(setf (bbox-ix box) b.x0)
-            ;; jetzt alles rendern:
-            (with-new-margins (rc (+ x0 (abox-left-leading box))
-                                  (- x1 (abox-right-leading box)))
-              (let ((x0 (+ x0 (abox-left-leading box)))) ;ALERT was: x0 -- change compatible ?
-                (setf (bbox-iy box) (rc-y rc)
-                      (bbox-ix box) x0)
+        (let ((b.width (reduce #'+ cws)))
+          (css:set-style-attr pt 'css:@width b.width))
+        (let ((box (make-skeleton-bbox-for-pt rc pt (- x1 x0))))
+          ;;(setf (bbox-ix box) b.x0)
+          ;; jetzt alles rendern:
+          (with-new-margins (rc (+ x0 (abox-left-leading box))
+                                (- x1 (abox-right-leading box)))
+            (let ((x0 (+ x0 (abox-left-leading box)))) ;ALERT was: x0 -- change compatible ?
+              (setf (bbox-iy box) (rc-y rc)
+                    (bbox-ix box) x0)
 
-                (dolist (rowgroup (table-rowgroups table))
-                  (let ((dy (render-rowgroup rc cws rowgroup (bbox-ix box) (rc-y rc))))
-                    (incf (rc-y rc) dy)))
+              (dolist (rowgroup (table-rowgroups table))
+                (let ((dy (render-rowgroup rc cws rowgroup (bbox-ix box) (rc-y rc))))
+                  (incf (rc-y rc) dy)))
         
-                (map-table-cells (lambda (cell)
-                                   (when (cell-bbox cell)
-                                     (add-content box (cell-bbox cell))))
-                                 table)
-                (setf (bbox-iheight box) (- (rc-y rc) (bbox-iy box) ;xxx
-                                            ;; zzz hmm
-                                            (bbox-padding-top box)
-                                            (abox-border-top-width box)
-                                            (bbox-padding-bottom box)
-                                            (abox-border-bottom-width box)))
-                (setf (bbox-width box)
-                  (reduce #'+ cws))
-                (add-content parent-box box)
-                box))))))))
-
-            
-
-
-(defun calc-table-column-widthen (table width avail)
-  ;; table - the table this is about
-  ;; width - the assigned width (either :auto or an real number)
-  ;; avail - the available width
-  ;; returns a vector of column widthen
-  (assert (typep width '(or (member :auto) real)))
-  (assert (typep avail 'real))
-  ;; Cells now come in three flavors:
-  ;;  no width given
-  ;;  percentage width given
-  ;;  absolute width given
-  ;; --
-  ;; 
-  )
+              (map-table-cells (lambda (cell)
+                                 (when (cell-bbox cell)
+                                   (add-content box (cell-bbox cell))))
+                               table)
+              (setf (bbox-iheight box) (- (rc-y rc) (bbox-iy box) ;xxx
+                                          ;; zzz hmm
+                                          (bbox-padding-top box)
+                                          (abox-border-top-width box)
+                                          (bbox-padding-bottom box)
+                                          (abox-border-bottom-width box)))
+              (setf (bbox-width box)
+                    (reduce #'+ cws))
+              (add-content parent-box box)
+              box)))))))
 
 (defun calc-table-column-widthen (table width avail &aux spyp)
   ;; `width' ist die zugewiesene Breite -- kann auch :auto sein.
@@ -1209,6 +1202,7 @@
     res))
 
 (defun table-get-cell (table rg y x)
+  (declare (ignore table))
   (dolist (cell (rowgroup-cells rg))
     (when (and (= y (cell-row-index cell))
                (= x (cell-col-index cell)))
@@ -1384,6 +1378,7 @@
 (defun bbox-baseline (bbox)
   ;; xxx with the new renderer this is now completety obsolete, we
   ;; have neither bboxen or iboxen any longer.
+  (declare (ignore bbox))
   0)
 
 ;; Eingabe:

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CSS; Readtable: GLISP; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CSS; Readtable: GLISP; Encoding: utf-8; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CSS selectors
 ;;;            [Split off from css-parse.lisp]
@@ -132,47 +132,7 @@
 
 (defun find-style (sheet element implicit-style 
                    &optional (origin 0) (p 0) 
-                             (res (make-array %%--NUMBER-- :initial-element nil)))
-  ;; Remember that the style sheet contains the assigments in reverse order!
-  (do ((q (style-sheet-assignments sheet) (cdr q))
-       (p p (- p 1)))
-      ((endp q)
-       ;; loop end
-       (dolist (im (reverse (style-sheet-imported-sheets sheet)))
-         (multiple-value-setq (res p) (find-style im element nil origin p res)))
-       ;; take care for implicit style
-       (decf p (length implicit-style)) ;make room in the p dimension
-       (let ((p p))
-         (dolist (k implicit-style)
-           (let ((prop (car k)) (value (cdr k)))
-             (setf res (augment-assignment-to-result* prop value
-                                                     0 origin 0 0 0 (prog1 p (incf p))
-                                                     res)))))
-       ;; recurse into the super sheet
-       (cond ((style-sheet-super-sheet sheet)
-              (setf res 
-                (find-style (style-sheet-super-sheet sheet) element nil (- origin 1) 0 res))))
-       ;; all done
-       (values res p))
-    ;; loop:
-    (let ((a (car q)))
-      (cond ((css2-selector-matches-p (assignment-selector a) element)
-             (let ((spec (or (assignment-specifity a)
-                             (setf (assignment-specifity a)
-                               (css2-selector-specificity (assignment-selector a))))))
-               (let ()
-                 (setf res
-                   (augment-assignment-to-result* (assignment-slot a)
-                                                 (assignment-value a)
-                                                 (if (assignment-importantp a) 1 0) ;CSS-1 modell
-                                                 origin 
-                                                 (aref spec 0) (aref spec 1) (aref spec 2)
-                                                 p
-                                                 res)))))))))
-
-(defun find-style (sheet element implicit-style 
-                   &optional (origin 0) (p 0) 
-                             (res (make-array %%--NUMBER-- :initial-element nil)))
+                             (res (make-array *n-attrs* :initial-element nil)))
   ;; handle imported sheets
   (dolist (im (style-sheet-imported-sheets sheet))
     (multiple-value-setq (res p) (find-style im element nil origin p res)))
@@ -183,25 +143,6 @@
              (dolist (a (rule-assignments rule))
                (let ()
                  (setf res
-                   (augment-assignment-to-result* (assignment-slot a)
-                                                  (assignment-value a)
-                                                  (if (assignment-importantp a) 1 0) ;CSS-1 modell
-                                                  origin
-                                                  (svref (assignment-specifity a) 0)
-                                                  (svref (assignment-specifity a) 1)
-                                                  (svref (assignment-specifity a) 2)
-                                                  (+ p (svref (assignment-specifity a) 3))
-                                                  res)) ))))
-          ((gi-selection-p rule)
-           (let ((q (gethash (sgml:gi element) 
-                             (gi-selection-hashtable rule)
-                             (gi-selection-default rule))))
-             (dolist (rule q)
-               ;; code duplication alert!
-               (when (css2-selector-matches-p (rule-selector rule) element)
-                 (dolist (a (rule-assignments rule))
-                   (let ()
-                     (setf res
                        (augment-assignment-to-result* (assignment-slot a)
                                                       (assignment-value a)
                                                       (if (assignment-importantp a) 1 0) ;CSS-1 modell
@@ -210,19 +151,38 @@
                                                       (svref (assignment-specifity a) 1)
                                                       (svref (assignment-specifity a) 2)
                                                       (+ p (svref (assignment-specifity a) 3))
-                                                      res)) )))))) ))
+                                                      res)) ))))
+          ((gi-selection-p rule)
+           (let ((q (gethash (element-gi element) 
+                             (gi-selection-hashtable rule)
+                             (gi-selection-default rule))))
+             (dolist (rule q)
+               ;; code duplication alert!
+               (when (css2-selector-matches-p (rule-selector rule) element)
+                 (dolist (a (rule-assignments rule))
+                   (let ()
+                     (setf res
+                           (augment-assignment-to-result* (assignment-slot a)
+                                                          (assignment-value a)
+                                                          (if (assignment-importantp a) 1 0) ;CSS-1 modell
+                                                          origin
+                                                          (svref (assignment-specifity a) 0)
+                                                          (svref (assignment-specifity a) 1)
+                                                          (svref (assignment-specifity a) 2)
+                                                          (+ p (svref (assignment-specifity a) 3))
+                                                          res)) )))))) ))
   ;; adjust p
   (incf p (style-sheet-j sheet))
   ;; handle implicit style
   (dolist (k implicit-style)
     (let ((prop (car k)) (value (cdr k)))
       (setf res (augment-assignment-to-result* prop value
-                                              0 origin 0 0 0 (prog1 p (incf p))
-                                              res))))
+                                               0 origin 0 0 0 (prog1 p (incf p))
+                                               res))))
   ;; recurse into super sheets
   (cond ((style-sheet-super-sheet sheet)
          (setf res 
-           (find-style (style-sheet-super-sheet sheet) element nil (- origin 1) 0 res))))
+               (find-style (style-sheet-super-sheet sheet) element nil (- origin 1) 0 res))))
   ;; return what we found
   (values res p))
 
@@ -252,8 +212,24 @@
     res))
 
 (defun css2-selector-matches-p (selector element)
-  ;;(break)
-  ;;(sleep .1) (print (list 'css2-selector-matches-p selector element))
+  ;; here is a kludge
+  (cond ((and (pseudo-class-matches-p :first-line element)
+              (not (find '(pclass #.(rod "first-line")) selector
+                         :test #'equalp)))
+         (return-from css2-selector-matches-p nil))
+        ((and (pseudo-class-matches-p :before element)
+              (not (find '(pclass #.(rod "before")) selector
+                         :test #'equalp)))
+         (return-from css2-selector-matches-p nil))
+        ((and (pseudo-class-matches-p :after element)
+              (not (find '(pclass #.(rod "after")) selector
+                         :test #'equalp)))
+         (return-from css2-selector-matches-p nil))
+        ((and (pseudo-class-matches-p :first-letter element)
+              (not (find '(pclass #.(rod "first-letter")) selector
+                         :test #'equalp)))
+         (return-from css2-selector-matches-p nil)))
+  ;;
   (dolist (pred selector t)
     (unless
         (case (car pred)
@@ -262,7 +238,7 @@
           ((class) (css2-class-match-p (cadr pred) element))
 
           ((attrib-exists)
-           (not (null (renderer::pt-attr* element (intern-attribute-name (cadr pred))))))
+           (not (null (element-attribute element (intern-attribute-name (cadr pred))))))
 
           ((attrib)
            (attribute-equal-p element (cadr pred) (caddr pred) nil)) ;CS or CI??
@@ -284,6 +260,9 @@
                        (rod-equal #.(map 'vector #'char-code "first-line") (cadr pred)))
                   (pseudo-class-matches-p :first-line element))
                  ((and (= (length (cdr pred)) 1)
+                       (rod-equal #.(map 'vector #'char-code "first-letter") (cadr pred)))
+                  (pseudo-class-matches-p :first-letter element))
+                 ((and (= (length (cdr pred)) 1)
                        (rod-equal #.(map 'vector #'char-code "before") (cadr pred)))
                   (pseudo-class-matches-p :before element))
                  ((and (= (length (cdr pred)) 1)
@@ -298,8 +277,8 @@
            (css2-ancester-match-p (cdr pred) element))
              
           ((parent)
-           (and (sgml:pt-parent element)
-                (css2-selector-matches-p (cdr pred) (sgml:pt-parent element))))
+           (and (element-parent element)
+                (css2-selector-matches-p (cdr pred) (element-parent element))))
           ((preceded-by)
            (let ((prec (pt-predecessor element)))
              (and prec
@@ -307,20 +286,6 @@
           (t
            t))
       (return nil) )))
-
-(defun pseudo-class-matches-p (pclass pt)
-  (case pclass
-    ((:link :visited)
-     (and (not (null (r2::pt-attr/latin1 pt :href))))) ;this is of course a bit too lazy!
-    ((:hover)
-     (and
-      (sgml:pt-attr pt :%hover-p nil)))
-    ((:first-line)
-     (eq pt *first-line-element*))
-    ((:before :after)
-     (eq (sgml::pt-attr pt :%pseudo-class) pclass))
-    (otherwise
-     nil)))
 
 (defun vector-greater-p (v1 v2)
   (dotimes (i (length v1) nil)
@@ -357,55 +322,28 @@
             ((< a b) (return nil)))) ))
 
 (defun pt-predecessor (pt)
-  (let ((par (sgml:pt-parent pt)))
+  (let ((par (element-parent pt)))
     (and par
          (let ((r nil))
-           (dolist (k (sgml:pt-children par))
+           (dolist (k (element-children par))
              (when (eq k pt)
                (return r))
-             (unless (eq (sgml:gi k) :pcdata)
+             (unless (text-element-p k)
                (setf r k)))))))
 
 (defun css2-ancester-match-p (selector element)
-  (and (sgml:pt-parent element)
-       (or (css2-selector-matches-p selector (sgml:pt-parent element))
-           (css2-ancester-match-p selector (sgml:pt-parent element)))))
+  (and (element-parent element)
+       (or (css2-selector-matches-p selector (element-parent element))
+           (css2-ancester-match-p selector (element-parent element)))))
 
 ;; class, id are case-sensitive in HTML
 
-(defun intern-attribute-name (string)
-  ;; XXX hack
-  (intern (string-upcase (map 'string (lambda (x) (or (code-char x) #\?)) string)) :keyword))
-
-(defun intern-gi (string)
-  (intern-attribute-name string))
-
-(defun css2-class-match-p (string element)
-  (attribute-contains-p element #.(map 'vector #'char-code "CLASS") string t))
-
-(defun css2-id-match-p (string element)
-  (attribute-equal-p element #.(map 'vector #'char-code "ID") string t))
-
-(defun css2-gi-match-p (string element)
-  (eq (sgml::pt-name (the sgml::pt element)) string))
-
-;;  ;; XXX hack
-;;  (let* ((gi (symbol-name (sgml:gi element)))
-;;         (n.gi (length gi))
-;;         (n.string (length string)))
-;;    (and (= n.gi n.string)
-;;         (dotimes (i n.gi t)
-;;           (unless (char-equal (code-char (%rune string i)) (schar gi i))
-;;             (return nil))))))
-;;  (eq (intern-attribute-name string) (sgml:gi element)))
-;;
-
 (defun attribute-contains-p (element attribute string case-sensitive-p)
-  (let ((v (renderer::pt-attr* element (intern-attribute-name attribute) nil)))
+  (let ((v (element-attribute element (intern-attribute-name attribute))))
     (and v (rod-contains-p v string case-sensitive-p))))
 
 (defun attribute-equal-p (element attribute string case-sensitive-p)
-  (let ((v (renderer::pt-attr* element (intern-attribute-name attribute) nil)))
+  (let ((v (element-attribute element (intern-attribute-name attribute))))
     (and v
          (if case-sensitive-p
              (rod= v string)
@@ -426,7 +364,7 @@
         (return t)))))
 
 (defun attribute-contain-dash-p (element attribute string case-sensitive-p)
-  (let ((v (renderer::pt-attr* element (intern-attribute-name attribute) nil)))
+  (let ((v (element-attribute element (intern-attribute-name attribute))))
     (and v 
          (>= (length v) (length string))
          (if case-sensitive-p 
@@ -532,33 +470,6 @@
 
 (defun assignment-list-adjoin (new assignments)
   (cons (cons (reverse (car new)) (cdr new)) assignments))
-
-#||
-(defun style-sheet-lookup (self pt slot &optional default)
-  (declare (optimize (safety 0) (speed 3) (debug 0)))
-  (cond ((null self) default)
-        (t
-         (let ((ass)
-               (best nil))
-           (dolist (k (cons self (style-sheet-imported-sheets self)))
-             (dolist (a (svref (style-sheet-assignments k)
-                               (symbol-value slot)))
-               (when (selector-matches-p (car a) pt)
-                 (push a ass))))
-           (dolist (k ass)
-             (cond ((or (null best)
-                        (not (selector-lessp (car k) (car best))) )
-                    ;; das ist alles eigentlich schon in
-                    ;; 'assignment-list-adjoin' behandelt.
-                    (setf best k))))
-           (if best
-               (cdr best)
-               (style-sheet-lookup (style-sheet-super-sheet self)
-                                   pt slot default)))) ))
-||#
-
-
-;; Noch ein test fall: font-family: foo /**/ bar
 
 ;;;; new CSS-2 selectors
 
@@ -948,8 +859,3 @@
 ;; - p/ident is not unicode safe!
 ;; - some how we broke "CSS1 Test Suite: LINK and @import" ;-(
 
-;; #!H1 #!CLASS #!BODY #!HTML #!HTML:BODY #!HTML:LANG
-;; name-namespace
-;; name-keyword
-;; keyword-name keyword &optional (namespace #!HTML:)
-;; 

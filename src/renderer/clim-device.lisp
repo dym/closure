@@ -3,7 +3,7 @@
 (defclass clim-device ()
   ((medium :accessor clim-device-medium :initarg :medium)
    (font-database :initform nil)
-   (zoom-factor :initform 1.5 :initarg :zoom-factor)
+   (zoom-factor :initform 1.1 :initarg :zoom-factor)
    ))
 
 (defmethod device-dpi ((device clim-device))
@@ -124,14 +124,14 @@
 
 (defun resolve-background-position (spec image-dim box-dim)
   (cond ((css:percentage-p spec)
-         (let ((i (maybe-resolve-percentage spec image-dim))
-               (b (maybe-resolve-percentage spec box-dim)))
+         (let ((i (r2::maybe-resolve-percentage spec image-dim))
+               (b (r2::maybe-resolve-percentage spec box-dim)))
            (- b i)))
+        ((null spec)
+         (warn "~S: null spec." 'resolve-background-position)
+         0)
         (t
          spec)))
-
-(defun background-aimage (drawable bg)
-  (error "Dont call me"))
 
 (defun background-pixmap+mask (document drawable bg)
   (cond ((r2::background-%pixmap bg)
@@ -165,13 +165,44 @@
 (defmethod update-lazy-object (document (self null))
   nil)
 
+(defun map-region-rectangles (fun region)
+  (clim:map-over-region-set-regions
+   (lambda (r)
+     (apply fun (mapcar #'round
+                        (multiple-value-list (clim:rectangle-edges* r)))))
+   region
+   :normalize :y-banding))
+
+(defun region-to-x11-rectangle-list (region)
+  (let ((res nil))
+    (map-region-rectangles (lambda (x1 y1 x2 y2)
+                             (push (- y2 y1) res)
+                             (push (- x2 x1) res)
+                             (push y1 res)
+                             (push x1 res))
+                           region)
+    (mapcar #'round res)))
+
+(defun region-from-x11-rectangle-list (rectangle-sequence)
+  (let ((res clim:+nowhere+))
+    (do ((q rectangle-sequence (nthcdr 4 q)))
+        ((endp q))
+      (setf res (region-union res
+                              (make-rectangle* (first q) (second q)
+                                               (+ (first q) (third q))
+                                               (+ (second q) (fourth q))))))
+    res))
+
 (defun background-pixmap+mask (document drawable bg)
+  (print `(background-pixmap+mask ,bg))
   (cond ((r2::background-%pixmap bg)
          ;; already there
          (values (r2::background-%pixmap bg)
                  (r2::background-%mask bg)))
         (t
-         (let ((aimage (r2::document-fetch-image document nil (r2::background-image bg))))
+         (let ((aimage #+NIL(r2::document-fetch-image document nil (r2::background-image bg))
+                       (r2::url->aimage document (r2::background-image bg) nil)
+                       ))
            ;; arg, jetzt haben wir wieder broken images
            (cond ((eql nil aimage)
                   (values :none))
@@ -202,11 +233,11 @@
                                             (list :none))))
                     (clip-region (let ((q old-clip-mask))
                                    (if (consp q)
-                                       (gu:region-from-x11-rectangle-list q)
-                                     gu:+everywhere+)))
-                    (paint-region (gu:region-intersection 
+                                       (region-from-x11-rectangle-list q)
+                                     +everywhere+)))
+                    (paint-region (region-intersection 
                                    clip-region
-                                   (gu:make-rectangle* x y (+ x w) (+ y h)))) )
+                                   (make-rectangle* x y (+ x w) (+ y h)))) )
                ;; There is a bug in CLX wrt to clip-x / clip-y
                ;; Turning off caching helps
                (setf (xlib:gcontext-cache-p ggc) nil)
@@ -218,12 +249,12 @@
                    do
                    (loop for j from (floor (- y yo) ih) to (ceiling (- (+ y h) (+ yo ih)) ih)
                      do
-                     (let ((rect (gu:make-rectangle*
+                     (let ((rect (make-rectangle*
                                   (+ xo (* i iw))
                                   (+ yo (* j ih))
                                   (+ (+ xo (* i iw)) iw)
                                   (+ (+ yo (* j ih)) ih))))
-                       (gu:map-region-rectangles 
+                       (map-region-rectangles 
                         (lambda (rx0 ry0 rx1 ry1)
                           (xlib:with-gcontext (ggc :exposures :off
                                                    :fill-style :tiled
@@ -236,7 +267,7 @@
                             (xlib:draw-rectangle drawable ggc
                                                  rx0 ry0 (max 0 (- rx1 rx0)) (max 0 (- ry1 ry0))
                                                  t)))
-                        (gu:region-intersection paint-region rect))))) )
+                        (region-intersection paint-region rect))))) )
                ;; turn on caching again (see above)
                (setf (xlib:gcontext-cache-p ggc) t)
                ;;
@@ -246,15 +277,17 @@
 (defun x11-draw-background (document medium bg x y width height
                             &optional (bix x) (biy y) (biwidth width) (biheight height))
   (when bg
-    #+NIL
-    (unless (eql (background-color bg) :transparent)
-      (ws/x11::fill-rectangle* drawable gcontext
-                               (round x) (round y) 
-                               (max 0 (round width))
-                               (max 0 (round height))
-                               (background-color bg)) )
+    ;; #+NIL
+    ;; (unless (eql (background-color bg) :transparent)
+    ;;   (ws/x11::fill-rectangle* drawable gcontext
+    ;;                            (round x) (round y) 
+    ;;                            (max 0 (round width))
+    ;;                            (max 0 (round height))
+    ;;                            (background-color bg)) )
     (unless (eql (r2::background-image bg) :none)
-      (multiple-value-bind (pixmap mask) (background-pixmap+mask document (sheet-direct-mirror (medium-sheet medium)) bg)
+      (multiple-value-bind (pixmap mask)
+          (background-pixmap+mask document (sheet-direct-mirror (medium-sheet medium)) bg)
+        (print (list 'x11-draw-background pixmap mask))
         (unless (eql pixmap :none)
           (let* ((iw (xlib:drawable-width pixmap))
                  (ih (xlib:drawable-height pixmap))
@@ -266,8 +299,8 @@
                       ((:no-repeat :repeat-x) ih))) )
             (let ((hp (car (r2::background-position bg)))
                   (vp (cdr (r2::background-position bg))))
-              (let ((xo (+ bix (r2::resolve-background-position hp iw biwidth)))
-                    (yo (+ biy (r2::resolve-background-position vp ih biheight))))
+              (let ((xo (+ bix (resolve-background-position hp iw biwidth)))
+                    (yo (+ biy (resolve-background-position vp ih biheight))))
                 (medium-draw-pm3-tiled* medium pixmap mask
                                (round (case (r2::background-repeat bg)
                                         ((:repeat :repeat-x) x)
@@ -277,23 +310,6 @@
                                         ((:no-repeat :repeat-x) (+ yo))))
                                (round w) (round h)
                                (round (+ xo)) (round (+ yo)))))) ))) ))
-
-(defun x11-draw-border (drawable gcontext border x y w h)
-  (when border
-    (ws/x11::draw-border drawable gcontext
-                        x y w h
-                        (border-top-style border)
-                        (border-top-width border)
-                        (border-top-color border)
-                        (border-right-style border)
-                        (border-right-width border)
-                        (border-right-color border)
-                        (border-bottom-style border)
-                        (border-bottom-width border)
-                        (border-bottom-color border)
-                        (border-left-style border)
-                        (border-left-width border)
-                        (border-left-color border))))
 
 ;;;; --------------------------------------------------------------------------------
 

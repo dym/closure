@@ -9,10 +9,10 @@
 (in-package :css)
 
 (defun element-has-class-p (element class)
-  (class-eq class (element-attribute element :class)))
+  (class-eq class (element-css-class element)))
 
 (defun element-has-id-p (element id)
-  (id-eq id (element-attribute pt :id)))
+  (id-eq id (element-css-id element)))
 
 ;;; hmmm
 
@@ -26,11 +26,16 @@
 (defun css2-class-match-p (string element)
   (attribute-contains-p element #.(map 'vector #'char-code "CLASS") string t))
 
+(defun css2-class-match-p (string element)
+  ;; XXX we should search for occurence
+  (equalp string (closure-protocol:element-css-class element)))
+;;   (attribute-contains-p element #.(map 'vector #'char-code "CLASS") string t))
+
 (defun css2-id-match-p (string element)
   (attribute-equal-p element #.(map 'vector #'char-code "ID") string t))
 
 (defun css2-gi-match-p (string element)
-  (eq (sgml::pt-name (the sgml::pt element)) string))
+  (eq (element-gi element) string))
 
 ;; We probably want
 ;;   intern-gi    document-language id-rod
@@ -48,27 +53,13 @@
 (defun id-eq (x y)
   (equalp x y))
 
-;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun element-style-cache (element)
-  (sgml::pt-cache element))
-
-(defun (setf element-style-cache) (new-value element)
-  (setf (sgml::pt-cache element) new-value))
-
-(defun pseudo-class-matches-p (pclass pt)
-  (case pclass
-    ((:link :visited)
-     (and (not (null (r2::pt-attr/latin1 pt :href))))) ;this is of course a bit too lazy!
-    ((:hover)
-     (and
-      (sgml:pt-attr pt :%hover-p nil)))
-    ((:first-line)
-     (eq pt *first-line-element*))
-    ((:before :after :first-letter)
-     (eq (sgml::pt-attr pt :%pseudo-class) pclass))
-    (otherwise
-     nil)))
-
-
-
+;; we still need to cover these:
+;;
+;; css-parse.lisp:                      (renderer::maybe-parse-style-sheet-from-url
+;; css-setup.lisp: ((interpret-length device value pt (r2::pt-font-size pt)))))
+;; css-setup.lisp:                 (*dpi* (r2::device-dpi *device*))
+;; css-setup.lisp:                 (dpi (r2::device-dpi *device*)))
+;; css-setup.lisp:              (round (* a (r2::device-canvas-width device))
+;; css-setup.lisp:              (round (* a (r2::device-canvas-height device))

@@ -363,12 +363,12 @@
       (char-code r))))
 
 (defmethod g/unread-byte (byte (self use-char-for-byte-stream-flavour))
-  (g/unread-char (or (code-char byte)
+  (g/unread-char (or (and #+CMU (<= byte char-code-limit) (code-char byte))
                      (error "Cannot stuff ~D. into a character." byte))
                  self))
 
 (defmethod g/write-byte (byte (self use-char-for-byte-stream-flavour))
-  (g/write-char (or (code-char byte)
+  (g/write-char (or (and #+CMU (<= byte char-code-limit) (code-char byte))
                     (error "Cannot stuff ~D. into a character." byte))
                 self))
 
@@ -380,7 +380,7 @@
   (let ((byte (g/read-byte self eof-error-p :eof)))
     (if (eq byte :eof)
         eof-value
-      (let ((res (code-char byte)))
+      (let ((res (and #+CMU (<= byte char-code-limit) (code-char byte))))
         (or res
             (error "The byte ~D. could not been represented as character in your LISP implementation." byte))))))
 
@@ -535,6 +535,7 @@
                         :adjustable t)))
 
 (defmethod g/close ((self vector-output-stream) &key abort)
+  (declare (ignorable self abort))
   nil)
 
 (defmethod g/finish-output ((self vector-output-stream))
@@ -663,6 +664,7 @@ Hmm unter PCL geht das nicht            ;-(
 (defun g/open-inet-socket (&rest args)
   (multiple-value-bind (stream kind) (apply #'open-inet-socket args)
     (ecase kind
+      #-CMU
       (:char (cl-char-stream->gstream stream))
       (:byte (cl-byte-stream->gstream stream)) )))
 
@@ -790,7 +792,7 @@ Hmm unter PCL geht das nicht            ;-(
 ;; das nicht, deswegen das Macro hier. Einige Compiler haben auch kein
 ;; DEFINE-COMPILER-MACRO :-(
 
-(defmacro mapc* (fn list &environment env)
+(defmacro mapc* (fn list)
   (let ((g (gensym)))
     `(dolist (,g ,list)
        ,(compile-funcall fn (list g)))))
@@ -806,6 +808,7 @@ Hmm unter PCL geht das nicht            ;-(
 
 (defmacro vreduce* (fun seq &rest rest &key (key '#'identity) from-end start end 
                                             (initial-value nil initial-value?))
+  (declare (ignore rest))
   (let (($start (make-symbol "start")) 
         ($end (make-symbol "end"))
         ($i (make-symbol "i"))
@@ -1108,17 +1111,3 @@ Hmm unter PCL geht das nicht            ;-(
         (princ ", variable"))
       )))
 
-;;;; 
-
-(defun g/read-signed-byte/LE (stream size)
-  
-  )
-
-(defun g/read-unsigned-byte/LE (stream size)
-  )
-
-(defun g/read-signed-byte/BE (stream size)
-  )
-
-(defun g/read-unsigned-byte/BE (stream size)
-  )

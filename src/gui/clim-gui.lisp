@@ -23,6 +23,9 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
+;; Revision 1.5  2003/03/13 19:29:17  gilbert
+;; lots of hacking
+;;
 ;; Revision 1.4  2002/08/16 17:20:50  gilbert
 ;; url-entry fix
 ;;
@@ -43,12 +46,25 @@
 
 (defvar *medium*)
 
+(defvar *initial-url* nil)
+
+(defvar closure:*home-page* "http://www.stud.uni-karlsruhe.de/~unk6/closure/user.html")
+(defvar closure:*user-wants-images-p* t)
+
+(defvar *closure-process* nil)
+
 (defclass closure-pane (sheet-multiple-child-mixin
                         application-pane)
   ())
 
+;;; Curde History
+
+(defvar *back-history* nil)
+(defvar *forw-history* nil)
+
 (define-application-frame closure ()
   ()
+  (:menu-bar menubar-command-table)
   (:panes
    (canvas (make-pane 'closure-pane
             :height 2000
@@ -67,39 +83,49 @@
     :text-style (make-text-style :sans-serif :roman :normal)
     :scroll-bar nil
     :height 20
+    :min-height 20
+    :max-height 20
     :width 200
     :background +black+
     :foreground +white+)
-   (interactor :interactor :height 200 :min-height 50 :max-height 200)
-   (back (make-pane 'push-button :label "Back"))
-   (forward (make-pane 'push-button :label "Forward"))
-   (stop (make-pane 'push-button :label "Stop"))
-   (url-entry (make-pane 'text-field
-               :value "http://www.w3.org/"
-               :max-width +fill+
-               :background +white+))
+   (interactor
+    :interactor
+    :foreground +black+
+    :background (make-rgb-color 1 1 7/8)
+    :height 50 :min-height 50 :max-height 50
+    :scroll-bars nil :border nil)
    (wholine
-    :pointer-documentation :width 5 :max-width +fill+ :height 20
+    :pointer-documentation :width 5 :max-width +fill+
+    :height 25
+    :text-style (make-text-style :sans-serif :roman 10)
     :foreground +white+
     :background +black+)
-   (menu-bar (climi::make-menu-bar 'menubar-command-table :height 25)))
+   ;;(menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
+   )
   (:layouts
    (default
        (vertically ()
-         menu-bar
-         (horizontally ()
-           (vertically ()
-             (climi::scrolling (:width 830 :height 600 :min-height 400 :max-height 20000)
-                               canvas)
-             (vertically () 
-               interactor))
-           #+NIL
-           (labelling (:label "Auxillary Pane")
-             aux))
-         (horizontally ()
+         (spacing (:thickness 5)
+                  (scrolling (:width 830 :height 600 :min-height 600 :max-height 20000
+                              :scroll-bar :vertical)
+                    canvas))
+         (spacing (:thickness 5)
+                  interactor)
+         (horizontally (:height 80 :min-height 80 :max-height 80)
            wholine
            2
            (200 status))))
+   (hidden-listener
+       (vertically ()
+         (spacing (:thickness 5)
+                  (scrolling (:width 830 :height 600 :min-height 600 :max-height 20000
+                              :scroll-bar :vertical)
+                    canvas))
+         (horizontally (:height 80 :min-height 80 :max-height 80)
+           wholine
+           2
+           (200 status))))
+   #+NIL
    (hidden-listener
        (vertically ()
          menu-bar
@@ -111,27 +137,22 @@
            wholine
            2
            (200 status)))))
-  ;;(:top-level (closure-frame-top-level . nil))
+  (:top-level (closure-frame-top-level . nil))
   )
+
 
 (make-command-table 'menubar-command-table
 		    :errorp nil
 		    :menu '(("File" :menu file-command-table)
                             ("Go"   :menu go-command-table)
-                            ("Bookmarks"   :menu bookmarks-command-table)
-                            ("View"     :menu view-command-table)
+                            ;; ("Bookmarks"   :menu bookmarks-command-table)
+                            ;; ("View"     :menu view-command-table)
                             ("Appearance" :menu appearance-command-table)
                             ))
 
 (make-command-table 'appearance-command-table :errorp nil
                     :menu '(("Show Listener" :command com-show-listener)
                             ("Hide Listener" :command com-hide-listener)))
-
-(define-closure-command com-show-listener ()
-  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) t))
-
-(define-closure-command com-hide-listener ()
-  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) nil))
 
 (make-command-table 'file-command-table
                     :errorp nil
@@ -159,103 +180,236 @@
                             ;;("Forward" :command com-forward)
                             ))
 
-
-(defparameter *shopping-list* nil)
-
-
-
-(define-closure-command com-hide-aux-pane ()
-  (setf (sheet-enabled-p (sheet-parent(find-pane-named *application-frame* 'aux))) nil))
-(define-closure-command com-show-aux-pane ()
-  (setf (sheet-enabled-p (sheet-parent(find-pane-named *application-frame* 'aux))) t))
-
-(define-closure-command com-add-to-shopping-list ((url 'url))
-  (setf *shopping-list* (append *shopping-list* (list url)))
-  #+NIL
-  (setf (pane-needs-redisplay (sheet-parent (find-pane-named *application-frame*
-                                                             'aux)))
-        t))
-
-(defun aux-display (frame pane)
-  (dolist (k *shopping-list*)
-    (present k 'url)
-    (terpri)))
-
-(define-closure-command nop ()
-  )
-
-(defmethod closure-frame-top-level ((frame application-frame)
-				       &key (command-parser 'command-line-command-parser)
-				       (command-unparser 'command-line-command-unparser)
-				       (partial-command-parser
-					'command-line-read-remaining-arguments-for-partial-command)
-				       (prompt "Command: "))
-  (declare (ignore command-parser command-unparser partial-command-parser prompt))
-  (clim-extensions:simple-event-loop))
-
-(define-closure-command com-foo ()
-  (let ((*standard-output* *trace-output*))
-    (let #+CMU
-      ((*standard-output* sys:*tty*)
-       (*standard-input* sys:*tty*)
-       (*debug-io* sys:*tty*)
-       (*error-output* sys:*tty*)
-       (*trace-output* sys:*tty*))
-      #-CMU
-      ()
-      (foo)
-      )))
+(defmethod closure-frame-top-level
+    ((frame application-frame)
+     &key (command-parser 'command-line-command-parser)
+     (command-unparser 'command-line-command-unparser)
+     (partial-command-parser
+      'command-line-read-remaining-arguments-for-partial-command)
+     (prompt "Closure => "))
+  (catch 'closure-quit
+    (loop
+        (with-simple-restart (forget "Just forget this command, restart the command loop.")
+          (let ((*standard-input* (frame-standard-input frame))
+                (*standard-output* (frame-standard-output frame))
+                (*query-io* (frame-query-io frame))
+                (*pointer-documentation-output* (frame-pointer-documentation-output
+                                                 frame))
+                ;; during development, don't alter *error-output*
+                ;; (*error-output* (frame-error-output frame))
+                (*command-parser* command-parser)
+                (*command-unparser* command-unparser)
+                (*partial-command-parser* partial-command-parser)
+                (prompt-style (make-text-style :fix :italic :normal)))
+            (map-over-sheets #'(lambda (pane)
+                                 (if (and (typep pane 'clim-stream-pane)
+                                          (eq (climi::pane-display-time pane) :command-loop)
+                                          (climi::pane-display-function pane))
+                                     (let ((func (climi::pane-display-function pane)))
+                                       (window-clear pane)
+                                       (funcall func frame pane) ; XXX other arguments
+                                        ; XXX incremental redisplay
+                                       )))
+                             (frame-top-level-sheet frame))
+            (let ((*application-frame* frame))
+              (when *initial-url*
+                (com-visit-url *initial-url*))
+              (setf *initial-url* nil)
+              (setf *closure-inited-p* t)
+              (when *standard-input*
+                (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
+                (when prompt
+                  (with-text-style (*standard-input* prompt-style)
+                    (if (stringp prompt)
+                        (write-string prompt *standard-input*)
+                        (funcall prompt *standard-input* frame))
+                    (finish-output *standard-input*)))
+                (let ((command (read-frame-command frame)))
+                  (fresh-line *standard-input*)
+                  ;;(window-clear *standard-output*)
+                  (clim:window-clear *query-io*)
+                  (when command
+                    (execute-frame-command frame command))
+                  (fresh-line *standard-input*)))))))))
 
 (define-presentation-type url ())
 (define-presentation-type r2::pt ())
 (define-presentation-type r2::hyper-link ())
 
-(define-closure-command com-visit-url ((url 'url :gesture :select))
+;;;; ----------------------------------------------------------------------------------------------------
+;;;; Commands
+;;;;
+
+(define-closure-command com-show-listener ()
+  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) t))
+
+(define-closure-command com-hide-listener ()
+  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) nil))
+
+(define-closure-command com-visit-url ((url 'url)) ;;; :gesture :select))
   (let ((*standard-output* *query-io*)) ;;(find-pane-named *frame* 'interactor)))
     (with-text-style (*standard-output* (make-text-style :sans-serif :roman :normal))
-      (format t "~%You are visiting "))
+      (format t "You are visiting "))
     (present url 'url)
     (with-text-style (*standard-output* (make-text-style :sans-serif :roman :normal))
       (format t ".~%")))
+  (setf *forw-history* nil
+        *back-history* (cons url *back-history*))
   (let ((*standard-output* *trace-output*))
     (foo url)))
 
-(defun make-google-search-url (string)
-  (url:unparse-url
-   (url:merge-url
-    (url:make-url :query (list
-                          (cons "hl" "en")
-                          (cons "ie" "ISO-8859-1")
-                          (cons "q" string)))
-    (url:parse-url "http://www.google.com/search"))))
+(define-closure-command com-reflow ()
+  (reflow))
 
-(define-closure-command com-reverse-lookup ((url 'url))
+(define-closure-command com-back ()
+  (let ((*standard-output* *query-io*)) 
+    (cond ((null (cdr *back-history*))
+           (format t "There is nowhere you can go back to.~%"))
+          (t
+           (push (pop *back-history*) *forw-history*)
+           (format t "Going back to ~S.~%" (first *back-history*))
+           (foo (first *back-history*))))))
+
+(define-closure-command com-forward ()
+  (let ((*standard-output* *query-io*)) 
+    (cond ((null *forw-history*)
+           (format t "There is nowhere you can go forward to.~%"))
+          (t
+           (push (pop *forw-history*) *back-history*)
+           (format t "Going forward to ~S.~%" (first *back-history*))
+           (foo (first *back-history*))))))
+
+(define-closure-command com-reload ()
+  (let ((*standard-output* *query-io*)) 
+    (cond ((null *back-history*)
+           (format t "There is nothing to reload.~%"))
+          (t
+           (format t "Reloading ~S.~%" (first *back-history*))
+           (foo (first *back-history*))))))
+
+(define-closure-command com-images-off ()
+  (setf closure:*user-wants-images-p* nil)
+  (format *query-io* "Images are now off.~%"))
+
+(define-closure-command com-images-on ()
+  (setf closure:*user-wants-images-p* t)
+  (format *query-io* "Images are now on. You may want to reload.~%"))
+
+(define-closure-command com-quit ()
+  (throw 'closure-quit nil))
+
+(defun make-google-search-url (string)
+  (url:merge-url
+   (url:make-url :query (list
+                         (cons "hl" "en")
+                         (cons "ie" "ISO-8859-1")
+                         (cons "q" string)))
+   (url:parse-url "http://www.google.com/search")))
+
+(define-closure-command com-reverse-search-google ((url 'url))
   (let ((*standard-output* *trace-output*))
     (com-visit-url
      (make-google-search-url (format nil "link:~A" url)))))
 
 (define-closure-command com-search-google ((what 'string))
   (com-visit-url (make-google-search-url what)))
-  
 
-(define-closure-command com-visit-string ((url 'string :gesture :select))
-  (let ((*standard-output* *trace-output*))
-    (foo url)))
+(define-closure-command com-home ()
+  (com-visit-url closure:*home-page*))
 
-(define-closure-command com-visit-hyper-link ((url 'r2::hyper-link :gesture :select))
-  (let ((*standard-output* *trace-output*))
-    (foo (r2::hyper-link-url url))))
+(define-presentation-translator fofo
+    (url command closure
+     :gesture :select
+     :documentation ((object presentation stream)
+                     (princ "Goto " stream)
+                     (with-text-style (stream (make-text-style :fix nil nil))
+                       (princ (url:unparse-url object) stream))
+                     (princ "." stream)))
+  (object)
+  object)
 
-(define-closure-command com-describe-pt ((pt 'r2::pt :gesture :describe))
-  (print pt))
+(define-presentation-to-command-translator fofo
+    (url com-visit-url closure
+         :gesture :select
+         :pointer-documentation ((object presentation stream)
+                                 (princ "GOTO " stream)
+                                 (with-text-style (stream (make-text-style :fix nil nil))
+                                   (princ (if (url:url-p object)
+                                              (url:unparse-url object)
+                                              object)
+                                          stream))
+                                 (princ "." stream)))
+  (object)
+  (list object))
 
-(define-closure-command com-quit ()
-  (unix:unix-exit 0))
+;;;; ----------------------------------------------------------------------------------------------------
+;;;; Lisp Interface
+;;;;
+
+(defvar *closure-lock* (clim-sys:make-recursive-lock "Closure"))
+(defvar *closure-inited-p* nil)
+
+(defmacro with-closure (ignore &body body)
+  (declare (ignore ignore))
+  `(clim-sys:with-lock-held (*closure-lock*)
+    ,@body))
+
+(defun parse-url* (url)
+  (etypecase url
+    (string (url:parse-url url))
+    (url:url url)))
+
+(defun send-closure-command (command &rest args)
+  (ensure-closure)
+  (with-closure ()
+    (mp:process-interrupt *closure-process*
+                          #'(lambda () (apply command args)))))
+
+(defun closure:visit (&optional (url closure:*home-page*))
+  (and url (setf url (parse-url* url)))
+  (cond ((and (null *closure-process*) (null url))
+         (setf *initial-url* url)
+         (ensure-closure))
+        (t
+         (ensure-closure)
+         (when url
+           (send-closure-command 'com-visit-url url)))))
+
+(defun closure:start ()
+  (closure:visit))
+
+(defun closure:stop ()
+  (with-closure ()
+    (when *closure-process*
+      (send-closure-command 'com-quit))))
+
+(defun ensure-closure ()
+  (with-closure ()
+    (unless *closure-process*
+      (setf *closure-inited-p* nil)
+      (run-closure)
+      (clim-sys:process-wait "Waiting for closure init"
+                             (lambda ()
+                               *closure-inited-p*)))))
+
 
 (defvar *frame*)
 (defvar *pane*)
 
-(defun foo-init ()
+(defun run-closure ()
+  ;; Care for proxy
+  (let* ((proxy (glisp:getenv "http_proxy"))
+         (url   (and proxy (url:parse-url proxy))))
+    (cond ((and url
+                (equal (url:url-protocol url) "http"))
+           (format t "~&;; Using HTTP proxy ~S port ~S~%"
+                   (setf netlib::*http-proxy-host* (url:url-host url))
+                   (setf netlib::*http-proxy-port* (url:url-port url))
+                   (setf netlib::*use-http-proxy-p* t)))
+          (t
+           ;; we go without one:
+           (setf netlib::*use-http-proxy-p* nil))))
+  ;;
   (setf CLUE-GUI2::*PIXMAP-CACHE* nil)
   (setf CLUE-GUI2::*PIXMAP-CACHE* nil)
   (setf CLUE-GUI2::*DCACHE* nil)
@@ -274,62 +428,107 @@
   (gui::init-closure)
   ;;;+XXX
   (loop for port in climi::*all-ports*
-      do (destroy-port port))
+        do (destroy-port port))
   (setq climi::*all-ports* nil)
   ;;;-XXX
   (setf *frame* (make-application-frame 'closure))
   (setf *pane*  (find-pane-named *frame* 'canvas))
-  (funcall;;progn ;;clim-sys:make-process
-   (lambda ()
-     (run-frame-top-level *frame*))))
+  (setf *closure-process*
+        (clim-sys:make-process
+         (lambda ()
+           (unwind-protect
+                (run-frame-top-level *frame*)
+             (ignore-errors (ws/netlib::commit-cache))
+             (setf *closure-process* nil)))
+         :name "Closure")))
 
 (defun write-status (string)
   (window-clear (find-pane-named *frame* 'status))
-  (write-string string (find-pane-named *frame* 'status)))
+  (write-string string (find-pane-named *frame* 'status))
+  (xlib:display-finish-output (clim-clx::clx-port-display (find-port))))
 
+(defun foo (url)
+  (let ((*standard-output* *trace-output*))
+    (clim-sys:make-process
+     (lambda ()
+       (with-simple-restart (forget "Just forget rendering this page.")
+         (let ((*package* (find-package :r2)))
+           (window-clear (find-pane-named *frame* 'canvas))
+           (progn;;with-sheet-medium (medium *pane*)
+             (let ((*medium* (find-pane-named *frame* 'canvas)))
+               (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
+                 (setq url (r2::parse-url* url))
+                 (let ((request (clue-gui2::make-request :url url :method :get)))
+                   (multiple-value-bind (io header) (clue-gui2::open-document-4 request)
+                     (write-status "Fetching Document ...")
+                     (let* ((doc (make-instance 'r2::document
+                                                :processes-hooks nil
+                                                :location
+                                                (r2::parse-url* url)
+                                                :http-header header
+                                                :pt (clue-gui2::make-pt-from-input 
+                                                     io 
+                                                     (netlib::get-header-field header :content-type) url) )))
+                       (write-status "Rendering ...")
+                       (setf *current-document* doc)
+                       (let ((closure-protocol:*document-language*
+                              (if (sgml::pt-p (r2::document-pt doc))
+                                  (make-instance 'r2::html-4.0-document-language)
+                                  (make-instance 'r2::xml-style-document-language)
+                                  ))
+                             (closure-protocol:*user-agent*
+                              nil)
+                             (r2::*canvas-width*
+                              (bounding-rectangle-width (sheet-parent *medium*))))
+                         (closure-protocol:render
+                          closure-protocol:*document-language* 
+                          doc
+                          device
+                          (setf *current-pt* (r2::document-pt doc))
+                          600           ;xxx width
+                          t             ;?
+                          0)
+                         (let ((x2 (bounding-rectangle-max-x (stream-output-history (find-pane-named *frame* 'canvas))))
+                               (y2 (bounding-rectangle-max-y (stream-output-history (find-pane-named *frame* 'canvas)))))
+                           (setf y2 (max y2 r2::*document-height*))
+                           (clim:change-space-requirements *medium* :width x2 :height y2)
+                           ;; While we are at it, force a repaint
+                           (handle-repaint *medium* (sheet-region (pane-viewport *medium*)))
+                           )))))
+                 (write-status "Done."))))))
+       (xlib:display-finish-output (clim-clx::clx-port-display (find-port)))))))
 
-(defun foo (&optional (url "file:/home/gilbert/work/closure/simple.html")) ;;http://127.1/~gilbert/tests/"))
-  ;;
-  (clim-sys:make-process
-   (lambda ()
-     (window-clear *pane*)
-     (progn;;with-sheet-medium (medium *pane*)
-       (let ((*medium* *pane*))
-         (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
-           (baz device url))))
-     (xlib:display-finish-output (clim-clx::clx-port-display (find-port))))))
+(defun reflow ()
+  (let ((*standard-output* *trace-output*))
+    (funcall ;;clim-sys:make-process
+     (lambda ()
+       (with-simple-restart (forget "Just forget rendering this page.")
+         (let ((*package* (find-package :r2)))
+           (window-clear (find-pane-named *frame* 'canvas))
+           (let* ((*medium* (find-pane-named *frame* 'canvas)) )
+             (write-status "Rendering ...")
+             (let ((closure-protocol:*document-language*
+                    (if (sgml::pt-p (r2::document-pt *current-document*))
+                        (make-instance 'r2::html-4.0-document-language)
+                        (make-instance 'r2::xml-style-document-language) ))
+                   (closure-protocol:*user-agent*
+                    nil)
+                   (r2::*canvas-width*
+                    (bounding-rectangle-width (sheet-parent *medium*))))
+               (r2::reflow)
+               (let ((x2 (bounding-rectangle-max-x (stream-output-history (find-pane-named *frame* 'canvas))))
+                     (y2 (bounding-rectangle-max-y (stream-output-history (find-pane-named *frame* 'canvas)))))
+                 (setf y2 (max y2 r2::*document-height*))
+                 (clim:change-space-requirements *medium* :width x2 :height y2)
+                 ;; While we are at it, force a repaint
+                 (handle-repaint *medium* (sheet-region (pane-viewport *medium*)))))
+             (write-status "Done."))))))))
 
 (defvar *current-document*)
+(defvar *current-pt*)
 
-(defun baz (device url)
-  (setq url (r2::parse-url* url))
-  (let ((request (clue-gui2::make-request :url url :method :get)))
-    (multiple-value-bind (io header) (clue-gui2::open-document-4 request)
-      (write-status "Fetching Document ...")
-      (let* ((doc (make-instance 'r2::document
-                                 :processes-hooks nil
-                                 :location
-                                 (r2::parse-url* url)
-                                 :http-header header
-                                 :pt (clue-gui2::make-pt-from-input 
-                                      io 
-                                      (netlib::get-header-field header :content-type) url) )))
-        (write-status "Rendering ...")
-        (setf *current-document* doc)
-        (time
-         (multiple-value-bind (x1 y1 x2 y2)
-             (r2::render-pt
-              device
-              doc
-              (r2::document-pt doc)
-              700                       ;xxx width
-              t                         ;?
-              0)
-           (clim:change-space-requirements *pane* :width x2 :height y2)))
-        (write-status "Done.")
-        '(describe doc)))))
-
-(defun parse-x11-color (string &aux sym)
+(defun parse-x11-color (string &aux sym r gb)
+  ;; ### pff this really needs to be more robust.
   (cond ((and (= (length string) 4) (char= (char string 0) #\#))
          (make-rgb-color
           (/ (parse-integer string :start 1 :end 2 :radix 16) #xF)
@@ -340,6 +539,13 @@
           (/ (parse-integer string :start 1 :end 3 :radix 16) #xFF)
           (/ (parse-integer string :start 3 :end 5 :radix 16) #xFF)
           (/ (parse-integer string :start 5 :end 7 :radix 16) #xFF)))
+        ((and (= (length string) 6) (every #'(lambda (x) (digit-char-p x 16)) string))
+         (let ((r (parse-integer (subseq string 0 2) :radix 16))
+               (g (parse-integer (subseq string 2 4) :radix 16))
+               (b (parse-integer (subseq string 4 6) :radix 16)))
+           (warn "Color malformed: ~S" string)
+           (and r g b 
+                (make-rgb-color (/ r 255) (/ g 255) (/ b 255)))))
         ((and (= (length string) 13) (char= (char string 0) #\#))
          (make-rgb-color
           (/ (parse-integer string :start 1 :end 5 :radix 16) #xFFFF)
@@ -354,97 +560,18 @@
          (warn "~S: foo color: ~S." 'parse-x11-color string)
          +red+)))
 
-;;;;;
+;;;; ----------------------------------------------------------------------------------------------------
 
-(defun invoke-for-all-links (cont &optional (doc *current-document*)
-                                  &aux url)
-  (sgml:map-pt (lambda (pt)
-                 (cond ((and (eq (sgml:gi pt) :A)
-                             (setf url (r2::pt-effective-url-attr doc pt :href)))
-                        (funcall cont url))))
-   (r2::document-pt doc)))
-
-(defmacro over-all-links ((var) &body body)
-  `(invoke-for-all-links (lambda (,var) .,body)))
-
-(define-closure-command com-fetch-files-matching ((pattern 'string))
-  (over-all-links (url)
-                  (when (equal (url:url-extension url) pattern)
-                    (print url))))
-
-(define-closure-command com-search-clx-manual ((query 'string))
-  (com-visit-url
-   (url:unparse-url
-    (url:merge-url
-     (url:make-url :query (list
-                           (cons "q" query)))
-     (url:parse-url "http://127.1/clxman/doc-index.cgi")))))
-
-(define-closure-command com-search-java-doc ((query 'string))
-  (com-visit-url
-   (url:unparse-url
-    (url:merge-url
-     (url:make-url :query (list
-                           (cons "q" query)))
-     (url:parse-url "http://127.1/~delly/javadoc/doc-index.pl")))))
-
-(define-closure-command com-bar ()
-  (clim-sys:make-process
-   (lambda ()
-     (run-frame-top-level (make-application-frame 'shopping-list)))))
-
-;;;;
-
-(define-application-frame shopping-list ()
-  ()
-  (:panes
-   (shoping-list :application
-    :width 400
-    :height 600))
-  (:layouts
-   (:default
-    shoping-list))
-  (:top-level
-   (shopping-list-top-level)))
-
-(defmethod shopping-list-top-level ((frame application-frame) &key)
-  (let ((*standard-input* (frame-standard-input frame))
-	(*standard-output* (frame-standard-output frame))
-	(*query-io* (frame-query-io frame)))
-    (catch 'exit
-      (clim-extensions:simple-event-loop))
-    (frame-exit frame)))
-
-;;;;;;;;
-
-(defmethod clim:sheet-native-transformation ((sheet null)) clim:+identity-transformation+)
-(defmethod clim:medium-sheet ((sheet sheet)) sheet)
-
-
-;;;;;;;;
-
-;; Now finally it would be good, if we had something like
-;; SPACE-REQUIREMENT-BASELINE, so that we can align these gadgets at
-;; the baseline. This however is not really sufficient, since the
-;; baseline of a gadget depends on its assigned size.
-
-(defmethod draw-gadget (sheet gadget x y)
-  (let ((sq (compose-space gadget)))
-    (allocate-space gadget
-                    (space-requirement-width sq)
-                    (space-requirement-height sq))
-    (move-sheet gadget x y)
-    (sheet-adopt-child sheet gadget)))
-
-(define-closure-command bar ()
-;;  (window-clear *pane*)
-;;  (with-output-as-gadget *pane*
-  (let ((gadget
-         (make-pane-1 (frame-manager *application-frame*)
-                      *application-frame*
-                      'push-button :label "Click me")))
-    (draw-gadget *pane* gadget 100 200)))
-
+#+NIL
+(define-closure-command com-reflow ()
+  (window-clear (find-pane-named *frame* 'canvas))
+  (let ((*medium* (find-pane-named *frame* 'canvas)))
+    (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
+      (let ((closure-protocol:*document-language*
+             (make-instance 'r2::html-4.0-document-language))
+            (closure-protocol:*user-agent*
+             nil))
+        (r2::reflow)))))
 
 (define-presentation-translator url-from-string
     (string url closure)
@@ -458,257 +585,10 @@
   (url:parse-url (accept 'string :stream stream :prompt nil)))
 
 
-(define-closure-command com-search-google ((what 'string))
-  (com-visit-url
-   (url:merge-url
-    (url:make-url :query `(("hl" . "en")
-                           ("ie" . "ISO-8859-1")
-                           ("q"  . ,string)))
-    (url:parse-url "http://www.google.com/search"))))
-
-(defparameter *current-test* nil)
-
-(defparameter *tests* '("test11.htm"
-                        "test12.htm"
-                        "test13.htm"
-                        "test14.htm"
-                        "test15.htm"
-                        "test16.htm"
-                        "test17.htm"
-                        "test21.htm"
-                        "test23.htm"
-                        "test24.htm"
-                        "test25.htm"
-                        "test26.htm"
-                        "test31.htm"
-                        "test32.htm"
-                        "test411.htm"
-                        "test412.htm"
-                        "test414.htm"
-                        "test42.htm"
-                        "test43.htm"
-                        "test44.htm"
-                        "test45.htm"
-                        "test522.htm"
-                        "test523.htm"
-                        "test524.htm"
-                        "test525.htm"
-                        "test526.htm"
-                        "test527.htm"
-                        "test531.htm"
-                        "test532.htm"
-                        "test533.htm"
-                        "test534.htm"
-                        "test535.htm"
-                        "test536.htm"
-                        "test537.htm"
-                        "test541.htm"
-                        "test542.htm"
-                        "test543.htm"
-                        "test544.htm"
-                        "test545.htm"
-                        "test546.htm"
-                        "test547.htm"
-                        "test548.htm"
-                        "test5501.htm"
-                        "test5501b.htm"
-                        "test5502.htm"
-                        "test5502b.htm"
-                        "test5503.htm"
-                        "test5503b.htm"
-                        "test5504.htm"
-                        "test5504b.htm"
-                        "test5505.htm"
-                        "test5505b.htm"
-                        "test5506.htm"
-                        "test5506b.htm"
-                        "test5507.htm"
-                        "test5507b.htm"
-                        "test5508.htm"
-                        "test5508b.htm"
-                        "test5509.htm"
-                        "test5509b.htm"
-                        "test5510.htm"
-                        "test5510b.htm"
-                        "test5511.htm"
-                        "test5511b.htm"
-                        "test5512.htm"
-                        "test5512b.htm"
-                        "test5513.htm"
-                        "test5513b.htm"
-                        "test5514.htm"
-                        "test5514b.htm"
-                        "test5515.htm"
-                        "test5515b.htm"
-                        "test5516.htm"
-                        "test5516b.htm"
-                        "test5517.htm"
-                        "test5517b.htm"
-                        "test5518.htm"
-                        "test5518b.htm"
-                        "test5519.htm"
-                        "test5519b.htm"
-                        "test5520.htm"
-                        "test5520b.htm"
-                        "test5521.htm"
-                        "test5521b.htm"
-                        "test5522.htm"
-                        "test5522b.htm"
-                        "test5523.htm"
-                        "test5524.htm"
-                        "test5525.htm"
-                        "test5525b.htm"
-                        "test5525c.htm"
-                        "test5525d.htm"
-                        "test5526.htm"
-                        "test5526b.htm"
-                        "test5526c.htm"
-                        "test561.htm"
-                        "test562.htm"
-                        "test563.htm"
-                        "test564.htm"
-                        "test565.htm"
-                        "test566.htm"
-                        "test61.htm"
-                        "test62.htm"
-                        "test63.htm"
-                        "test64.htm"
-                        "test71.htm"))
-
-(defparameter *tests*
-  (reverse '("test71.htm"
-             "test566.htm"
-             "test565.htm"
-             "test564.htm"
-             "test563.htm"
-             "test5526c.htm"
-             "test5526b.htm"
-             "test5525c.htm"
-             "test5525b.htm"
-             "test5525.htm"
-             "test5524.htm"
-             "test5523.htm"
-             "test5522b.htm"
-             "test5522.htm"
-             "test5521b.htm"
-             "test5521.htm"
-             "test5520b.htm"
-             "test5520.htm"
-             "test5519b.htm"
-             "test5519.htm"
-             "test5518b.htm"
-             "test5518.htm"
-             "test5517b.htm"
-             "test5517.htm"
-             "test5516b.htm"
-             "test5516.htm"
-             "test5515b.htm"
-             "test5514b.htm"
-             "test5514.htm"
-             "test5513b.htm"
-             "test5513.htm"
-             "test5512b.htm"
-             "test5512.htm"
-             "test5511b.htm"
-             "test5511.htm"
-             "test5510b.htm"
-             "test5509b.htm"
-             "test5508b.htm"
-             "test5507b.htm"
-             "test5506b.htm"
-             "test5505b.htm"
-             "test5504b.htm"
-             "test5503b.htm"
-             "test5502b.htm"
-             "test5501b.htm"
-             "test548.htm"
-             "test546.htm"
-             "test544.htm"
-             "test543.htm"
-             "test542.htm"
-             "test541.htm"
-             "test537.htm"
-             "test536.htm"
-             "test535.htm"
-             "test534.htm"
-             "test533.htm"
-             "test527.htm"
-             "test526.htm"
-             "test525.htm"
-             "test45.htm"
-             "test44.htm"
-             "test43.htm"
-             "test42.htm"
-             "test414.htm"
-             "test26.htm"
-             "test24.htm"
-             "test21.htm")))
-
-(defparameter *tests*
-  (reverse '("test71.htm"
-             "test566.htm"
-             "test565.htm"
-             "test564.htm"
-             "test563.htm"
-             "test5525c.htm"
-             "test5525.htm"
-             "test5524.htm"
-             "test5521.htm"
-             "test5520.htm"
-             "test5519.htm"
-             "test5518.htm"
-             "test548.htm"
-             "test544.htm"
-             "test542.htm"
-             "test541.htm"
-             "test537.htm"
-             "test536.htm"
-             "test535.htm"
-             "test534.htm"
-             "test533.htm"
-             "test527.htm"
-             "test525.htm"
-             "test45.htm"
-             "test44.htm"
-             "test26.htm"
-             "test24.htm")))
-
-(define-closure-command com-init-test ()
-  (setf *passed* nil)
-  (setf *failed* nil)
-  (setf *test-urls*
-        (mapcar (lambda (x)
-                  (url:merge-url
-                   (url:parse-url x)
-                   (url:parse-url "http://www.w3.org/Style/CSS/Test/CSS1/current/")))
-                *tests*)))
-
-(defparameter *passed* nil)
-(defparameter *failed* nil)
-
-(define-closure-command com-next-test ()
-  (if (null *test-urls*)
-      (let ((*standard-output* *query-io*))
-        (with-text-family (*standard-output* :serif)
-          (with-text-size (*standard-output* 18)
-            (format *standard-output* "~%           No more tests; That was it!~%~%"))
-          (format t "(You might try 'Init Test')~%~%")))
-      (com-visit-url (setf *current-test* (pop *test-urls*)))))
-
-(define-closure-command com-pass ()
-  (push *current-test* *passed*)
-  (com-next-test))
-
-(define-closure-command com-fail ()
-  (push *current-test* *failed*)
-  (com-next-test))
-
-(define-closure-command com-tex-mode-on ()
-  (setf r2::*tex-mode-p* t)
-  (texpara::init-hyp))
-
-(define-closure-command com-tex-mode-off ()
-  (setf r2::*tex-mode-p* nil))
 
 
+(define-closure-command (com-clear-interactor :name t) ()
+    (clim:window-clear (clim:frame-query-io clim:*application-frame*)))
+
+;;;; ----------------------------------------------------------------------------------------------------
 

@@ -77,7 +77,7 @@
 
 (defun document-base-url (document)
   (with-slots (location pt) document
-    (or (pt-base-url pt)
+    (or (closure-protocol:element-base-url closure-protocol:*document-language* pt)
         location)))
 
 (defun run-process-on-behalf-of-document (document continuation &key (name "anonymous process"))
@@ -129,3 +129,59 @@
 (defun document-add-anchor (document name x y)
   (push (make-anchor :name name :x x :y y)
         (document-anchors document)))
+
+(defun document-style-sheet (doc &key (selected-style :default))
+  "Compute the documents style. This could be either a <STYLE> element
+  in the header or an external style sheet defined via <LINK>."
+  ;; It isn't exactly specified, what one should do, when multiple
+  ;; STYLE nodes are present.
+  ;; We take the route to parse all styles present by either LINK or
+  ;; STYLE and combine, as if they occured via @import.
+  (let ((sheets nil)
+        (pt (document-pt doc)))
+
+    (setq user::pt pt)
+    
+    ;;
+    (dolist (link (document-links doc))
+      (when (and (style-sheet-link-p link)
+                 (style-link-does-apply-p link selected-style)
+                 (link-href link))
+        (describe link)
+        (let* ((media-type 
+                (or (ignore-errors
+                     (css::parse-media-type (link-media link)))
+                    :all))
+               (href (link-href link))
+               (sheet (maybe-parse-style-sheet-from-url 
+                       href
+                       :name "Document style via LINK"
+                       :media-type media-type)))
+          (when sheet
+            (push sheet sheets)))))
+    ;;
+    (let ((style (closure-protocol:root-element-embedded-style
+                  closure-protocol:*document-language*
+                  pt)))
+      (when style
+        (multiple-value-bind (res condition)
+            (ignore-errors
+             (css:parse-style-sheet (cl-char-stream->gstream
+                                     (make-string-input-stream
+                                      style))
+                                    nil
+                                    :name "Document Style via STYLE"
+                                    :base-url (document-base-url doc)))
+          (cond ((null res)
+                 (warn "Error while parsing embedded style sheet in ~S:~% ~A"
+                       (r2::document-location doc)
+                       condition))
+                (t
+                 (push res sheets))))))
+    (setf sheets (nreverse sheets))
+    (let ((s (css:create-style-sheet *default-style-sheet*
+                                     :name "Document style"
+                                     :base-url (document-base-url doc))))
+      (setf (css::style-sheet-imported-sheets s)
+        sheets)
+      s)))

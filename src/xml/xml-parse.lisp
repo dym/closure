@@ -612,12 +612,14 @@
             (list (cons (list kind name)
                         def)))))
 
+#||
 (defun define-element (zinput dtd element-name content-model)
   ;; zinput is for source code location recoding
   (let ((elmdef (make-elmdef :name element-name
                              :content content-model
                              )))
     ()))
+||#
 
 (defun entity->xstream (entity-name kind &optional zstream)
   ;; `zstream' is for error messages
@@ -1248,7 +1250,7 @@
             (error "Illegal char: ~S." d))
           (when (rune= d #/>) (return))
           (unless warnedp
-            (error "WFC: no '--' in comments please.")
+            (warn "WFC: no '--' in comments please.")
             (setf warnedp t))
           (when (rune= d #/-)
             (collect #/-)
@@ -2305,51 +2307,30 @@
 
 ;;;;
 
-(defun sanify-white-space (node)
-  ;; sanify white space in the node `node'
-  ;; The white space convention we use is:
-  ;; nuke any white space directly after a start tag
-  ;; nuke any white space directly before a end tag
-  ;; we still have left white space between two tags, but
-  ;; we cannot handle these with out the DTD
-  )
-
-#||
-(setf (logical-pathname-translations "jclark")
-  '(("**;*" "/usr/gilbert/work/closure/specs/jclark/**/*")
-    ("**;*.*" "/usr/gilbert/work/closure/specs/jclark/**/*.*")))
-(setf (logical-pathname-translations "stig")
-  '(("**;*" "/usr/gilbert/work/closure/src/xml/stig-test/**/*")
-    ("**;*.*" "/usr/gilbert/work/closure/src/xml/stig-test/**/*.*")))
-||#
-
-
-
-(defun foo (x)
-  (name-rune-p x))
-
-;;;;
-
-
-
 (progn
 
   (defmethod dom:create-processing-instruction ((document null) target data)
+    (declare (ignorable document target data))
     nil)
 
   (defmethod dom:append-child ((node null) child)
+    (declare (ignorable node child))
     nil)
 
   (defmethod dom:create-element ((document null) name)
+    (declare (ignorable document name))
     nil)
 
   (defmethod dom:set-attribute ((document null) name value)
+    (declare (ignorable document name value))
     nil)
 
   (defmethod dom:create-text-node ((document null) data)
+    (declare (ignorable document data))
     nil)
 
   (defmethod dom:create-cdata-section ((document null) data)
+    (declare (ignorable document data))
     nil)
   )
 
@@ -2549,8 +2530,7 @@
                                      (recurse-on-entity 
                                       zinput name :general
                                       (lambda (zinput)
-                                        (muffle (car (zstream-input-stack zinput))
-                                                :eof)))))))
+                                        (muffle (car (zstream-input-stack zinput)))))))))
                            ((and (rune= c #/<))
                             ;; xxx fix error message
                             (cerror "Eat them in spite of this."
@@ -2585,9 +2565,9 @@
 
 (defun read-att-value-2 (input)
   (let ((delim (read-rune input)))
-    (unless (member delim '(#/\" #/\') :test #'eq)
+    (unless (member delim '(#/\" #/\') :test #'eql)
       (error "Bad attribute value delimiter ~S, must be either #\\\" or #\\\'."
-             (or (code-char delim) delim)))
+             (if (< delim char-code-limit) (code-char delim) delim)))
     (with-rune-collector-4 (collect)
       (loop
         (let ((c (read-rune input)))
@@ -2611,24 +2591,6 @@
                  (collect #x20))
                 (t
                  (collect c))))))))
-
-#+CMU
-(defun qqq ()
-  (do-symbols (k :xml)
-    (when (and (eq (symbol-package k) (find-package :xml))
-               (fboundp k))
-      (eval `(profile:profile ,k))))
-    (do-symbols (k :encoding)
-    (when (and (eq (symbol-package k) (find-package :encoding))
-               (fboundp k))
-      (eval `(profile:profile ,k))))
-  (profile:reset-time)
-  (parse-file "src/xml/stig-test/dump.xml")
-  (profile:report-time)
-  (profile:unprofile)
-  )
-
-
 
 ;;; Faster constructors
 

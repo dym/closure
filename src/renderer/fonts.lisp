@@ -5,7 +5,7 @@
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: GPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 1998 by Gilbert Baumann
+;;;  (c) copyright 1998-2003 by Gilbert Baumann
 
 ;;; This program is free software; you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by

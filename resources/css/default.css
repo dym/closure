@@ -40,7 +40,8 @@ CENTER { text-align: center }
  * ADDRESS { text-align: right }  
  */
 
-MENU, DIR, OL, UL { margin: 1em 0 1em 2em; }
+MENU, DIR, OL, UL { margin: 1em 0 1em 0em; }
+LI { margin-left: 2em; }
 OL { list-style-type: decimal; }
 OL LI OL { list-style-type: lower-alpha }
 
@@ -69,7 +70,7 @@ P { margin: 1em 0; text-indent: 0; }
 
 PRE { margin: 7px 0; white-space: pre; }
 DD { margin-left: 20px; }
-LI { margin: 0.5ex 0px 0.5ex 0px; }
+LI { margin-top: 0.5ex; margin-bottom: 0.5ex; }
 DT { margin: 5px 0px; }
 IMG { margin: 2px 2px; }
 
@@ -117,14 +118,14 @@ INS, DEL { display: inline; }
 
 SELECT { display: inline; }
 
-TABLE { display: block; padding: 1em; }
+TABLE { display: table; padding: 1em; }
 
 INPUT { margin: 3px; }
 
 
 TD { border-width: 0px; border-style: solid; padding: 0px; margin: 0; text-align: left; }
 TH { border-width: 0px; border-style: solid; padding: 0px; margin: 0; text-align: center; }
-TABLE { display: block; padding: 0; border-width: 0; margin: 0; }
+TABLE { display: table; padding: 0; border-width: 0; margin: 0; }
 HTML { line-height: 1.2; }
 IMG { padding: 0px; }
 
@@ -134,7 +135,7 @@ IMG { padding: 0px; }
 */
 
 INPUT { display: inline; }
-TD { border: 1px inset; padding: 0px; margin: 0px; }
+/*TD { border: 1px inset; padding: 0px; margin: 0px; }*/
 
 /* Das hier sollte nicht noetig sein! */
 HTML { list-style-position: outside; }
@@ -161,10 +162,7 @@ IMG { padding: 0; margin: 0; border: 0; }
 
 
 
-A:link { color: #00009a;
-         padding: 3px;
-         margin: -3px;
-       } 
+A:link { color: #00009a; } 
 A:hover { background-color: #ccc; text-decoration: none; }
 
 
@@ -252,3 +250,16 @@ TABLE TABLE { margin-left: 0; margin-right: 0; }
 
 STYLE { display: none; }
 .illegalstyle { display: none; color: red; }
+
+TABLE    { display: table }
+TR       { display: table-row }
+THEAD    { display: table-header-group }
+TBODY    { display: table-row-group }
+TFOOT    { display: table-footer-group }
+COL      { display: table-column }
+COLGROUP { display: table-column-group }
+TD, TH   { display: table-cell }
+CAPTION  { display: table-caption }
+
+
+DIV, BODY, HTML, BODY { display: block; }

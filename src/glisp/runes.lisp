@@ -73,16 +73,26 @@
         ((<= #x00e0 rune #x00fe) (- rune #x20))
         (t rune)))
 
+(defun rune-upper-case-letter-p (rune)
+  (or (<= #x0041 rune #x005a) (<= #x00c0 rune #x00de)))
+
+(defun rune-lower-case-letter-p (rune)
+  (or (<= #x0061 rune #x007a) (<= #x00e0 rune #x00fe)
+      (= rune #x00d7)))
+
+
 (defun rune-equal (x y)
   (rune= (rune-upcase x) (rune-upcase y)))
 
 (defun rod-downcase (rod)
   ;; FIXME
-  (map '(simple-array (unsigned-byte 16) (*)) #'rune-downcase rod))
+  (register-rod
+   (map '(simple-array (unsigned-byte 16) (*)) #'rune-downcase rod)))
 
 (defun rod-upcase (rod)
   ;; FIXME
-  (map '(simple-array (unsigned-byte 16) (*)) #'rune-upcase rod))
+  (register-rod
+   (map '(simple-array (unsigned-byte 16) (*)) #'rune-upcase rod)))
 
 (defsubst white-space-rune-p (char)
   (or (= char 9)        ;TAB
@@ -139,6 +149,9 @@
   (code-rune (char-code char)))
 
 (defun rune-char (rune &optional (default #\?))
+  #+CMU
+  (if (< rune 256) (code-char rune) default)
+  #-CMU
   (or (code-char rune) default))
 
 (defun rod-string (rod &optional (default-char #\?))
@@ -358,6 +371,7 @@
 ;;; ROD ext syntax
 
 (defun rod-reader (stream subchar arg)
+  (declare (ignore arg))
   (rod
    (with-output-to-string (bag)
      (do ((c (read-char stream t nil t)
@@ -385,3 +399,14 @@
 
 (set-dispatch-macro-character #\# #\" 'rod-reader)
 
+#||
+(defun longish-array-p (arr)
+  (and (arrayp arr)
+       (> (array-total-size arr) 10)))
+
+(set-pprint-dispatch '(satisfies longish-array-p)
+                     #'(lambda (stream object)
+                         (let ((*print-array* nil)
+                               (*print-pretty* nil))
+                           (prin1 object stream))))
+||#

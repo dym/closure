@@ -43,6 +43,38 @@
   (declare (ignore depth))
   (format sink "#<~S ~A~{ ~S~}>" (type-of self) (pt-name self) (pt-children self)))
 
+(defmethod print-object ((object pt) stream)
+  (format stream "#<~S ~A ..>" (type-of object) (pt-name object)))
+
+#||
+(set-pprint-dispatch 'pt (lambda (stream object)
+                           (funcall 'pprint-pt stream object)))
+
+(defun pprint-pt (stream object)
+  '(cond ((eql (gi object) :pcdata)
+          (loop for c across (rod-string (pt-attrs object)) do
+                (cond ((eql c #\newline)
+                       (pprint-newline :mandatory stream))
+                      (t
+                       (princ c stream)))))
+    (t
+     (format stream "<~A~{ ~A=~S~}~A>"
+      (gi object)
+      (mapcar (lambda (x)
+                (if (glisp::rodp x) (rod-string x) x))
+              (pt-attrs object))
+      (if (null (pt-children object)) "/" ""))))
+  (when (pt-children object)
+    (pprint-logical-block (stream (pt-children object)
+                                  :prefix (format nil "<~A>" (gi object))
+                                  :suffix (format nil "</~A>" (gi object)))
+                          (pprint-indent :block 2 stream)
+                          (dolist (k (pt-children object))
+                            (pprint k stream)))
+    ;; (pprint-newline :mandatory stream)
+    '(format stream "</~A>" (gi object)) ))
+||#
+
 #-CLISP
 (defun print-pt (self sink depth)
   (user::with-depth-abbreviation (sink depth)
@@ -195,6 +227,12 @@
         (t
          (error "~S does not look like LHTML." tree)) ))
 
+(defun lhtml-reader (stream subchar arg)
+  `(lhtml->pt
+    ,(funcall (get-macro-character #\`) stream nil)))
+
+(set-dispatch-macro-character #\# #\T 'lhtml-reader)
+
 (defun map-pt (fun pt)
   "Apply 'fun' to all parse tree nodes in 'pt'."
   (funcall fun pt)
@@ -237,3 +275,28 @@
   (or (eq putative-ancestor (pt-parent node))
       (and (not (null (pt-parent node)))
            (ancestorp (pt-parent node) putative-ancestor))))
+
+
+;;;;; The Basic Closure Element Protocol
+
+(defmethod closure-protocol:element-p ((object pt))
+  t)
+
+(defmethod closure-protocol:element-parent ((element pt))
+  (pt-parent element))
+
+(defmethod closure-protocol:element-children ((element pt))
+  (pt-children element))
+
+(defmethod closure-protocol:element-attribute ((element pt) attribute-name)
+  (getf (sgml:pt-attrs element) attribute-name))
+
+(defmethod closure-protocol:element-gi ((element pt))
+  (gi element))
+
+(defmethod closure-protocol:text-element-p ((element pt))
+  (eql (gi element) :pcdata))
+
+(defmethod closure-protocol:element-text ((element pt))
+  (assert (eql (sgml:gi element) :pcdata))
+  (pt-attrs element))

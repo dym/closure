@@ -217,19 +217,21 @@
 (defun allocate-component-ramp (colormap component)
   (let ((byte (mask->byte
                (ecase component
-                 (:red (xlib:visual-info-red-mask (xlib:colormap-visual-info colormap)))
+                 (:red   (xlib:visual-info-red-mask (xlib:colormap-visual-info colormap)))
                  (:green (xlib:visual-info-green-mask (xlib:colormap-visual-info colormap)))
-                 (:blue (xlib:visual-info-blue-mask (xlib:colormap-visual-info colormap)))))))
+                 (:blue  (xlib:visual-info-blue-mask (xlib:colormap-visual-info colormap)))))))
     (let ((res (make-array (ash 1 (byte-size byte)) :element-type '(unsigned-byte 32)))
           (linearp t))
       (dotimes (i (ash 1 (byte-size byte)))
-        (let ((color (xlib:make-color component (/ i (1- (ash 1 (byte-size byte))))
-                                      :red 0 :green 0 :blue 0)))
-               (let ((pixel (xlib:alloc-color colormap color))
-                     (naiv (dpb i byte 0)))
-                 (when (/= naiv pixel)
-                   (setf linearp nil))
-                 (setf (aref res i) pixel))))
+        (let ((color (case component
+                       (:red (xlib:make-color :red (/ i (1- (ash 1 (byte-size byte)))) :green 0 :blue 0))
+                       (:green (xlib:make-color :green (/ i (1- (ash 1 (byte-size byte)))) :red 0 :blue 0))
+                       (:blue (xlib:make-color :blue (/ i (1- (ash 1 (byte-size byte)))) :red 0 :green 0)))))
+          (let ((pixel (xlib:alloc-color colormap color))
+                (naiv (dpb i byte 0)))
+            (when (/= naiv pixel)
+              (setf linearp nil))
+            (setf (aref res i) pixel))))
       (values
        res
        linearp))))
@@ -475,7 +477,7 @@
 ;;;; ==========================================================================================
 
 (defun make-ximage-for-aimage (aimage depth translator)
-  (declare (:explain :calls))
+  #+EXCL (declare (:explain :calls))
   (let* ((width (imagelib:aimage-width aimage))
          (height (imagelib:aimage-height aimage))
          (idata (imagelib:aimage-data aimage))
@@ -485,7 +487,8 @@
                                     :depth  depth
                                     :data   xdata)))
     (declare (type (simple-array (unsigned-byte 32) (* *)) idata)
-             (type (simple-array (unsigned-byte 8) (* *)) xdata))
+             #+NIL(type (simple-array (unsigned-byte 8) (* *)) xdata)
+             )
     (loop for x fixnum from 0 below width do
       (loop for y fixnum from 0 below height do
         (setf (aref xdata y x) 
@@ -980,6 +983,7 @@
   (with-slots (display) self
     (xlib:open-font display (r2::font-desc-ddp font-desc))))
 
+#||
 (defmethod r2::device-font-database ((self x11-device))
   (cond ((slot-value self 'font-database))
         (t
@@ -1002,6 +1006,7 @@
           (when fd
             (r2::font-database-relate res fd))))
       res)))
+||#
 
 (defmethod r2::scale-font-desc ((device x11-device) fd size)
   (labels ((hash-key (fd)
@@ -1338,19 +1343,5 @@
 ;; code. Which is the best thing, we can do in a PseudoColor
 ;; environment.
 
-(defmethod cluei:convert (contact value (type (eql 'xlib:pixel)))
-  (labels ((convert-color (color)
-             (funcall (pixel-translator (xlib:screen-default-colormap (cluei:contact-screen contact)))
-                      0 0 (compose-rgba (floor (* 255 (xlib:color-red color)))
-                                        (floor (* 255 (xlib:color-green color)))
-                                        (floor (* 255 (xlib:color-blue color)))))))
-  (typecase value
-    (xlib:color (convert-color value))
-    (xlib:pixel value)
-    (xlib:stringable
-     (let ((color (cluei:convert contact value 'xlib:color)))
-       (and color
-            (convert-color color))))
-    (otherwise
-     nil))))
+
 ; LocalWords:  colormap RGB

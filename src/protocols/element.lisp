@@ -44,3 +44,13 @@
 
 (defgeneric element-text (element)
   )
+
+;;; Fall through predicate definitions
+
+(defmethod element-p ((object t))
+  (declare (ignorable object))
+  nil)
+
+(defmethod text-element-p ((object t))
+  (declare (ignorable object))
+  nil)

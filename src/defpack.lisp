@@ -113,10 +113,10 @@
 (defpackage :gui
   (:use :glisp)
 
-  (:import-from #:WS/GRAPHICS-UTILITIES
+  (:import-from #:clim
    #:+nowhere+
    #:+everywhere+
-   #:region-intersects-rectangle-p
+   ;; #:region-intersects-rectangle-p
    #:region-union
    #:make-rectangle*)
 
@@ -186,6 +186,14 @@
 
 (defpackage :gtk-gui (:use :glisp))
 
+(defpackage :closure
+    (:use)
+    (:export
+     #:*home-page*
+     #:*user-wants-images-p*
+     #:visit
+     #:start
+     #:stop))
 
 '(defpackage "WS/POSTSCRIPT"
   (:nicknames "WS/PS")
@@ -213,7 +221,7 @@
                 "DEVICE-FONT-UNDERLINE-THICKNESS"
                 ))
 
-(defpackage :clue-gui2 (:use :glue :clue :glisp))
+(defpackage :clue-gui2 (:use #||:glue :clue||# :glisp))
 
 
 

@@ -177,6 +177,7 @@
             mask nil))))
 
 (defun deref-aimage-pixmap (aimage pixmap)
+  (declare (ignore aimage))
   (let ((pce (find pixmap *pixmap-cache* :key #'pce-pixmap :test #'equal)))
     (assert (not (null pce)))
     (assert (> (pce-refcount pce) 0))
@@ -274,88 +275,5 @@
 
 ;;; ----------------------------------------------------------------------------------------------------
 
-(defclass ro/lazy-img (r2::ro/img)
-  ()
-  )
 
-(defmethod gui::make-image-replacement ((device clue-device)
-                                        document
-                                        &key url width height)
-  (cond ((and width height)
-         (make-lazy-image-replacement device document url width height))
-        (t
-         (let ((aim (r2::url->aimage document url)))
-           (cond ((eql aim :error)
-                  (make-instance 'r2::ro/img
-                    :url url
-                    :aim-orig (renderer::broken-aimage document)))
-                 (t
-                  (make-instance 'r2::ro/img
-                    :url url
-                    :aim-orig aim) ))))))
 
-(defmethod redraw-new-lazy-image (document htview ro)
-  ;; ro - the image r2::robj
-  ;; seek for the containing abox
-  (when (r2::document-display-list document) ; display-list there already?
-    (dolist (k (gui:display-list-items (r2::document-display-list document)))
-      ;; grrf. find the parent of this robj
-      (r2::map-boxen (lambda (box)
-                       (when (and (r2::abox-p box) 
-                                  (find-if (lambda (x)
-                                             (and (r2::rbox-p x)
-                                                  (eq (r2::rbox-obj x) ro)))
-                                           (r2::abox-contents box)) )
-                         (multiple-value-bind (x0 y0 x1 y1)
-                             (values (r2::abox-bx0 box) (r2::abox-by0 box) 
-                                     (r2::abox-bx1 box) (r2::abox-by1 box))
-                           (cond ((and x0 y0 x1 y1)
-                                  ;; queue a redraw
-                                  ;; this could be optimized further, it is enough to
-                                  ;; redraw only this box.
-                                  (gui-post document
-                                            'clue:display
-                                            htview
-                                            x0 y0
-                                            (- x1 x0) (- y1 y0) ))
-                                 (t
-                                  (warn "Hugh?! a box without a bounding box?")) ))))
-                     k))))
-
-(defmethod make-lazy-image-replacement (device document url width height)
-  (let ((ro (make-instance 'r2::ro/img :url url)))
-    (let ((aim (aimage-from-url-lazy 
-                document 
-                url
-                ;; callback, called when the image is ready:
-                #'(lambda (value)
-                    (if (eq value :error)
-                        (setf (slot-value ro 'aim-orig)
-                          (renderer::broken-aimage document))
-                      (setf (slot-value ro 'aim-orig) value))
-                    (redraw-new-lazy-image document (slot-value device 'htview) ro) ))))
-      (setf (slot-value ro 'aim-orig)
-        (if (eq aim :error)
-            (r2::broken-aimage document)
-          aim))
-      ro)))
-
-#||
-(defmethod make-lazy-image-replacement (device document url width height)
-  (let ((ro (make-instance 'r2::ro/img :url url)))
-    (setf (slot-value ro 'aim-orig) nil) ;erstmal gar nichts
-    ;; rest asynchron
-    (let ((aim (aimage-from-url-lazy 
-                document 
-                url
-                ;; callback, called when the image is ready:
-                #'(lambda (value)
-                    (if (eq value :error)
-                        (setf (slot-value ro 'aim-orig)
-                              (renderer::broken-aimage document))
-                      (setf (slot-value ro 'aim-orig) value))
-                    (redraw-new-lazy-image document (slot-value device 'htview) ro) ))))
-      (when aim
-        (setf (slot-value ro 'aim-orig) aim)))
-    ro))
-||#

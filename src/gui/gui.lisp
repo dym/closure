@@ -210,6 +210,7 @@
     (renderer:scale-font-desc clonee fd size)))
 
 (defmethod gui::make-image-replacement ((self proxy-device) doc &rest args &key url width height)
+  (declare (ignore url width height))
   (with-slots (clonee) self
     (apply #'gui::make-image-replacement clonee doc args)))
 
@@ -316,6 +317,7 @@
                    :if-exists :new-version
                    :element-type '(unsigned-byte 8))
     (netlib:with-open-document ((input mime-type) url)
+      (declare (ignore mime-type))
       (netlib::copy-gstream input (glisp:cl-byte-stream->gstream sink))))
   (format T "~&;; Source of ~A dumped to ~S." url filename))
 
@@ -377,328 +379,10 @@
 (defparameter user::*profile-closure-p* nil)
 (defparameter user::*closure-dpi* 88)           ;this doesn't belong here
 
-#+ALLEGRO
-(defun invoke-with-profiling (fun)
-  (multiple-value-prog1
-      (prof:with-profiling () (funcall fun))
-    (prof:show-flat-profile)))
-
-#+CMU
-(defun invoke-with-profiling (fun)
-  (profile:profile-all :package :r2 :callers-p t)
-  (profile:profile-all :package :css :callers-p t)
-  (eval `(profile:reset-time ,@profile:*timed-functions*))
-  (multiple-value-prog1
-      (funcall fun)
-    (with-open-file (*trace-output* "profile.out" :direction :output :if-exists :new-version)
-      (let ((*package* (find-package :renderer)))
-        (eval `(profile:report-time ,@profile:*timed-functions*))))
-    (format *trace-output* "~&;; profile data dumped to 'profile.out'.")
-    (finish-output *trace-output*)
-    (eval `(profile:unprofile ,@profile:*timed-functions*))))
-
-#+CLISP
-(defun invoke-with-profiling (fun)
-    (funcall fun)
-#||
-  (monitor:monitor-all :r2)
-  (monitor:monitor-all :css)
-  (monitor:reset-all-monitoring)
-  (multiple-value-prog1
-      (funcall fun)
-    (monitor:report-monitoring)
-    (monitor:unmonitor *monitored-functions*) )
-||#
-)
-
-#-(OR ALLEGRO CMU CLISP)
-(defun invoke-with-profiling (fun)
-  (warn "Define ~S for your Lisp implementation." 'invoke-with-profiling)
-  (funcall fun))
-
-(defun my-time-fn (fun)
-  (if user::*profile-closure-p*
-      (invoke-with-profiling fun)
-    (time (funcall fun))))
-
-(defmacro my-time (&body body)
-  `(my-time-fn (lambda () ,@body)))
-
-;;;; ----------------------------------------------------------------------------------------------------
-
-;;;
-;;;  Minimal Hypertext View
-;;;
-
-;; This is a bare bones implementation of an hyper text view. It
-;; displays the renderer's output and reacts to exposure and input
-;; events. Any implementation of a toolkit specific hypertext view
-;; should mixin this class.
-
-;; Methods which are still to be defined for a PRIM-HT-VIEW:
-
-;;   GET-DRAWABLE+GCONTEXT self -> drawable ; gcontext
-;;     Obtain a drawable and a graphics context for painting the
-;;     document
-  
-;;   SET-MOUSE-DOCUMENTATION self string ->
-;;     This is called, when ever the mouse hovers over some hyperlink
-;;     and should update some wholine or pop-up some balloon help.
-  
-;;   HANDLE-ACTIVATED-LINK self pt 
-;;     When ever the user actually clicks on an hyper link this method
-;;     is invoked.
-
-;; A prim-ht-view instance unterstands the following methods:
-
-;;   HANDLE-EVENT self <exposure-event>
-;;   HANDLE-EVENT self <enter-event>
-;;   HANDLE-EVENT self <leave-event>
-;;   HANDLE-EVENT self <pointer-motion-event>
-;;   HANDLE-EVENT self <button-press-event>
-;;   HANDLE-EVENT self <button-release-event>
-;;     This method is to be invoked when ever some event comes in from
-;;     the window system.
-  
-;;   SET-DISPLAY-LIST self new-display-list
-;;     Change the display list maintained by the hyper text view.
-
-;; Things, which still need to be implemented:
-;;
-;;  - Marking some section of the hypertext for yanking from some
-;;    other app.
-;;  - It may be useful to be able to use the <TAB> key to cycle
-;;    thru' all the hyper links. (One would activate these by <RIGHT>,
-;;    like within Lynx).
-;;  - Jumping to anchors.
-
 (defclass prim-ht-view ()
   ((display-list        :initform nil)
    (active-pt           :initform nil)
    (active-link         :initform nil) ))
-
-(defmethod handle-event ((self prim-ht-view) (event exposure-event))
-  (with-slots (display-list) self
-    ;; wir sollten die region in dem event noch an unserem fenster clippen...
-    (multiple-value-bind (drawable gcontext) (get-drawable+gcontext self)
-      (setf (xlib:gcontext-clip-mask gcontext) (gu:region-to-x11-rectangle-list (event-region event))
-            (xlib:gcontext-clip-x gcontext) 0
-            (xlib:gcontext-clip-y gcontext) 0)
-      (paint-display-list drawable gcontext 0 0 display-list (event-region event) nil))))
-
-;;; Maintaining the active region
-
-(defun r2::abox-bounding-region (box)
-  (if (and (r2::abox-bx0 box) (r2::abox-by0 box) (r2::abox-bx1 box) (r2::abox-by1 box))
-      (make-rectangle* (floor (r2::abox-bx0 box)) (floor (r2::abox-by0 box))
-                       (ceiling (r2::abox-bx1 box)) (ceiling (r2::abox-by1 box)))
-    +nowhere+))
-
-(defun map-link-boxen (fun display-list link)
-  (when link
-    (map-display-list-boxen (lambda (box)
-                              (when (and (r2::abox-p box) (r2::abox-map box))
-                                (dolist (q (r2::abox-map box))
-                                  (when (eq link (r2::imap-area-link q))
-                                    (funcall fun box)))))
-                            display-list)))
-
-(defmethod active-extents ((self prim-ht-view) link)
-  "Find the region the active pt spans."
-  (let ((res +nowhere+))
-    (with-slots (display-list) self
-      (map-link-boxen (lambda (box)
-                        (setf res (gu:region-union res (r2::abox-bounding-region box))))
-                      display-list link))
-    res))
-
-(defmethod maintain-active ((self prim-ht-view) x y)
-  "Called when we get knowledge of a new mouse position."
-  ;; 'x' might as well be NIL. (leave event)
-  ;; calls UPDATE-NEW-ACTIVE, if active changed.
-  (with-slots (active-link) self
-    (let ((a (if (null x) 
-                 nil
-               (find-active-link self x y))))
-      ;;(when a (print (list (first a) (floor (second a)) (floor (third a)))))
-      (setf a (first a))
-      (unless (eq a active-link)
-        (update-new-active self a)))))
-
-(defmethod find-active-link ((self prim-ht-view) x y)
-  (with-slots (display-list) self
-    (when display-list
-      (dolist (k (display-list-items display-list))
-        (when (r2::bbox-p k)
-          (let ((r (find-active-in-abox* k x y)))
-            (when r
-              (return r))))))))
-
-(defun find-active-in-abox* (abox x y)
-  (let (q)
-    (when (point-in-abox-p abox x y)
-      (cond ((setq q (some (rcurry #'find-active-in-abox* x y) 
-                           (r2::abox-contents abox)))
-             q)
-            ((and (r2::ibox-p abox) (r2::abox-map abox))
-             (dolist (area (r2::abox-map abox))
-               (cond ((r2::area-contains-point-p
-                       area 
-                       (- x (r2::inner-left-edge abox))
-                       (- y (r2::inner-top-edge abox))
-                       (r2::inner-width abox)
-                       (r2::inner-height abox))
-                      (return 
-                        (list (r2::imap-area-link area)
-                              (- x (r2::inner-left-edge abox))
-                              (- y (r2::inner-top-edge abox)) ))))))))))
-
-(defun point-in-abox-p (abox x y)
-  (cond ((and (r2::abox-p abox)
-              (r2::abox-bx0 abox)
-              (r2::abox-by0 abox)
-              (r2::abox-bx1 abox)
-              (r2::abox-by1 abox))
-         (and (<= (r2::abox-bx0 abox) x (r2::abox-bx1 abox))
-              (<= (r2::abox-by0 abox) y (r2::abox-by1 abox))))
-        (t
-         nil)))
-
-(defun map-display-list-boxen (fun display-list)
-  (when display-list
-    (mapc (curry #'r2::map-boxen fun) (display-list-items display-list))))
-
-(defun map-boxen-for-pt (fun display-list pt)
-  (map-display-list-boxen (lambda (box)
-                            (cond ((and (r2::abox-p box) (eq (r2::abox-pt box) pt))
-                                   (funcall fun box))))
-                          display-list))
-
-(defmethod update-new-active ((self prim-ht-view) new-active)
-  (let ((id (if (and new-active
-                     #|(r2::hyper-link-url new-active)|# )
-                58 68)))
-    (let* ((fn (xlib:open-font (xlib:window-display (get-drawable+gcontext self))
-                               "cursor"))
-           (cr (xlib:create-glyph-cursor :source-font fn
-                                         :source-char id
-                                         :mask-font fn
-                                         :mask-char (+ id 1)
-                                         :foreground (xlib:make-color :red 0 :green 0 :blue 0)
-                                         :background (xlib:make-color :red 1 :green 1 :blue 1)
-                                         )))
-      (setf (xlib:window-cursor (get-drawable+gcontext self)) cr)))
-  (with-slots (active-link) self
-    (let ((reg (gu:region-union (active-extents self active-link) (active-extents self new-active))))
-      (and active-link (unactivate-link self active-link))
-      (and new-active (activate-link self new-active))
-      (setf active-link new-active)
-      (multiple-value-bind (drawable gcontext) (get-drawable+gcontext self)
-        (declare (ignore gcontext))
-        (gu:map-region-rectangles (lambda (x1 y1 x2 y2)
-                                    (xlib:clear-area drawable 
-                                                     :x x1 :y y1 
-                                                     :width (- x2 x1)
-                                                     :height (- y2 y1)
-                                                     :exposures-p nil) )
-                                  reg)
-        #-(AND)
-        (cond (active-link
-               (let ((mx #x7fff) (my 0))
-                 (gu:map-region-rectangles (lambda (x1 y1 x2 y2)
-                                             (setf mx (min x1 x2 mx)
-                                                   my (max y1 y2 my)))
-                                           (active-extents self active-link))
-                 (let ((str (active-link-mouse-documentation self active-link)))
-                   (unless (stringp str)
-                     (setf str (map 'string (lambda(x)(or (code-char x) #\?)) str)))
-                   (clue-gui2::balloon drawable str (+ mx 5) (+ my 2)))))
-              (t
-               (clue-gui2::balloon drawable ""))))
-      (handle-event self (make-instance 'exposure-event :region reg))
-      (set-mouse-documentation self (active-link-mouse-documentation self active-link)) )))
-
-;; xxx
-(defvar *old-background* nil)
-
-(defmethod unactivate-link ((self prim-ht-view) link)
-  (with-slots (display-list) self
-    (map-link-boxen (lambda (box)
-                      (setf (r2::abox-background box) *old-background*) )
-                    display-list link)))
-
-(defmethod activate-link ((self prim-ht-view) link)
-  (with-slots (display-list) self
-    (map-link-boxen (lambda (box)
-                      (setf *old-background* (r2::abox-background box))
-                      (setf (r2::abox-background box) 
-                        (r2::make-background :color "#9cc")));9cc
-                    display-list link)))
-
-(defmethod active-link-mouse-documentation ((self prim-ht-view) (command null))
-  "")
-
-(defmethod active-link-mouse-documentation ((self prim-ht-view) (command t))
-  (r2::command-documentation command))
-
-;;;;
-
-(defmethod set-display-list ((self prim-ht-view) new-display-list)
-  (with-slots (display-list) self
-    (maintain-active self nil nil)
-    (setf display-list new-display-list)
-    (multiple-value-bind (window) (get-drawable+gcontext self)
-      (when window
-        ;;(xlib:clear-area window :exposures-p t)
-        '(handle-event self (make-instance 'exposure-event :region +everywhere+))
-        (multiple-value-bind (x y same-screen-p) (xlib:query-pointer window)
-          ;; handle positions outside of the window
-          (maintain-active self (and same-screen-p x) y) )))))
-
-(defun paint-display-list (drawable gcontext xo yo display-list region active-link)
-  (declare (ignore xo yo active-link))
-  #||
-  (xlib:with-gcontext (gcontext :foreground 7)
-    (xlib:draw-rectangle drawable gcontext 0 0 1000 1000 t))
-  ||#
-  (when (not (null display-list))
-    (let ((items (display-list-items display-list))
-          (doc   (display-list-document display-list)))
-      (labels ((aux (box)
-                 (multiple-value-bind (x1 y1 x2 y2) (gu:region-bounding-rectangle* region)
-                   (r2::draw-bbox-background doc drawable gcontext box x1 y1 x2 y2))))
-        (cond ((r2::abox-background (car items))
-               (aux (car items)))
-              ((and (r2::abox-contents (car items))
-                    (r2::abox-background (car (r2::abox-contents (car items)))))
-               (aux (car (r2::abox-contents (car items)))))))
-      (when r2::*no-color-p*
-        (setf (xlib:gcontext-foreground gcontext)
-          (ws/x11::x11-find-color drawable "white"))
-        (xlib:draw-rectangle drawable gcontext 0 0 #x7FFF #x7FFF t))
-      (dolist (k items)
-        (cond ((r2::bbox-p k)
-               (r2::draw-abox doc drawable gcontext k region)) )))))
-
-;;;; Glue it to the clm-window
-
-(defmethod handle-event ((self prim-ht-view) (event enter-event))
-  (maintain-active self (event-x event) (event-y event)))
-
-(defmethod handle-event ((self prim-ht-view) (event leave-event))
-  (maintain-active self nil nil))
-
-(defmethod handle-event ((self prim-ht-view) (event pointer-motion-event))
-  (maintain-active self (event-x event) (event-y event)))
-
-(defmethod handle-event ((self prim-ht-view) (event button-press-event))
-  (let ((q (find-active-link self (event-x event) (event-y event))))
-    (when q
-      (handle-activated-link self (first q) (second q) (third q)))))
-
-(defmethod handle-event ((self prim-ht-view) (event button-release-event))
-  )
-
 
 ;;; --------------------------------------------------------------------------------
 
@@ -748,11 +432,12 @@
       (setf user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
       (princ " done.")
       (finish-output))))
-  
-  (format T "~&;; Parsing default style sheet ...")
-  (setf r2::*default-style-sheet* 
-    (css::parse-style-sheet-from-url (url:parse-url "file://closure/resources/css/default.css")
-                                     :name "Closure Default Style Sheet"))
+
+  (unless r2::*default-style-sheet* 
+    (format T "~&;; Parsing default style sheet ...")
+    (setf r2::*default-style-sheet* 
+          (css::parse-style-sheet-from-url (url:parse-url "file://closure/resources/css/default.css")
+                                           :name "Closure Default Style Sheet")))
   (princ " done.")
   (finish-output)
   (values))  

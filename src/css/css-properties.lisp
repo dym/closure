@@ -151,14 +151,23 @@
                ;; CSS2
                :run-in :compact :marker 
         
-               ;; Table stuff:
-               ;;  :table :inline-table
-               ;;  :table-row-group :table-header-group
-               ;;  :table-footer-group :table-row :table-column-group
-               ;;  :table-column :table-cell :table-caption 
+               ;;; Table stuff:
+               
+               :table
+               :inline-table
+               :table-row-group
+               :table-header-group
+               :table-footer-group
+               :table-row
+               :table-column-group
+               :table-column
+               :table-cell
+               :table-caption
+               
                ;; :inherit
                )
-    :default-value :block
+    ;; ### CSS1 has :block here while CSS2 has :inline
+    :default-value :inline
     :inheritedp nil
     ;;xxx float -> block
     ;;xxx CSS2: default: inline
@@ -194,6 +203,26 @@
                (barbar :underline :overline :line-through :blink))
     :inheritedp nil
     :default-value :none)
+
+(define-css-property text-shadow
+    :value (or :none
+               (comma-list
+                (mungle
+                 (barbar (mungle (? <a-color>) (lambda (x) (and x (list :color x))))
+                         (mungle
+                          (& (mungle <length> (lambda (x) (list :dx x)))
+                             (mungle <length> (lambda (x) (list :dy x)))
+                             (mungle (? <length>) (lambda (x) (and x (list :radius x)))))
+                          (lambda (x) (reduce #'append x))))
+                 (lambda (x) (list `(:shadow ,@(reduce #'append x)))))))
+    ;; Now this is funny they cannot even read their own BNF:
+    ;; "Each shadow effect must specify a shadow offset and may
+    ;; optionally specify a blur radius and a shadow color. "
+    :default-value :none
+    :inheritedp nil
+    ;; :applies-to all
+    ;; :media visual
+    )
 
 (define-css-property padding-top
     :value (or <non-negative-length> <non-negative-percentage>)
@@ -325,30 +354,30 @@
                <non-negative-length>
                <non-negative-percentage>)
     :inheritedp t
-    :default-value :medium)
+    :default-value '(:pt . 12))
 
 (define-css-property border-top-color
     :value <a-color>
     :default-value "black"
-    :inheritedp t                       ;xxx not sure
+    :inheritedp nil                       ;xxx not sure
     )
 
 (define-css-property border-right-color
     :value <a-color>
     :default-value "black"
-    :inheritedp t                       ;xxx not sure
+    :inheritedp nil                       ;xxx not sure
     )
 
 (define-css-property border-bottom-color
     :value <a-color>
     :default-value "black"
-    :inheritedp t                       ;xxx not sure
+    :inheritedp nil                       ;xxx not sure
     )
 
 (define-css-property border-left-color
     :value <a-color>
     :default-value "black"
-    :inheritedp t                       ;xxx not sure
+    :inheritedp nil                       ;xxx not sure
     )
 
 ;;; Missing:
@@ -359,6 +388,27 @@
 
 ;;; Missing:
 ;; BACKGROUND-POSITION -- weird
+
+(define-css-property background-position
+    :value <a-background-position>
+    :default-value (cons '(:% . 0) '(:% . 0))
+    :inheritedp nil)
+
+(define-cooking background-position
+    :applicable-if t
+    :value (cons
+            (if (and (consp (car value))
+                     (member (caar value)
+                             '(:px :em :ex :in :cm :mm :pt :pc :canvas-h-percentage :canvas-v-percentage)))
+                (new-interpret-length (car value)
+                                      device (prop font-size) pt dpi)
+                (car value))
+            (if (and (consp (cdr value))
+                     (member (cadr value)
+                             '(:px :em :ex :in :cm :mm :pt :pc :canvas-h-percentage :canvas-v-percentage)))
+                (new-interpret-length (cdr value)
+                                      device (prop font-size) pt dpi)
+                (cdr value))))
 
 (define-css-property font-family
     :value <a-font-family>
@@ -457,6 +507,13 @@
 (define-css-property orig-width
     :value :khjdskdjshaks               ;xxx
     )
+
+#||
+(define-css-property caption-side
+    :value (or :top :bottom :left :right :inherit)
+    :inheritedp t
+    :default-value :top)
+||#
 
 ;;; ------------------------------------------------------------------------------------------
 ;;;  Shorthand properties
@@ -595,13 +652,24 @@
     :applicable-if (eql value :bold)
     :value         700)
 
+#||
 (define-cooking font-weight
     :applicable-if (eql value :bolder)
     :value         (min 900 (+ (parent-prop font-weight) 300)))
 
 (define-cooking font-weight
-    :applicable-if (eql @font-weight :lighter)
+    :applicable-if (eql value :lighter)
     :value         (max 100 (- (parent-prop font-weight) 300)))
+||#
+
+;; XXX kludge
+(define-cooking font-weight
+    :applicable-if (eql value :bolder)
+    :value         700)
+
+(define-cooking font-weight
+    :applicable-if (eql value :lighter)
+    :value         400)
 
 (define-cooking (border-top-width border-right-width border-bottom-width border-left-width)
     :applicable-if (eql value :thin) :value *thin-border*)
@@ -618,8 +686,8 @@
                         vertical-align
                         margin-top margin-right margin-bottom margin-left
                         padding-top padding-right padding-bottom padding-left
-                        text-indent width height top right bottom left line-height)
-    )
+                        text-indent width height top right bottom left line-height
+                        marker-offset) )
 
 (define-cooking font-size
     :applicable-if (and (consp value)
@@ -634,6 +702,7 @@
 (define-percentage-cooking font-size
     :base          (parent-prop font-size))
 
+#+NIL
 (define-cooking letter-spacing
     :applicable-if (eql value :normal)
     :value         0)
@@ -713,20 +782,70 @@
     :applicable-if (eql (prop border-left-style) :none)
     :value         0)
 
+;;;; CSS-2 table properties
+
+(define-css-property caption-side
+    :default-value :top
+    :value (or :top :bottom :left :right)
+    ;; :applies-to (:table-caption)
+    :inheritedp t
+    ;; :media :visual
+    )
+
+(define-css-property table-layout
+    :default-value :auto
+    :value (or :auto :fixed)
+    :inheritedp nil
+    ; :applies-to (:table :inline-table)
+    )
+
+(define-css-property border-collapse
+    :default-value :collapse
+    :value (or :collapse :separate)
+        ; :applies-to (:table :inline-table)
+    :inheritedp t)
+
+(define-css-property border-spacing
+    :default-value '(0 0)
+    :value (or (& <non-negative-length> <non-negative-length>)
+               (mungle <non-negative-length> (lambda (x) (list x x))))
+    :inheritedp t
+    ;; :applies-to (:table :inline-table)
+    )
+
+(define-cooking border-spacing
+    :applicable-if t
+    :value (list (new-interpret-length (first value) device (prop font-size) pt dpi)
+                 (new-interpret-length (second value) device (prop font-size) pt dpi)))
+
+(define-css-property empty-cells
+    :value (or :show :hide)
+    :default-value :show
+    ;; :applies-to (:table :inline-table)
+    :inheritedp t)
+
+#||
+(define-css-property speak-header
+    :value (or :once :always)
+    :default-value :once
+    :inheritedp t
+    ;; :media :aural
+    )
+||# 
+
 ;;; ---------------------------------------------------------------------------
 
 (defun p/background-position-1 (tokens)
   ;;  [<percentage> | <length>]{1,2}
-  (p/attcons '@background-position
-             (let ((r (p/repeated tokens 1 2 (lambda (toks)
-                                               (or (p/percentage toks)
-                                                   (p/length toks))))))
-               (and r
-                    (cons (let* ((v (car r))
-                                 (x (first v))
-                                 (y (or (second v) (cons :% 50))))
-                            (cons x y))
-                          (cdr r))))))
+  (let ((r (p/repeated tokens 1 2 (lambda (toks)
+                                    (or (p/percentage toks)
+                                        (p/length toks))))))
+    (and r
+         (cons (let* ((v (car r))
+                      (x (first v))
+                      (y (or (second v) (cons :% 50))))
+                 (cons x y))
+               (cdr r)))))
 
 (defun p/background-position-2 (tokens)
   ;; [top | center | bottom] || [left | center | right]
@@ -782,9 +901,9 @@
                      ((or (equal v '(:right :bottom))
                           (equal v '(:bottom :right)))
                       (values '(:% . 100) '(:% . 100))))
-             (p/attcons '@background-position (cons (cons x y) (cdr r))))))))
+             (cons (cons x y) (cdr r)))))))
     
-(defun p/background-position (tokens)
+(defun p/a-background-position (tokens)
   (or (p/background-position-1 tokens)
       (p/background-position-2 tokens)))
 
@@ -793,11 +912,33 @@
 ;;;
 )
 
+(eval-when (eval compile load)
+  (generate-slot-constants))
+
 (generate-parsers)
 (register-parsers)
 (generate-setup-style)
+(generate-setup-style-1)
+(generate-setup-style-3)
+
+(defmethod print-object ((object cooked-style) stream)
+  (print-unreadable-object (object stream :type t :identity nil)
+    (with-slots (%element) object
+      (cond (%element
+             (format stream "for ~A"
+                     (element-gi %element))
+             (loop for class in '(:before :after :first-line :first-letter) do
+                   (when (pseudo-class-matches-p class %element)
+                     (format stream "~(:~A~)" class))))
+            (t
+             (princ "anonymous" stream)) ))))
+
+
 
 ;; $Log$
+;; Revision 1.6  2003/03/13 19:29:17  gilbert
+;; lots of hacking
+;;
 ;; Revision 1.5  2002/07/29 12:41:25  gilbert
 ;; - cooking for 'border-*-width' on '(eql (prop border-*-style) :none)'
 ;;   must come late.

@@ -33,5 +33,23 @@
    #:element-gi
    #:text-element-p
    #:element-text
+   
+   ;; css support protocol
+   #:element-css-class
+   #:element-css-id
+   #:pseudo-class-matches-p
+   #:element-style-cache
+   #:element-implicit-style
+   #:element-explicit-style
+   
+   ;; renderer support protocol
+   #:element-replaced-element-1
+   #:element-replaced-element
+   #:*user-agent*
+   #:*document-language*
+   #:element-base-url
+   #:element-imap
+   #:render
+   #:root-element-embedded-style
    ))
 

@@ -59,6 +59,7 @@
 (defparameter *http-proxy-port* nil
   "Specifies the HTTP proxy port; see also *USE-HTTP-PROXY-P* and *HTTP-PROXY-HOST*.")
 
+#+NIL
 (defparameter *http-cache-dir* "test-cache/*"
   "A directory, where the HTTP document cache resides.")
 
@@ -82,6 +83,8 @@
 (defparameter *trust-expires-p* t
   "Whether to trust servers 'Expires' header field [and your clock].")
 
+(defvar *referer* nil)
+
 (defvar *http-cache* nil)
 
 ;;;
@@ -90,6 +93,7 @@
 (defparameter *http-proxy-port* 3128)
 
 (defparameter *user-agent* "Lynx/2.7.1ac-0.98 libwww-FM/2.14")
+(defparameter *user-agent* "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)")
 (defparameter *user-agent* "CLOSURE/0.1")
 
 
@@ -100,7 +104,15 @@
 
 (defun http-cache ()
   (or *http-cache*
-      (setf *http-cache* (uncommit-cache *http-cache-dir*))))
+      (let ((dir (merge-pathnames
+                  (make-pathname
+                   :directory '(:relative ".closure" "test-cache")
+                   :name nil
+                   :type nil
+                   :defaults (user-homedir-pathname))
+                  (user-homedir-pathname))))
+        (ensure-directories-exist dir)
+        (setf *http-cache* (uncommit-cache dir)))))
 
 ;;; ---- HTTP dates ---------------------------------------------------------------------------
 
@@ -289,6 +301,7 @@
     (url:unparse-url url)))
 
 (defun open-socket-for-http (url)
+  "This is the basic switch to decide whether to use a proxy and which proxy to use."
   ;; -> io proxyp
   (let* ((host (or (url:url-host url) "localhost"))
          (https-p (string= (url:url-protocol url) "https"))
@@ -332,6 +345,11 @@
                                      (not (member :host header :test #'string-equal :key #'car)))
                                 (list (cons "Host" host))
                               nil)
+                            (if *referer*
+                                (list (cons "Referer" (if (url:url-p *referer*)
+                                                          (url:unparse-url *referer*)
+                                                          *referer*)))
+                                nil)
                             (if (eq method :post)
                                 (list (cons "Content-Length" (format nil "~D" (length post-data))))
                               nil)

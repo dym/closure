@@ -25,6 +25,24 @@
 
 (defpackage :css
   (:use :glisp)
+  ;;
+  (:import-from "CLOSURE-PROTOCOL"
+   ;; basic element protocol
+   #:element-parent
+   #:element-children
+   #:text-element-p
+   #:element-gi
+   #:element-attribute
+   
+   ;; css support protocol
+   #:element-css-class
+   #:element-css-id
+   #:pseudo-class-matches-p
+   #:element-style-cache
+   #:element-implicit-style
+   #:element-explicit-style
+   )
+  ;;
   (:export
    #:MAKE-ASSIGNMENT
    #:ASSIGNMENT-SELECTOR
@@ -51,6 +69,8 @@
    #:percentage-p
    #:block-element-p
    #:display                            ;als funktion
+
+   #:KILL-STYLE
 	   
    ;; Defined Attributes
    #:@BACKGROUND-ATTACHMENT #:@BACKGROUND-COLOR #:@BACKGROUND-IMAGE

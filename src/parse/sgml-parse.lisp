@@ -61,6 +61,16 @@
 
 (in-package :SGML)
 
+#+:CMU
+  (shadow "CODE-CHAR")
+#+:CMU
+  (declaim (inline code-char))
+#+:CMU
+  (defun code-char (code)
+    (if (< code char-code-limit)
+        (cl:code-char code)
+        nil))
+
 ;; This is a high-speed implementation of an SGML parser.
 
 ;; NOTES
@@ -245,9 +255,8 @@
 (defmethod xml::read-octets (sequence (stream glisp:gstream) start end)
   (glisp:g/read-byte-sequence sequence stream :start start :end end))
 
-(defmethod xml::figure-encoding ((stream glisp:gstream))
-  ;; For HTML iso-8859-1 is the default
-  (values (xml::find-encoding :iso-8859-1) nil))
+(defmethod xml::xstream/close ((stream glisp:gstream))
+  (glisp:g/close stream))
 
 ;; a fake definition -- XXX non-reentrant!
 
@@ -375,7 +384,8 @@
           (t
            (parse-warn input 3
                        "Saw character '~A' after '&' -- bad entity reference?!" 
-                       (or (code-char ch) (format nil "&#x~4,'0X" ch)))
+                       (or (code-char ch)
+                           (format nil "&#x~4,'0X" ch)))
            (a-unread-byte ch input)     ;it might be something interesting
            (push-on-scratch input sp #/&)) )))
 
@@ -546,7 +556,9 @@
   (let ((name (read-name input)))
     (skip-white-space input)
     (let ((ch (a-read-byte input)))
-      (cond ((rune= ch #/>)
+      (cond ((null ch)
+             (read-tag-error input "In end tag: Expected '>' got end-of-file instead."))
+            ((rune= ch #/>)
              (values :end-tag name))
             (t
              (read-tag-error input "In end tag: Expected '>'")) ))))
@@ -584,13 +596,14 @@
   (let ((slot (read-sloopy-name input)))
     ;;(print (list 'slot '= (mungle slot) (mungle (vector (a-peek-byte input)))))
     (skip-white-space input)
-    (cond ((rune= (a-peek-byte input) #/=)
-           (a-read-byte input)
-           (skip-white-space input)
-           (let ((value (read-value input dtd)))
-             (cons slot value)))
-          (t
-           slot))))
+    (let ((c (a-peek-byte input)))
+      (cond ((and (not (null c)) (rune= c #/=))
+             (a-read-byte input)
+             (skip-white-space input)
+             (let ((value (read-value input dtd)))
+               (cons slot value)))
+            (t
+             slot)))))
 
 (defun read-value (input dtd)
   (let ((ch (a-peek-byte input)))
@@ -662,19 +675,20 @@
 
 (defun read-define-tag (input dtd)
   (let ((ch (a-peek-byte input)))
-    (cond ((rune= ch #/>)
+    (cond ((null ch)
+           (read-tag-error input "unexpected EOF"))
+          ((rune= ch #/>)
            ;; empty define tag -- to be ignored
            (a-read-byte input)
            (read-token input dtd))
           ((rune= ch #/-)
            ;; comment?
            (a-read-byte input)
-           (cond ((rune= (a-peek-byte input) #/-)
-                  (read-comment input))
-                 (t
-                  (read-tag-error input "Expected '-' after \"<!-\""))))
-          ((null ch)
-           (read-tag-error input "unexpected EOF"))
+           (let ((ch (a-peek-byte input)))
+             (cond ((and (not (null ch)) (rune= ch #/-))
+                    (read-comment input))
+                   (t
+                    (read-tag-error input "Expected '-' after \"<!-\"")))))
           (t
            (read-define-tag-2 input)) )))
 

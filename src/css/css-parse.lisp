@@ -5,7 +5,7 @@
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: GPL (See file COPYING for details).
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 1998-2001 by Gilbert Baumann
+;;;  (c) copyright 1998-2003 by Gilbert Baumann
 
 ;;; This program is free software; you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
@@ -21,22 +21,6 @@
 ;;; along with this program; if not, write to the Free Software
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-;;; Changes
-
-;;  When        Who     What
-;; ----------------------------------------------------------------------------
-;;  2001-05-19  GB      - selector stuff more to extra file 'css-selector.lisp'
-;;  2001-05-14  GB      - ID selectors cannot begin with a digit
-;;  1999-08-16  GB      - url merging is now done upon parsing (URL are relative
-;;                        to the style sheet the assignment occurs in).
-;;                        [PARSE-STYLE-SHEET and P/URL].
-;;                      - new special variable *STYLE-SHEET-BASE-URL*.
-;;                      - LOOKUP-ALL-STYLE: fixed bug wrt STYLE attribute style.
-;;  1999-08-15  GB      - implemented CSS-2 selectors
-;;                      - changed signature of LOOKUP-ALL-STYLE to reflect 
-;;                        difference between implicit style and style by STYLE
-;;                        attribute
-
 (in-package :CSS)
 
 (defvar *style-sheet-base-url*
@@ -45,7 +29,6 @@
    should be bound appropriate.")
 
 (defparameter *css-2-enabled-p* t)
-;; eigentlich könnten wir hier CSS-1, "CSS-P" und CSS-2 unterscheiden.
 
 ;;; Some differences between CSS-1 and CSS-2 parsing:
 
@@ -623,6 +606,8 @@
             (and ,g
                  (cons (,(caddr x) (car ,g))
                        (cdr ,g))))))
+      ((and (consp x) (eq (car x) 'comma-list))
+       `(p/comma-separated-list tokens (lambda (tokens) ,(compile-rule (cadr x)))))
       ((keywordp x)
        `(p/simple-enum tokens ,x))
       ((and (symbolp x) 
@@ -1001,40 +986,6 @@
                               (num-gi-2 (selector-num-gi s2)))
                           (< num-gi-1 num-gi-2)))))))))
 
-;; REC-CSS1 says:
-;;
-;; "Also, the case-sensitivity of the CLASS and ID attributes is under
-;; the control of HTML [2]."
-;; 
-;; Which is bad.
-;; in HTML-4.0 'class' and 'id' are CS.
-
-(defun singleton-selector-matches-p (s pt)
-  (declare #.cl-user:+optimize-very-fast+)
-  (declare (type sgml::pt pt)
-           (type singleton-selector s))
-  (and (or (null (singleton-selector-id s))
-           (id-eq (singleton-selector-id s) (r2::pt-attr* pt :id)))
-       (or (null (singleton-selector-gi s))
-           (eq (singleton-selector-gi s) (sgml:pt-name pt)))
-       (or (null (singleton-selector-class s)) 
-           (class-eq (singleton-selector-class s) (r2::pt-attr* pt :class)))
-       (or (null (singleton-selector-pseudo-class s))
-           (pseudo-class-matches-p (singleton-selector-pseudo-class s) pt))))
-
-(defun selector-matches-p (selector pt)
-  (declare #.cl-user:+optimize-very-fast+)
-  (declare (type sgml::pt pt))
-  (cond ((null selector) t)
-        ((null pt) nil)
-        ((singleton-selector-matches-p (car selector) pt)
-         (if (null (cdr selector))
-             t
-           (do ((q (sgml:pt-parent pt) (sgml:pt-parent q)))
-               ((null q))
-             (when (selector-matches-p (cdr selector) q)
-               (return t))))) ))
-
 (defun parse-style-sheet (input super-sheet
                           &rest create-options
                           &key base-url
@@ -1067,142 +1018,6 @@
     (css:parse-style-sheet input nil
                            :name name
                            :base-url url)))
-
-(defun pprint-selector (sel)
-  (format T "[~A ~A ~A] "
-          (or (singleton-selector-gi sel) "?")
-          (or (singleton-selector-class sel) "?")
-          (or (singleton-selector-id sel) "?")))
-
-#||
-(defun describe-style-sheet (self)
-  (dotimes (i (length (style-sheet-assignments self)))
-    (let ((key (find i *atts* :key #'symbol-value))
-          (value (aref (style-sheet-assignments self) i))) 
-      (unless (null value)
-        (format T "~&~% ~(~A~):" key)
-        (dolist (as value)
-          (format T "~%    ")
-          (dolist (s (car as))
-            (pprint-selector s))
-          (format T "~30T-> ~S."  (cdr as)))))))
-||#
-
-;;(export '(create-style-sheet style-sheet-relate
-;;          style-sheet-lookup parse-style-sheet
-;;          describe-style-sheet))
-
-;;; Liste aller definierten attribute: (alphabetisch sortiert).
-
-;;; ---------------------------------------------------------------------------
-
-(defconstant @BACKGROUND-ATTACHMENT     0)
-(defconstant @BACKGROUND-COLOR          1)
-(defconstant @BACKGROUND-IMAGE          2)
-(defconstant @BACKGROUND-REPEAT         3)
-(defconstant @BORDER-BOTTOM-COLOR       4)
-(defconstant @BORDER-BOTTOM-STYLE       5)
-(defconstant @BORDER-BOTTOM-WIDTH       6)
-(defconstant @BORDER-LEFT-COLOR         7)
-(defconstant @BORDER-LEFT-STYLE         8)
-(defconstant @BORDER-LEFT-WIDTH         9)
-(defconstant @BORDER-RIGHT-COLOR        10)
-(defconstant @BORDER-RIGHT-STYLE        11)
-(defconstant @BORDER-RIGHT-WIDTH        12)
-(defconstant @BORDER-TOP-COLOR          13)
-(defconstant @BORDER-TOP-STYLE          14)
-(defconstant @BORDER-TOP-WIDTH          15)
-(defconstant @CLEAR                     16)
-(defconstant @COLOR                     17)
-(defconstant @DISPLAY                   18)
-(defconstant @FLOAT                     19)
-(defconstant @FONT-FAMILY               20)
-(defconstant @FONT-SIZE                 21)
-(defconstant @FONT-STYLE                22)
-(defconstant @FONT-VARIANT              23)
-(defconstant @FONT-WEIGHT               24)
-(defconstant @HEIGHT                    25)
-(defconstant @LETTER-SPACING            26)
-(defconstant @LINE-HEIGHT               27)
-(defconstant @LIST-STYLE-IMAGE          28)
-(defconstant @LIST-STYLE-POSITION       29)
-(defconstant @LIST-STYLE-TYPE           30)
-(defconstant @MARGIN-BOTTOM             31)
-(defconstant @MARGIN-LEFT               32)
-(defconstant @MARGIN-RIGHT              33)
-(defconstant @MARGIN-TOP                34)
-(defconstant @PADDING-BOTTOM            35)
-(defconstant @PADDING-LEFT              36)
-(defconstant @PADDING-RIGHT             37)
-(defconstant @PADDING-TOP               38)
-(defconstant @TEXT-ALIGN                39)
-(defconstant @TEXT-DECORATION           40)
-(defconstant @TEXT-INDENT               41)
-(defconstant @TEXT-TRANSFORM            42)
-(defconstant @VERTICAL-ALIGN            43)
-(defconstant @WHITE-SPACE               44)
-(defconstant @WIDTH                     45)
-(defconstant @WORD-SPACING              46)
-
-
-(defconstant @POSITION                  47)
-(defconstant @TOP                       48)
-(defconstant @RIGHT                     49)
-(defconstant @BOTTOM                    50)
-(defconstant @LEFT                      51)
-
-(defconstant @ORIG-WIDTH                52)
-
-(defconstant @BACKGROUND-POSITION       53)
-
-(defconstant @OVERFLOW                  54)
-(defconstant @CLIP                      55)
-
-(defconstant @CONTENT                   56)
-(defconstant @QUOTES                    57)
-(defconstant @COUNTER-RESET             58)
-(defconstant @COUNTER-INCREMENT         59)
-(defconstant @MARKER-OFFSET             60)
-(defconstant @Z-INDEX                   61)
-
-
-(defconstant *n-attr*                   62)
-
-(defconstant *atts*
-    '(@BACKGROUND-ATTACHMENT @BACKGROUND-COLOR @BACKGROUND-IMAGE
-      @BACKGROUND-REPEAT @BORDER-BOTTOM-COLOR @BORDER-BOTTOM-STYLE
-      @BORDER-BOTTOM-WIDTH @BORDER-LEFT-COLOR @BORDER-LEFT-STYLE
-      @BORDER-LEFT-WIDTH @BORDER-RIGHT-COLOR @BORDER-RIGHT-STYLE
-      @BORDER-RIGHT-WIDTH @BORDER-TOP-COLOR @BORDER-TOP-STYLE
-      @BORDER-TOP-WIDTH @CLEAR @COLOR @DISPLAY @FLOAT @FONT-FAMILY @FONT-SIZE
-      @FONT-STYLE @FONT-VARIANT @FONT-WEIGHT @HEIGHT @LETTER-SPACING
-      @LINE-HEIGHT @LIST-STYLE-IMAGE @LIST-STYLE-POSITION @LIST-STYLE-TYPE
-      @MARGIN-BOTTOM @MARGIN-LEFT @MARGIN-RIGHT @MARGIN-TOP @PADDING-BOTTOM
-      @PADDING-LEFT @PADDING-RIGHT @PADDING-TOP @TEXT-ALIGN @TEXT-DECORATION
-      @TEXT-INDENT @TEXT-TRANSFORM @VERTICAL-ALIGN @WHITE-SPACE @WIDTH
-      @WORD-SPACING
-      @POSITION @TOP @RIGHT @BOTTOM @LEFT @ORIG-WIDTH @BACKGROUND-POSITION
-      ;;
-      @OVERFLOW @CLIP
-      ;; CSS2: Chapter 12
-      @CONTENT @QUOTES @COUNTER-RESET @COUNTER-INCREMENT @MARKER-OFFSET
-      ))
-
-#||
-
-Testing:
-
-(defun tt (str)
-  (parse-assignment
-   (slurp (cl-char-stream->gstream (make-string-input-stream str)))))
-
-(defun tt (str)
-  (parse-selector
-   (slurp (cl-char-stream->gstream (make-string-input-stream str)))))
-
-||#
-
-;;;;;;;;;;;;
 
 (eval-when (compile eval load)
   
@@ -1297,95 +1112,36 @@ Testing:
                                 r)
                           (function ,(intern (format nil "P/~S" (property-description-name x))))))
         r))))
-)
+
+(defun generate-slot-constants-1 ()
+  (let ((defconstants nil)
+        (k 0))
+    ;; we go to some length to keep the indicies stable ...
+    (let ((props nil)
+          (taken nil))
+      (maphash (lambda (prop def)
+                 (when (typep def 'concrete-property-description)
+                   (push prop props)))
+               *css-properties*)
+      (dolist (prop props)
+        (let ((sym (intern (format nil "@~A" (symbol-name prop)))))
+          (when (boundp sym)
+            (push (symbol-value sym) taken))))
+      (dolist (prop props)
+        (let* ((sym (intern (format nil "@~A" (symbol-name prop))))
+               (val (or (and (boundp sym) (symbol-value sym))
+                        ;; find the smallest non-taken
+                        (loop for i from 0 when (not (member i taken)) return i))))
+          (pushnew val taken)
+          (push `(defconstant ,sym ,val) defconstants)))
+      `(progn
+        ,@defconstants
+        (defconstant *n-attrs* ,(1+ (reduce #'max taken))))))) )
+
+(defmacro generate-slot-constants ()
+  (generate-slot-constants-1))
 
 (defun find-value-parser (slot)
-  (gethash slot *value-parsers*))
+  (gethash (rod-downcase slot) *value-parsers*))
 
-#||
-(defun css-prop-raw-accessor (p)
-  (intern (format nil "STYLE-~A" (property-description-name p))))
-
-(defun css-prop-cooked-accessor (p)
-  (intern (format nil "COMPUTED-STYLE-~A" (property-description-name p))))
-
-(defun css-prop-raw-vector-index (p)
-  (intern (format nil "@~A" (property-description-name p))))
-
-(defun css-prop-interpreter (p)
-  'identity)
-
-(defun ququ ()
-  (let ((props (mapcar (lambda (x) (gethash x *css-properties*))
-                       '(font-size text-decoration))))
-    (print props)
-    `(progn
-      (defstruct computed-style
-        ,@(mapcar (lambda (prop)
-                    (with-slots (name) prop
-                      name))
-                  props))
-
-      ,@(mapcar (lambda (p)
-                  `(defun ,(css-prop-raw-accessor p) (raw-style)
-                    (or (aref raw-style ,(css-prop-raw-vector-index p))
-                     ',(if (property-description-inheritedp p)
-                           :inherit
-                           (property-description-default-value p)))))
-                props)
-
-      (defun compute-style (raw-style parent-computed-style device)
-        (let* (,(mapcar (lambda (p)
-                          `(,(property-description-name p)
-                            (let ((value (,(css-prop-raw-accessor p) raw-style)))
-                              (if (eql value :inherit)
-                                  (,(css-prop-cooked-accessor p) parent-computed-style)
-                                  (,(css-prop-interpreter p) value)))))
-                        props))
-          ))
-          
-      )))
-
-  (mapcar (lambda (x)
-            (setf x (gethash x *css-properties*))
-            
-            )
-          '(font-size)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; We distinguish between raw style as retrieved from the style sheet
-;;; and cooked style.
-
-;;; Cooking sould be done upon the exact subtype/rhs item.
-
-(defmacro define-rhs-item (name &key predicate cooker)
-  )
-
-(define-rhs-item <length>
-    :predicate (lambda (object)
-                 (or
-                  (and (consp object)
-                       (member (car object)
-                               '(:px :em :ex :in :cm :mm :pt :pc :canvas-h-percentage :canvas-v-percentage)))
-                  (eql object 0)))
-    :cooker    (lambda (device object property)
-                 (declare (ignore property))
-                 (interpret-length object (device-dpi device) nil
-                                   1em 1ex
-                                   (device-canvas-width device)
-                                   (device-canvas-height device)))
-    :type       real)
-
-(define-rhs-combination or (&rest clauses)
-  (
-
-(define-rhs-item <percentage>
-    :predicate (lambda (object)
-                 (and (consp object)
-                      (eql (car object) ':%)))
-    :cooker    (lambda (device object property)
-                 ...))
-
-||#
 

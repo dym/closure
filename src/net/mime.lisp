@@ -70,6 +70,7 @@
 (define-mime-type "image/x-xbitmap"	:extensions '("xbm"))
 (define-mime-type "text/html"		:extensions '("html"))
 (define-mime-type "text/lml"		:extensions '("lml"))
+(define-mime-type "text/xml"		:extensions '("xml"))
 (define-mime-type "text/plain"		:extensions '("txt"))
 (define-mime-type "text/css"		:extensions '("css"))
 
