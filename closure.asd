@@ -39,11 +39,29 @@
 ;; Finally declaim normal optimization level
 (declaim #.+optimize-normal+)
 
+(defclass closure-source-file (cl-source-file) ())
+
+#+sbcl
+(defmethod perform :around ((o compile-op) (s closure-source-file))
+  ;; shut up already.  Correctness first.
+  (handler-bind ((sb-ext:compiler-note #'muffle-warning))
+    (call-next-method)))
+
+#|
+;;; Convenience feature: will stop it from breaking into the debugger
+;;; under sbcl for full WARNINGs (better to fix the warnings :-).
+#+sbcl
+(defmethod perform :around ((o compile-op) s)
+  (setf (operation-on-failure o) :warn)
+  (call-next-method o s))
+|#
+
 (defpackage :glisp (:use))
 (asdf:defsystem glisp
     :pathname (merge-pathnames "src/glisp/"
 			       (make-pathname :name nil :type nil
 					      :defaults *load-truename*))
+    :default-component-class closure-source-file
     :components
     ((:file dependent
 	    :pathname
@@ -70,6 +88,7 @@
                  :clim
                  :clim-clx
                  :glisp)
+    :default-component-class closure-source-file
     :components
     ((:module src
 	      :serial t

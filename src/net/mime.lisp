@@ -312,7 +312,7 @@
                          ((setq c (position (char string ptr) *base64-codes* :test #'char=))
                           (incf ptr)
                           c)
-                         ((char= c #\=) (incf ptr) '=)
+                         ((char= (char string ptr) #\=) (incf ptr) '=)
                          (t (incf ptr) (read-code)))))
                (emit (byte)
                  (write-char (code-char byte) sink)))
