@@ -1,0 +1,30 @@
+Preliminary Installation Instructions
+
+Provide yourself with:
+
+ 1. CMUCL
+
+    [For what it is worth, I use 18d-pre]
+
+ 2. djpeg
+
+    [Debian package libjpeg-progs]
+
+ 3. gif2png
+
+    [Debian package gif2png]
+
+
+There is a script named BUILD. After executing it, if you are lucky
+this will leave you with a lisp.core which contains closure.
+
+Fire up the the newly build core:
+
+$ lisp -core lisp.core
+
+Then start Closure:
+
+* (closure:start)
+
+
+2003-03-10, Gilbert Baumann
