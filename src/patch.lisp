@@ -121,19 +121,10 @@
                  (process-next-event port)))))
          :name (format nil "~S's event process." port)))) ))
 
+
 ;;;; ----------------------------------------------------------------------------------------------------
 
 (in-package :climi)
-
-(defmethod change-space-requirements ((pane layout-protocol-mixin)
-                                      &rest space-req-keys &key resize-frame height
-				      &allow-other-keys)
-  (declare (ignore resize-frame))
-  (setf (pane-space-requirement pane) nil)
-  (with-slots (user-height) pane
-    (when height
-      (setf user-height height)))
-  (note-space-requirements-changed (sheet-parent pane) pane))
 
 (defmethod clim:sheet-native-transformation ((sheet null)) clim:+identity-transformation+)
 (defmethod clim:medium-sheet ((sheet sheet)) sheet)
