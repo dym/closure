@@ -1471,8 +1471,8 @@
 (define-style-mapping html-4.0-document-language (element (gi (eql :IMG)) (attr (eql :HSPACE)) value)
   (let (x)
     (when (setf x (pt-attr/pixels element :hspace nil))
-      (add-style 'css:@margin-top    (cons :px x))
-      (add-style 'css:@margin-bottom (cons :px x)))))
+      (add-style 'css:@margin-left    (cons :px x))
+      (add-style 'css:@margin-right   (cons :px x)))))
 
 (define-style-mapping html-4.0-document-language (element (gi (eql :IMG)) (attr (eql :BORDER)) value)
   (let (x)
