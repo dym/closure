@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.14  2005/03/13 20:58:31  emarsden
+;;  - Update to new McCLIM requirements on DEFINE-xx-COMMAND, adding :name t
+;;    so that commands are available from listener pane
+;;
 ;; Revision 1.13  2005/03/13 19:24:14  gbaumann
 ;; make it at least compile and show a window with CMUCL 19a and cvs mcclim.
 ;;
@@ -85,7 +89,7 @@
 (defclass closure-pane (application-pane)
   ())
 
-;;; Curde History
+;;; Crude History
 
 (defvar *back-history* nil)
 (defvar *forw-history* nil)
@@ -259,10 +263,10 @@
 ;;;; Commands
 ;;;;
 
-(define-closure-command com-show-listener ()
+(define-closure-command (com-show-listener :name t) ()
   (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) t))
 
-(define-closure-command com-hide-listener ()
+(define-closure-command (com-hide-listener :name t) ()
   (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) nil))
 
 (define-closure-command (com-visit-url :name t) ((url 'url)) ;;; :gesture :select))
@@ -277,10 +281,10 @@
   (let ((*standard-output* *trace-output*))
     (foo url)))
 
-(define-closure-command com-reflow ()
+(define-closure-command (com-reflow :name t) ()
   (reflow))
 
-(define-closure-command com-back ()
+(define-closure-command (com-back :name t) ()
   (let ((*standard-output* *query-io*)) 
     (cond ((null (cdr *back-history*))
            (format t "There is nowhere you can go back to.~%"))
@@ -289,7 +293,7 @@
            (format t "Going back to ~S.~%" (first *back-history*))
            (foo (first *back-history*))))))
 
-(define-closure-command com-forward ()
+(define-closure-command (com-forward :name t) ()
   (let ((*standard-output* *query-io*)) 
     (cond ((null *forw-history*)
            (format t "There is nowhere you can go forward to.~%"))
@@ -298,7 +302,7 @@
            (format t "Going forward to ~S.~%" (first *back-history*))
            (foo (first *back-history*))))))
 
-(define-closure-command com-reload ()
+(define-closure-command (com-reload :name t) ()
   (let ((*standard-output* *query-io*)) 
     (cond ((null *back-history*)
            (format t "There is nothing to reload.~%"))
@@ -306,15 +310,15 @@
            (format t "Reloading ~S.~%" (first *back-history*))
            (foo (first *back-history*))))))
 
-(define-closure-command com-images-off ()
+(define-closure-command (com-images-off :name t) ()
   (setf closure:*user-wants-images-p* nil)
   (format *query-io* "Images are now off.~%"))
 
-(define-closure-command com-images-on ()
+(define-closure-command (com-images-on :name t) ()
   (setf closure:*user-wants-images-p* t)
   (format *query-io* "Images are now on. You may want to reload.~%"))
 
-(define-closure-command com-quit ()
+(define-closure-command (com-quit :name t) ()
   (throw 'closure-quit nil))
 
 (defun make-google-search-url (string)
@@ -325,15 +329,15 @@
                          (cons "q" string)))
    (url:parse-url "http://www.google.com/search")))
 
-(define-closure-command com-reverse-search-google ((url 'url))
+(define-closure-command (com-reverse-search-google :name t) ((url 'url))
   (let ((*standard-output* *trace-output*))
     (com-visit-url
      (make-google-search-url (format nil "link:~A" url)))))
 
-(define-closure-command com-search-google ((what 'string))
+(define-closure-command (com-search-google :name t) ((what 'string))
   (com-visit-url (make-google-search-url what)))
 
-(define-closure-command com-home ()
+(define-closure-command (com-home :name t) ()
   (com-visit-url closure:*home-page*))
 
 (define-presentation-translator fofo
