@@ -232,6 +232,14 @@ used by the table renderer.")
   forcep)               ;whether this is a forced line break
                         ; (in which case 'here' may not apply)
 
+(defclass* floating-chunk ()
+  style                                 ;always the same as the (block-box-style (floating-chunk-content .))
+  content                               ;always a single block-box
+  %width                                ;width cache [outer width]
+  x1 y1 x2 y2)                          ;the bounding rectangle of this floating box.
+                                        ; (applicable if mounted).
+
+
 (defmethod print-object ((object black-chunk) stream)
   (format stream "#{~S}" (rod-string (black-chunk-data object))))
 
@@ -498,7 +506,7 @@ used by the table renderer.")
                                 (closure/clim-device::medium-draw-ro*
                                  clim-user::*medium*
                                  ro x (+ dy y)))
-                              (incf x (ro/size ro))) )))))
+                              (incf x (chunk-width chunk))) )))))
                    ;;
                    (walk (chunks)
                      (walk-aux chunks))
@@ -758,10 +766,10 @@ used by the table renderer.")
       (multiple-value-bind (vmp vmn yy yy0 bm)
         (let ((*floating-boxes* nil)) ;### hmm
           (format-block (floating-chunk-content chunk) x1 x2
-                    #|ss:|# nil
-                    #|before-markers:|# nil
-                    #|vmargins:|# 0 0
-                    #|y|# y))
+                        #|ss:|# nil
+                        #|before-markers:|# nil
+                        #|vmargins:|# 0 0
+                        #|y|# y))
         (incf yy vmp)                    ;flush the vertical margin
         (incf yy vmn)                    ;flush the vertical margin
         (setf (floating-chunk-x1 chunk) x1
@@ -797,7 +805,8 @@ mounted floating boxen."
 (defun format-para (items pos-vertical-margin neg-vertical-margin x1 x2 yy ss block-style before-markers)
   ;; ### we want another special rule to force floating boxen which occur on otherwise empty lines.
   ;;     (i am still not sure if this is necessarily a good idea).
-  (let ((clw 0)
+  (let (style                           ;###
+        (clw 0)                    
         (cww 0)
         (cur-line nil)
         (cur-word nil)
@@ -992,6 +1001,7 @@ mounted floating boxen."
                                        (t
                                         (incf ww (chunk-width k))) ))
                                ;; disc exhausted continue with list
+                               (let ((ss ss))
                                (dolist (k (cdr xs))
                                  (cond ((typep k 'disc-chunk)
                                         ;; before is missing.
@@ -999,8 +1009,23 @@ mounted floating boxen."
                                         (return-from zulu))
                                        ((typep k 'floating-chunk)
                                         nil)
+                                       ((typep k 'open-chunk)
+                                        (incf ww (chunk-width k))
+                                        (push (bounding-chunk-style k) ss))
+                                       ((typep k 'close-chunk)
+                                        (incf ww (chunk-width k))
+                                        (pop ss))
+                                       ((typep k 'replaced-object-chunk)
+                                        ;; hhmm..
+                                        (multiple-value-bind (width height)
+                                            (replaced-object-dimensions (replaced-object-chunk-object k)
+                                                                        (cooked-style-width (car ss))
+                                                                        (cooked-style-height (car ss)))
+                                          (ro/resize (replaced-object-chunk-object k)
+                                                     width height)
+                                          (incf ww width)))
                                        (t
-                                        (incf ww (chunk-width k))))))
+                                        (incf ww (chunk-width k)))))))
                              (cond ((<= (+ clw ww) (- x2 x1))
                                     (show p))
                                    (t
@@ -1009,7 +1034,13 @@ mounted floating boxen."
                                     (flush-line)
                                     (show (disc-chunk-after x))))))))
                    (replaced-object-chunk
-                    (incf cww (chunk-width x))
+                    ;; this is the time to resize
+                    (multiple-value-bind (width height)
+                        (replaced-object-dimensions (replaced-object-chunk-object x)
+                                                    (cooked-style-width (car ss)) (cooked-style-height (car ss)))
+                      (ro/resize (replaced-object-chunk-object x)
+                                 width height)
+                      (incf cww width))
                     (push x cur-word))
                    (kern-chunk
                     (incf cww (chunk-width x))
@@ -1510,7 +1541,7 @@ mounted floating boxen."
   (format stream "#<PARA-BOX ~S>" (para-box-items object)))
 
 (defmethod print-object ((object block-box) stream)
-  (format stream "#<BLOCK-BOX ~S>" (block-box-content object)))
+  (format stream "#<BLOCK-BOX ~S ~S>" (element-gi (block-box-element object)) (block-box-content object)))
 
 (defclass* marker-box ()
   ;; A marker box can occur as content of a block-box.
@@ -2701,18 +2732,17 @@ border-spacing between the spaned columns is included."
 ;;;;
 
 
-(defclass* floating-chunk ()
-  style                                 ;always the same as the (block-box-style (floating-chunk-content .))
-  content                               ;always a single block-box
-  %width                                ;width cache [outer width]
-  x1 y1 x2 y2)                          ;the bounding rectangle of this floating box.
-                                        ; (applicable if mounted).
-
 (defun floating-chunk-width (chunk)
   (or (slot-value chunk '%width)
       (error "FLOATING-CHUNK has no width?")))
 
 (defun compute-floating-chunk-width (chunk containing-block-width)
+  (describe (floating-chunk-content chunk))
+  ;;; Kludge!
+  #+NIL
+  (cond ((and (block-box-p (floating-chunk-content chunk))
+              (eq (element-gi (block-box-element (floating-chunk-content chunk)))
+                  :table))))
   (setf (slot-value chunk '%width)
         (let* ((style (floating-chunk-style chunk))
                (ml (cooked-style-margin-left  style))
@@ -2722,6 +2752,15 @@ border-spacing between the spaned columns is included."
                (br (cooked-style-border-right-width style))
                (pr (cooked-style-padding-right style))
                (mr (cooked-style-margin-right style)))
+          ;; kludge
+          (cond ((eq :auto (slot-value style 'css::width))
+                 (setf wd (minmax-block (floating-chunk-content chunk)))))
+          (print (list 'compute-floating-chunk-width
+                       (cooked-style-display (block-box-style (floating-chunk-content chunk)))
+                       (cooked-style-display style)
+                       ml pl bl wd br pr mr)
+                 *trace-output*)
+          (finish-output *trace-output*)
           (+
            ml pl bl wd br pr mr))))
 
@@ -4229,6 +4268,7 @@ border-spacing between the spaned columns is included."
           (setf wd r.w
                 hd (+ r.h r.d))
         ;; ### now this is bogus --- it does not belong here.
+        #+NIL
         (ro/resize replaced-object r.w (+ r.h r.d)) ))
 
       (cond ((cooked-style-block-element-p style)
@@ -4850,26 +4890,30 @@ border-spacing between the spaned columns is included."
       items)))
 
 (defun items-to-tex-nodes (items)
-  (map 'list (lambda (item)
-               (etypecase item
-                 (black-chunk
-                  (cond ((equalp (black-chunk-data item) (rod " "))
-                         (texpara::make-white-space-glue (chunk-width item)))
-                        (t
-                         (texpara::make-box :width (chunk-width item) :data item))))
-                 ((or bounding-chunk replaced-object-chunk kern-chunk)
-                  (texpara::make-box :width (chunk-width item) :data item))
-                 (disc-chunk
-                  (cond ((and (black-chunk-p (car (disc-chunk-here item)))
-                              (null (cdr (disc-chunk-here item)))
-                              (equalp (black-chunk-data (car (disc-chunk-here item))) (rod " ")))
-                         (texpara::make-white-space-glue (chunk-width (car (disc-chunk-here item)))))
-                        (t
-                         (texpara::make-discretionary
-                          :pre (items-to-tex-nodes (disc-chunk-before item))
-                          :post (items-to-tex-nodes (disc-chunk-after item))
-                          :no (items-to-tex-nodes (disc-chunk-here item))))))))
-       items))
+  (remove nil
+          (map 'list (lambda (item)
+                       (etypecase item
+                         (black-chunk
+                          (cond ((equalp (black-chunk-data item) (rod " "))
+                                 (texpara::make-white-space-glue (chunk-width item)))
+                                (t
+                                 (texpara::make-box :width (chunk-width item) :data item))))
+                         ((or bounding-chunk replaced-object-chunk kern-chunk)
+                          (texpara::make-box :width (chunk-width item) :data item))
+                         ( floating-chunk
+                          )
+                         (disc-chunk
+                          (cond ((and (black-chunk-p (car (disc-chunk-here item)))
+                                      (null (cdr (disc-chunk-here item)))
+                                      (equalp (black-chunk-data (car (disc-chunk-here item))) (rod " ")))
+                                 (texpara::make-white-space-glue (chunk-width (car (disc-chunk-here item)))))
+                                (t
+                                 (texpara::make-discretionary
+                                  :pre (items-to-tex-nodes (disc-chunk-before item))
+                                  :post (items-to-tex-nodes (disc-chunk-after item))
+                                  :no (items-to-tex-nodes (disc-chunk-here item))))))
+                         ))
+               items)))
 
 (defun tex-line-to-items (line)
   (map 'list (lambda (node)
