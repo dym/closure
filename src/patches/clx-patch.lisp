@@ -106,6 +106,7 @@
 ;; This is stolen form CMUCL
 
 #-(OR CMU ;; under CMUCL this all isn't needed
+      sbcl
       (AND EXCL (NOT (VERSION>= 5))))   ;ACL 4.3 lacks hostname
 (progn
 
