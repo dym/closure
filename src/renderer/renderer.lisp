@@ -4,6 +4,7 @@
 ;;;   Created: long ago
 ;;;    Author: Gilbert Baumann <unk6@rz.uni-karlsruhe.de>
 ;;;   License: GPL (See file COPYING for details).
+;;;       $Id$
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 1997-2002 by Gilbert Baumann
 
@@ -24,6 +25,28 @@
 (in-package :R2)
 
 ;;;; TODO
+
+;; . somehow when given
+;;
+;;   <div><div float:left width:100%>FFFF</div>RRRR</div> we wind up with:
+;;
+;;   RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+;;   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+;;
+;;   instead of
+;;
+;;   FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+;;   RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+;;
+
+;;   "as high as possible"!
+
+;; . somehow we missed case-insensitivity for css property names.
+
+;; . See: http://www.w3.org/TR/css3-selectors/#first-line
+;;   They changed rules!
+
+;; . multiple STYLE nodes in HEAD?
 
 ;; . test clear on tables.
 
@@ -152,6 +175,8 @@
 ;;   x-position (for after markers) but are taken into account for
 ;;   vertical align and are aligned vertically by the line spilling
 ;;   further down.
+;;
+;;   we might even get away with an output record? how knows.
 ;;
 
 ;; - We copy far too much. First the layout for lines should be changed into
@@ -940,9 +965,7 @@
                           (:right
                            (return-from find-floating-box-position
                              (values (- x1 w) y)))) ))) ))
-      ;; Note: This has same resemblance to the sweep line
-      ;; algorithmus.
-      ;; 
+      ;; Note: This has some resemblance to the sweep line algorithm.
       (try yo)
       (dolist (y ys)
         (and (> y yo) (try y)))
@@ -974,7 +997,13 @@
       (flush-vertical-margin new-rc)
       (handle-clear new-rc
                     (fbox-desc-pt fb) (css:style-attr (fbox-desc-pt fb) 'css:@clear))
-    
+
+      (print (list 'add-floating-box
+                   '(fbox-desc-w fb) '= (fbox-desc-w fb)
+                   (rc-x0 new-rc)
+                   (rc-x1 new-rc)
+                   (- (rc-x0 new-rc) (rc-x1 new-rc) )))
+      
       (multiple-value-bind (px py)
           (find-floating-box-position (fbox-desc-side fb)
                                       (rc-left-floating-boxen new-rc) 
@@ -2199,18 +2228,20 @@ festmachen?]
 
 (defun current-word-empty-p (pc)
   "Is the current word empty?"
-  (= (pc-espc pc) (pc-eword pc)))
+  ;; Used while placing floating boxen, should resemble the phrase "any content".
+  ;; was: (= (pc-espc pc) (pc-eword pc))
+  ;; now:
+  (at-the-very-beginning-of-line-p pc)
+  )
 
 (defun at-the-very-beginning-of-line-p (pc)
   "Are we at the very beginning of the current line? That is there nothing on
    the current line but some open/close chunks."
   ;; xxx why not (= eword espc)
-  (let ((res
-         (dotimes (i (pc-eword pc) t)
-           (when (or (integerp (aref (pc-data pc) i))
-                     (ro-chunk-p (aref (pc-data pc) i)))
-             (return nil)))))
-    res))
+  (dotimes (i (pc-eword pc) t)
+    (when (or (integerp (aref (pc-data pc) i))
+              (ro-chunk-p (aref (pc-data pc) i)))
+      (return nil))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -2280,20 +2311,25 @@ festmachen?]
     (cond ((and (realp width) (realp height))
            (ro/resize re width height))
           ((and (realp width) (eq height :auto))
-           (ro/resize re width (if (zerop (+ (nth-value 1 (ro/intrinsic-size re))
-                                             (nth-value 2 (ro/intrinsic-size re))))
-                                   0
-                                   (* width (/ (nth-value 0 (ro/intrinsic-size re))
-                                               (+ (nth-value 1 (ro/intrinsic-size re))
-                                                  (nth-value 2 (ro/intrinsic-size re))))))))
+           (ro/resize re
+                      ;;xxx because of round
+                      (round width)
+                      (round (if (zerop (nth-value 0 (ro/intrinsic-size re)))
+                                 0
+                                 (* width (/ (+ (nth-value 1 (ro/intrinsic-size re))
+                                                (nth-value 2 (ro/intrinsic-size re)))
+                                             (nth-value 0 (ro/intrinsic-size re))))))))
           ((and (eq width :auto) (realp height))
            (ro/resize re
-                      (if (zerop (nth-value 0 (ro/intrinsic-size re)))
-                          0
-                          (* height (/ (+ (nth-value 1 (ro/intrinsic-size re))
-                                          (nth-value 2 (ro/intrinsic-size re)))
-                                       (nth-value 0 (ro/intrinsic-size re)))))
-                      height))
+                      (round            ;xxx
+                       (if (zerop (+ (nth-value 1 (ro/intrinsic-size re))
+                                     (nth-value 2 (ro/intrinsic-size re))))
+                           0
+                           (* height (/ (nth-value 0 (ro/intrinsic-size re))
+                                        (+ (nth-value 1 (ro/intrinsic-size re))
+                                           (nth-value 2 (ro/intrinsic-size re)))))))
+                      (round
+                       height)))
           ((and (eq width :auto) (eq height :auto))
            ;; nothing to do
            ) )))
@@ -2367,10 +2403,27 @@ festmachen?]
 
 (declaim (inline add-rune* walk-pcdata/normal))
 
-(defun add-rune* (rc pc rune white-space)
+(defun pc-first-letter-p (pc)
+  (at-the-very-beginning-of-line-p pc)
+  )
+
+(defun add-rune* (rc pc rune white-space
+                  &aux first-letter-pseudo-element)
   (declare (type rc rc)
            (type pc pc)
            (type fixnum rune))
+  ;; In theory this is correct, in praxis we now keep abuting
+  ;; white-space (which winds up non-existing) with first-letter
+  ;; pseudo elements.
+  #+NIL
+  (cond ((and (not (member rune '(32 8 10 13 12)))
+              (pc-first-letter-p pc))
+         (setf first-letter-pseudo-element
+               (let ((e
+                      (make-pseudo-element :first-letter (pc-block-pt pc))))
+                 #+NIL (setf (sgml::pt-parent e) ?)
+                 e))
+         (walk/add-oc rc pc first-letter-pseudo-element)))
   (let ((text-transform (computed-style-text-transform 
                            (style-computed (car (pc-style-stack pc))))))
     (case rune
@@ -2415,7 +2468,10 @@ festmachen?]
          (:none
           (add-rune pc rune)))
        (setf (pc-last-was-word-space-p pc) nil)
-       (setf (pc-last-was-space-p pc) nil) ))))
+       (setf (pc-last-was-space-p pc) nil) )))
+  (when first-letter-pseudo-element
+    (walk/add-cc rc pc first-letter-pseudo-element))
+  )
 
 (defun walk-pcdata/normal (rc pc pt)
   (declare (type pc pc))
@@ -2484,10 +2540,22 @@ festmachen?]
         ;; need to add it never the less and spill the line immediatly
         ;; after that.
         ;;
+        ;; Wait a minute: we have a last change: if the containing
+        ;; block is so narrow because of floating boxen, we might get
+        ;; around by clearing; try that first.
+        ;;
         ((current-word-is-only-word-p pc)
-         (warn "Overful line box.")
-         (end-current-word/nobreak rc pc)
-         (spill-line rc pc) )
+         (handle-clear rc (pc-block-pt pc) :both) ;(pc-block-pt ..) right?
+         (find-margins rc pc)
+         (cond ((or (current-word-fits-p pc)
+                    *tex-mode-p*)
+                (end-current-word/nobreak rc pc))
+               ((current-word-is-only-word-p pc)      
+                (warn "Overful line box.")
+                (end-current-word/nobreak rc pc)
+                (spill-line rc pc))
+               (t
+                (spill-line rc pc))))
         ;;
         ;; Otherwise spill line and start over
         ;;
@@ -2573,13 +2641,17 @@ festmachen?]
 (defun add-fbox (rc pc fd flag)
   "Add the box as a floating box to the current word or what ever."
   (let ((fbox-width (fbox-desc-w fd)))
+    (let ((*package* (find-package :r2)))
+      (print (list 'add-fbox
+                   '(current-word-empty-p pc) '= (current-word-empty-p pc)
+                   'flag '= flag)))
     (cond ((or flag (current-word-empty-p pc))
            ;; the current word is empty, so we place this
            ;; floating box now.
            ;; Does it fit?
            (cond ((or (<= (+ (pc-line-width pc)
-                             (pc-word-width pc)
-                             (pc-spc-width pc)
+                             ;;(pc-word-width pc) -- xxx why was this in?
+                             ;;(pc-spc-width pc) -- xxx why was this in?
                              fbox-width)
                           (pc-avail pc))
                       flag)
@@ -2592,6 +2664,7 @@ festmachen?]
                   ;; boxen
                   (push fd (pc-dangling-fboxen pc))) ))
           (t
+           (debug/show-current-line pc)
            ;; the word is not empty, so add this
            ;; floating box to current word's dangling
            ;; floating boxen.
@@ -2602,10 +2675,6 @@ festmachen?]
 ;; - 'clear' scheint überhaupt nicht zu funktionieren
 ;; - Wir sollten keine Wörten setzen, wo keine hinpassen
 ;; - Ebenso für floating boxen.
-;; - Dekorationen wie background und border stimmen überhaupt nicht
-;;   mehr.
-;; Ansonsten wird der Acid Test schon bestanden!
-
 
 (defun find-margins (rc pc)
   "Reflect new, possible narrower margins."
@@ -2620,10 +2689,20 @@ festmachen?]
     (setf (sgml::pt-attrs r) 
           (list* :%pseudo-class class (sgml::pt-attrs r)))
     (setf (sgml::pt-cache r) nil)
-    (when (eq (css:display pt) :list-item)
+    ;; kludge
+    (when (and (eq (css:display pt) :list-item) (eql class :before))
       (setf (sgml::pt-name r) :%PSEUDO-ELEMENT)
       (setf (sgml::pt-attrs r)
-            (list* :style (rod (format nil "display: marker; content: 'o~A';" (code-char #o240)))
+            (list* :style (concatenate 'rod
+                                       (rod (format nil "display: ~A; content: '"
+                                                    (case (css:style-attr pt 'css:@list-style-position)
+                                                      ((:inside)  "inline")
+                                                      ((:outside) "marker"))))
+                                       ;; xxx we should use LIST-ITEM-STRING instead.
+                                       (list-item-string* (css:style-attr pt 'css:@list-style-type)
+                                                          (1+ (list-item-index pt)))
+                                       (vector #o240)
+                                       (rod "';"))
                    (sgml::pt-attrs r)) ))
     r))
 
@@ -2647,9 +2726,6 @@ festmachen?]
           (let* ((pe (make-pseudo-element class pt))
                  (content (pt-style-content rc pe)))
             (setf (gethash pt ht) pe)
-            #+NIL
-            (when (eq (sgml:gi pt) :LI)
-              (dprint "~S" (list pt pe (css:display pe))))
             (cond ((null content)
                    (setf (gethash pt ht) nil)
                    nil)
@@ -3150,6 +3226,9 @@ the bbox argument."
         (let* ((first-line-pseudo-element (sgml::copy-pt pt))
                (css::*first-line-element* first-line-pseudo-element)
                )
+          ;; kludge: nuke the STYLE attribute of the pseudo element
+          (remf (sgml::pt-attrs first-line-pseudo-element) :style)
+          ;;
           (let ((re (replaced-element-p (rc-document rc) (rc-device rc) pt)))
             (cond (re
                    (cond ((sgml::pt-p re)
@@ -3376,6 +3455,7 @@ the bbox argument."
   ;; also it would be a nice idea if we could have an extra open chunk
   ;; for the line itself.
   ;;
+  (debug/show-current-line pc)
   (let ((line-chunks (make-array (+ (* 1 (length (pc-dangling-ocs pc)))
                                     (pc-eline pc))
                                  :initial-element :unset))
@@ -3476,6 +3556,7 @@ the bbox argument."
                    (declare (type fixnum i))
                    (let ((this-is-dangling-oc-p (< i number-of-dangling-ocs))
                          ;; kludge!
+                         (ody dy)
                          (replaced-element (oc-ro x))
                          (bg-record(clim:with-new-output-record (clim-user::*medium*)
                                     )))
@@ -3496,13 +3577,13 @@ the bbox argument."
                                     (url:unparse-url
                                      (hyper-link-url (imap-area-link (maybe-pt-imap rc (oc-pt x)))))
                                     'clim-user::url)
-                                   (incf dy (oc-dy x))
+                                   (setf dy (oc-dy x))
                                    (setf i (foo (+ i 1))))))
                                (t
-                                (incf dy (oc-dy x))
+                                (setf dy (oc-dy x))
                                 (setf i (foo (+ i 1)))))
                          (unless replaced-element
-                           (draw-text-decoration xx1 (+ yy dy) xx text-decoration color))
+                           (draw-text-decoration xx1 (+ yy (oc-dy x)) xx text-decoration color))
                          (let* ((cc (let ((cc (svref (the (simple-array t (*)) line-chunks)
                                                      (the fixnum (1- i)))))
                                       (and (cc-p cc)
@@ -3526,7 +3607,7 @@ the bbox argument."
                            (multiple-value-bind (x1 y1 x2 y2)
                                (if replaced-element
                                    (values
-                                    xx1 (+ yy (- dy) (- (nth-value 1 (ro/size replaced-element)))
+                                    xx1 (+ yy (oc-dy x) (- (nth-value 1 (ro/size replaced-element)))
                                            (- border-top-width)
                                            (- border-bottom-width)
                                            (- padding-bottom)
@@ -3534,13 +3615,15 @@ the bbox argument."
                                            (- (oc-margin-bottom x))
                                            ;;(- (oc-margin-top x))
                                            )
-                                    xx  (+ yy (- dy) (nth-value 2 (ro/size replaced-element))
+                                    xx  (+ yy (oc-dy x) (nth-value 2 (ro/size replaced-element))
                                            (- (oc-margin-bottom x))
                                            )
                                     )
-                                   (values xx1 (- yy dy (text-style-ascent (oc-ts x))
+                                   (values xx1 (- (+ yy (oc-dy x))
+                                                  (text-style-ascent (oc-ts x))
                                                   border-top-width padding-top)
-                                           xx  (+ (- yy dy) (text-style-descent (oc-ts x))
+                                           xx  (+ (+ yy (oc-dy x))
+                                                  (text-style-descent (oc-ts x))
                                                   border-bottom-width padding-bottom)))
 
                              (let ((new-record
@@ -3559,7 +3642,9 @@ the bbox argument."
                                (clim:delete-output-record new-record (clim:output-record-parent new-record))
                                (clim:add-output-record new-record bg-record)
                                )
-                             )))))
+                             ))))
+                     (setf dy ody)
+                     )
                    i)
                  ;;
                  (foo (i)
@@ -3597,7 +3682,7 @@ the bbox argument."
                             (setf yet-flushed-p t))
                           (closure/clim-device::medium-draw-ro*
                            clim-user::*medium*
-                           (ro-chunk-ro x) xx (- yy
+                           (ro-chunk-ro x) xx (- (+ yy dy)
                                                  (oc-margin-bottom (car ocs))
                                                  (oc-padding-bottom (car ocs))
                                                  (oc-border-bottom-width (car ocs))
@@ -3807,7 +3892,7 @@ the bbox argument."
 
 (defun oc-text-height-and-depth (oc)
   (cond ((oc-ro oc)
-         ;; hmm... css1 does not considere replaced objects to have a baseline
+         ;; hmm... css1 does not consider replaced objects to have a baseline
          (values (+ (nth-value 1 (ro/size (oc-ro oc)))
                     (oc-padding-top oc)
                     (oc-border-top-width oc)
@@ -3832,6 +3917,45 @@ the bbox argument."
              ;; dieser hack mit 'max' oben.
              (values as2 ds2) )))))
 
+;;; Vertical Align
+
+;; There is certain confusion about what the geometry on an inline box
+;; is. Here is my interpretation:
+
+;; The specification says that the height of an inline box is given by
+;; its line-height property. Since the height is the inside height, we
+;; need to add the padding, border, and margin to get to the top of an
+;; inline box.
+
+;; Note however that the top of an line-box is not influenced by
+;; possible margins to paddings.
+
+
+;; 'baseline'    ⇒ dy ← 0
+;; 'middle'      ⇒ dy ← H/2 - D/2 - parent.x-height/2
+;; 'sub'         ⇒ dy ← ...
+;; 'super'       ⇒ dy ← ...
+;; 'text-top'    ⇒ dy ← H - parent.ascent
+;; 'text-bottom' ⇒ dy ← - (D - parent.descent)
+
+;; While:
+;; non-replaced elements:
+;;   H ← [line-height - ascent - descent]/2 + ascent
+;;   D ← [line-height - ascent - descent]/2 + descent
+;;
+;; replaced elements:
+;;   H ← ro.height + padding-top + border-top-width + margin-top
+;;   D ← ro.depth + padding-bottom + border-bottom-width + margin-bottom
+
+;; CAUTION
+;;   CSS1 makes this glory exception that some replaced objects are
+;;   not considered to have a baseline, in which case one should calculate:
+;;     H ← ro.height + padding-top + border-top-width + margin-top +
+;;          ro.depth + padding-bottom + border-bottom-width + margin-bottom 
+;;     D ← 0
+
+;; XXX: sometimes dy is absolute, sometimes it is relative! Fix that!
+
 (defun vertically-align-line-2 (rc pc chunks end
                                 &aux text-seen-p
                                 no-line-height-mode-p)
@@ -3840,79 +3964,110 @@ the bbox argument."
            (type rc rc)
            (type pc pc))
 
-  ;; This still fails because the line-height of the surrounding block
-  ;; is not taken into account.
+  (let ((*tops* nil)
+        (*btms* nil))
+    
+    ;; This still fails because the line-height of the surrounding block
+    ;; is not taken into account.
 
-  ;; Special mode for lines, which contain no text at all, that are
-  ;; often images in tables, which should align without any gaps between them.
-  (setf no-line-height-mode-p
-               (not (find-if #'integerp chunks :end end)))
-  ;;
+    ;; Special mode for lines, which contain no text at all, that are
+    ;; often images in tables, which should align without any gaps between them.
+    (setf no-line-height-mode-p
+          (not (find-if #'integerp chunks :end end)))
+    ;;
 
-  (multiple-value-bind (total-height total-depth)
-      ;; xxx hack
-      (if no-line-height-mode-p
-          (values 0 0)
-          (oc-text-height-and-depth (make-oc :ts (car (last (pc-ts-stack pc)))
-                                             :pt (pc-block-pt pc)
-                                             :style-stack (list (car (last (pc-style-stack pc)))))))
-    (let ((oc-stack nil))
-      (labels ((klose (oc)
-                 (let ((dy
-                        (- (new-resolve-valign oc (car oc-stack)))))
-                   ;; xxx top/bottom!
-                   (setf (oc-dy oc) dy)
-                   (cond (oc-stack
-                          (setf (oc-height (car oc-stack))
-                                (max 0 (oc-height (car oc-stack))(- (oc-height oc) dy)))
-                          (setf (oc-depth  (car oc-stack))
-                                (max 0 (oc-depth (car oc-stack))(+ (oc-depth  oc) dy))))
-                         (t
-                          (setf total-height (max 0 total-height (- (oc-height oc) dy)))
-                          (setf total-depth (max 0 total-depth (+ (oc-depth oc) dy))))))))
-        (do ((i 0 (+ i 1)))
-            ((= i end))
-          (declare (type fixnum i))
-          (let ((item (aref chunks i)))
-            (cond ((typep item 'fixnum)
-                   (incf i 1);; xxx
-                   )
-                  (t
-                   (typecase item
-                     (oc
-                      (setf (values (oc-height item) (oc-depth item))
-                            (if (and no-line-height-mode-p (null (oc-ro item)))
-                                (values 0 0)
-                                (oc-text-height-and-depth item)))
-                      (push item oc-stack))
-                     (ro-chunk
-                      ;; NOTE: these are now handled at the corresponding OC.
-                      #||
-                      ;; Now ro-chunks are somewhat special, since the padding
-                      ;; and border of its containing element should influence
-                      ;; the line height (indirectly by affecting the
-                      ;; height/depth of the container).
-                      ;;
-                      ;; Unfortunately we currently have no access to these
-                      ;; properties.
-                      ;;
-                      (multiple-value-bind (w h d) (ro/size (ro-chunk-ro item))
+    (multiple-value-bind (total-height total-depth)
+        ;; xxx hack
+        (if no-line-height-mode-p
+            (values 0 0)
+            (oc-text-height-and-depth (make-oc :ts (car (last (pc-ts-stack pc)))
+                                               :pt (pc-block-pt pc)
+                                               :style-stack (list (car (last (pc-style-stack pc)))))))
+      (let ((oc-stack nil))
+        (labels ((klose (oc)
+                   (let ((dy
+                          (- (new-resolve-valign oc (car oc-stack)))))
+                     ;; xxx top/bottom!
+                     (setf (oc-dy oc) dy)
+                     (cond (oc-stack
+                            (setf (oc-height (car oc-stack))
+                                  (max 0 (oc-height (car oc-stack))(- (oc-height oc) dy)))
+                            (setf (oc-depth  (car oc-stack))
+                                  (max 0 (oc-depth (car oc-stack))(+ (oc-depth  oc) dy))))
+                           (t
+                            (setf total-height (max 0 total-height (- (oc-height oc) dy)))
+                            (setf total-depth (max 0 total-depth (+ (oc-depth oc) dy))))))))
+
+          ;; kludge: Add a chunk for the line-box itself
+          (let ((item))
+            (add-oc rc pc (pc-block-pt pc)
+                    (lambda (oc) (setf item oc)))
+            (setf (values (oc-height item) (oc-depth item))
+                  (if (and no-line-height-mode-p (null (oc-ro item)))
+                      (values 0 0)
+                      (oc-text-height-and-depth item)))
+            (push item oc-stack))
+          
+          (do ((i 0 (+ i 1)))
+              ((= i end))
+            (declare (type fixnum i))
+            (let ((item (aref chunks i)))
+              (cond ((typep item 'fixnum)
+                     (incf i 1);; xxx
+                     )
+                    (t
+                     (typecase item
+                       (oc
+                        (setf (values (oc-height item) (oc-depth item))
+                              (if (and no-line-height-mode-p (null (oc-ro item)))
+                                  (values 0 0)
+                                  (oc-text-height-and-depth item)))
+                        (push item oc-stack))
+                       (ro-chunk
+                        ;; NOTE: these are now handled at the corresponding OC.
+                        #||             ;
+                        ;; Now ro-chunks are somewhat special, since the padding
+                        ;; and border of its containing element should influence
+                        ;; the line height (indirectly by affecting the
+                        ;; height/depth of the container).
+                        ;;
+                        ;; Unfortunately we currently have no access to these
+                        ;; properties.
+                        ;;
+                        (multiple-value-bind (w h d) (ro/size (ro-chunk-ro item))
                         (setf (oc-height (car oc-stack))
-                              (max 0 (+ (oc-height (car oc-stack))
-                                        h)))
+                        (max 0 (+ (oc-height (car oc-stack))
+                        h)))
                         (setf (oc-depth (car oc-stack))
-                              (max 0 (oc-depth (car oc-stack)) d)))
-                      ||#
-                      )
-                     (cc
-                      (let ((oc (pop oc-stack)))
-                        (unless oc
-                          (error "More close chunks as open chunks, please debug."))
-                        (when oc        ;xxx shouln't happen
-                          (klose oc))))
-                     )))))
-        (do () ((null oc-stack)) (klose (pop oc-stack)))
-        (values total-height total-depth) ))))
+                        (max 0 (oc-depth (car oc-stack)) d)))
+                        ||#
+                        )
+                       (cc
+                        (let ((oc (pop oc-stack)))
+                          (unless oc
+                            (error "More close chunks as open chunks, please debug."))
+                          (when oc      ;xxx shouln't happen
+                            (klose oc))))
+                       )))))
+          (do () ((null oc-stack)) (klose (pop oc-stack)))
+          ;;
+          ;; now care for top/bottom
+          ;;
+          (dotimes (i 2)
+            (when *tops*
+              (dolist (k *tops*)
+                (setf (oc-dy k) (- (oc-height k) total-height))
+                (setf total-height (max total-height (- (oc-height k) (oc-dy k))))
+                (setf total-depth  (max total-depth (+ (oc-depth k) (oc-dy k))))
+                ))
+            (when *btms*
+              (dolist (k *btms*)
+                (setf (oc-dy k) (- total-depth (oc-depth k)))
+                (setf total-height (max total-height (- (oc-height k) (oc-dy k))))
+                (setf total-depth  (max total-depth (+ (oc-depth k) (oc-dy k))))
+                )))
+          ;;
+          (values total-height total-depth) )))))
 
 (defun dprint (fmt &rest args)
   (fresh-line *trace-output*)
@@ -3978,3 +4133,7 @@ the bbox argument."
 ;; (This is a similiar situation to table-cells).
 ;;
 
+;; $Log$
+;; Revision 1.7  2002/07/30 13:40:28  gilbert
+;; some more work on vertical align
+;;
