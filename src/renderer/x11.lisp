@@ -36,7 +36,7 @@
 (defparameter *code-optimization*
     '#.cl-user:+optimize-very-fast-trusted+)
 
-(defconstant *dither-map*
+(defvar *dither-map*
   '#2A((0    192   48  240   12  204   60  252)
        (128   64  176  112  140   76  188  124)
        (32   224   16  208   44  236   28  220)
