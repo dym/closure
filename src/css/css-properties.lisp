@@ -26,6 +26,8 @@
 
 (in-package :CSS)
 
+(eval-when (eval compile load)
+
 (defparameter *cookings*
   nil)
 
@@ -671,7 +673,7 @@
 
 ;;;;;;;;;;;
 
-(defun p/border (tokens)
+(defun p/the-border (tokens)
   ;;  <border-width> || <border-style> || <color>
   (let ((r0 (p/border-top tokens))
         (r1 (p/border-right tokens))
@@ -687,6 +689,9 @@
                         (eq (cdr r2) (cdr r3))))
            (cons (append (car r0) (car r1) (car r2) (car r3))
                  (cdr r0))))))
+
+(define-simple-short-hand-property border
+    :value <the-border>)
 
 ;;; ---------------------------------------------------------------------------
 
@@ -766,12 +771,17 @@
 ;;; ------------------------------------------------------------------------------------------
 ;;;  Code Generation
 ;;;
+)
 
 (generate-parsers)
 (register-parsers)
 (generate-setup-style)
 
 ;; $Log$
+;; Revision 1.3  2002/07/24 04:10:14  gilbert
+;; Whole file is now wraped into (eval-when (eval compile load) ...)
+;; Fixing cold built.
+;;
 ;; Revision 1.2  2002/07/22 10:15:44  gilbert
 ;; *COOKINGS* now is properly cleared.
 ;;
