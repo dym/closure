@@ -763,6 +763,13 @@
               ((null x)
                (return))))
       (q/s*)
+      ;; xxx does this apply to CSS2 as well.
+      ;; xxx also this looks like some bogus random implementation limitation.
+      (when (member-if-not (lambda (x) (and (consp x) (eq (car x) 'pclass)))
+                           (member-if (lambda (x) (and (consp x) (eq (car x) 'pclass)))
+                                      modifiers))
+        (error "Psuedoclass in non trailing location: ~S." modifiers))
+      ;;
       (append element modifiers))))
 
 (defun q/s* ()
