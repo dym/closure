@@ -84,8 +84,7 @@
 
 
 (asdf:defsystem closure
-    :depends-on (:clx
-                 :clim
+    :depends-on (:clim
                  :clim-clx
                  :glisp)
     :default-component-class closure-source-file
