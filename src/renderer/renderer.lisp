@@ -2478,9 +2478,8 @@ festmachen?]
     (when (eq (css:display pt) :list-item)
       (setf (sgml::pt-name r) :%PSEUDO-ELEMENT)
       (setf (sgml::pt-attrs r)
-            (list* :style (rod "display: marker; content: 'o ';")
-                   (sgml::pt-attrs r))
-            ))
+            (list* :style (rod (format nil "display: marker; content: 'o~A';" (code-char #o240)))
+                   (sgml::pt-attrs r)) ))
     r))
 
 (defparameter *before-pe-hash*
