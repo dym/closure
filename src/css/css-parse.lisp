@@ -861,7 +861,7 @@
 ;;; --------------------
 
 (defun p/a-padding (tokens)
-  (or (p/length tokens) (p/percentage tokens)))
+  (or (p/non-negative-length tokens) (p/non-negative-percentage tokens)))
 
 (defun p/non-negative-length (tokens)
   (let ((r (p/length tokens)))
