@@ -140,7 +140,7 @@
   (let ((sheets nil)
         (pt (document-pt doc)))
 
-    (setq user::pt pt)
+    (setq cl-user::pt pt)
     
     ;;
     (dolist (link (document-links doc))

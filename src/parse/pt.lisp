@@ -77,7 +77,7 @@
 
 #-CLISP
 (defun print-pt (self sink depth)
-  (user::with-depth-abbreviation (sink depth)
+  (cl-user::with-depth-abbreviation (sink depth)
     (cond ((and (eq (gi self) :pcdata) *print-readably*)
            (prin1 (rod-string (pt-cdata self)) sink))
           ((and (eq (gi self) :pcdata) (not *print-readably*))
@@ -116,7 +116,7 @@
                              (pt-children self))))))))))
 
 (defun print-pt (self sink depth)
-  (user::with-depth-abbreviation (sink depth)
+  (cl-user::with-depth-abbreviation (sink depth)
     (cond ((eq (gi self) :pcdata)
            (prin1 
             (if *print-readably*
@@ -126,7 +126,7 @@
             sink))
           (t
            (format sink "#n(~A" (pt-name self))
-           (user::print-list-with-length-abbreviation 
+           (cl-user::print-list-with-length-abbreviation 
             (pt-children self)
             #'prin1 
             sink)

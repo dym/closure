@@ -1288,7 +1288,7 @@
         neu))))
 
 (defun parse-html (input &optional (charset :iso-8859-1))
-  (let ((dtd user::*html-dtd*))
+  (let ((dtd cl-user::*html-dtd*))
     (let ((input (xml:make-xstream input :initial-speed 1 :speed 128)))
       (setf (a-stream-scratch input)
         (make-array #.(* 2 *buf-size*) :element-type 'rune))
@@ -1600,7 +1600,7 @@
     (parse-html input)))
 ||#
 
-(defun check-saneness (pt &optional (dtd user::*html-dtd*))
+(defun check-saneness (pt &optional (dtd cl-user::*html-dtd*))
   (dolist (k (pt-children pt))
     (unless (member (gi k) (elm-inclusion dtd (gi pt)))
       (warn "Unallowed ~A element within ~A." (gi k) (gi pt)))

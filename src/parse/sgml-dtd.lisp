@@ -670,9 +670,9 @@
     (print `(in-package :sgml) sink)
     (let ((*package* (find-package :sgml)))
       (princ "(SETQ " sink)
-      (prin1 'user::*html-dtd* sink)
+      (prin1 'cl-user::*html-dtd* sink)
       (princ " '" sink)
-      (dump-dtd user::*html-dtd* sink)
+      (dump-dtd cl-user::*html-dtd* sink)
       (princ ")" sink))))
 
 ;;; --------------------------------------------------------------------------------

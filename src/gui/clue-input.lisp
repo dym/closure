@@ -40,7 +40,7 @@
 
 (in-package :CLUE-GUI2)
 
-(defparameter user::*debug-submit-p* nil
+(defparameter cl-user::*debug-submit-p* nil
   "Whether to dump the values about to be submit by a <FORM> to the server on the listener.")
 
 ;;; Input elements

@@ -6,7 +6,7 @@
 ;;; ---------------------------------------------------------------------------
 ;;;  (c) copyright 1999,2000 by Gilbert Baumann
 
-(defpackage :glisp-temp)
+(defpackage :glisp-temp (:use #:cl))
 (in-package :glisp-temp)
 
 (defpackage :glisp (:use))
@@ -350,6 +350,7 @@
     `(
       #+:CLISP                 ,@'(:lisp)
       #+:CMU                   ,@'(:ext)
+      #+:sbcl                   ,@'(:sb-gray)
       #+:ALLEGRO               ,@'(:common-lisp :excl :stream)
       #+:HARLEQUIN-COMMON-LISP ,@'(:stream)
       ))

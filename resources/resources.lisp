@@ -28,7 +28,7 @@
 
 (format T "~&;; Parsing DTD~% ")
 (sgml:slurp-catalog (url:parse-url "file://closure/resources/dtd/catalog"))
-(setf user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
+(setf cl-user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
 (format T "~&;; done~%")
 
 
