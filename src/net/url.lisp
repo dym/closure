@@ -33,7 +33,7 @@
 ;;                      - URL-EXTENSION, new function
 ;;  1999-08-26  GB      - PARSE-PATH, new function
 
-(require :glisp)
+;(require :glisp)
 
 (defpackage :url
   (:use :glisp)
@@ -342,7 +342,7 @@
                       i (+ i 3)))))
           res)))))
 
-(defconstant *the-crlf-sequence* (map 'string #'code-char '#(#x0d #x0a)))
+(defvar *the-crlf-sequence* (map 'string #'code-char '#(#x0d #x0a)))
 
 (defun newline->crlf (string)
   "Substitue all occurrences of #\\Newline in `string' by #\\Return #\\Newline."

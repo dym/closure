@@ -216,8 +216,8 @@
 
 ;;; ---- Some CLIM fake ---------------------------------------------------------------------------------
 
-(defconstant +black+ (xlib:make-color :red 0 :green 0 :blue 0))
-(defconstant +white+ (xlib:make-color :red 1 :green 1 :blue 1))
+(defvar +black+ (xlib:make-color :red 0 :green 0 :blue 0))
+(defvar +white+ (xlib:make-color :red 1 :green 1 :blue 1))
 
 ;;; ====================================================================================================
 
@@ -376,8 +376,8 @@
 ;;;;  profiling
 ;;;;
 
-(defparameter user::*profile-closure-p* nil)
-(defparameter user::*closure-dpi* 88)           ;this doesn't belong here
+(defparameter cl-user::*profile-closure-p* nil)
+(defparameter cl-user::*closure-dpi* 88)           ;this doesn't belong here
 
 (defclass prim-ht-view ()
   ((display-list        :initform nil)
@@ -386,7 +386,7 @@
 
 ;;; --------------------------------------------------------------------------------
 
-(defvar user::*html-dtd* nil)
+(defvar cl-user::*html-dtd* nil)
 
 (defun aimage->pixmap+mask/raw (drawable aim)
   (let* ((width (r2::aimage-width aim))
@@ -419,18 +419,18 @@
     (setf *ht* (slurp-patterns "resources/patterns/english.ptn"))
     (princ " done.") )
   ||#
-  (unless user::*html-dtd*
+  (unless cl-user::*html-dtd*
     (cond 
      ;; xxx hack
      ((probe-file (compile-file-pathname "html-dtd.lisp"))
       (format T "~&;; Loading DTD ")
-      (setf user::*html-dtd* (sgml::undump-dtd "html-dtd"))
+      (setf cl-user::*html-dtd* (sgml::undump-dtd "html-dtd"))
       (princ " done.")
       (finish-output))
      (t
       (format T "~&;; Parsing DTD ")
       (sgml:slurp-catalog (url:parse-url "file://closure/resources/dtd/catalog"))
-      (setf user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
+      (setf cl-user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
       (princ " done.")
       (finish-output))))
 

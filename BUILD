@@ -3,6 +3,9 @@ lisp << EOF
 (in-package :cl-user)
 
 ;;(gc-off)
+
+(setf *print-case* :upcase)
+
 (setf *features* (delete :no-clx *features* :test #'eq))
 
 (or

@@ -122,10 +122,10 @@
 
 ;;; More special parsers in the context of HTTP
 
-(defconstant +token-chars+
+(defvar +token-chars+
     "!#$%&'*+-.0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ^_`abcdefghijklmnopqrstuvwxyz|~")
 
-(defconstant +tspecial+
+(defvar +tspecial+
     (concatenate 'string "()<>@,;:\\\"/[]?={}" (string #\space) (string #\tab)))
 
 (defun http-alpha-char-p (c)

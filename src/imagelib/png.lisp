@@ -44,7 +44,7 @@
 ;;;   6       8,16        Each pixel is an R,G,B triple, followed by an alpha sample.
 ;;;
 
-(defconstant *png-magic* '#(137 80 78 71 13 10 26 10)
+(defvar *png-magic* '#(137 80 78 71 13 10 26 10)
   "The first eight bytes of a png file.")
 
 (defstruct png-image 

@@ -83,15 +83,15 @@
 ;; Each such list is a list of preferences, there should be a
 ;; character, which is likely to exist in all fonts.
 
-(defconstant +list-style-type-glyphs/disc+
+(defvar +list-style-type-glyphs/disc+
     (list ;;u/black-circle u/bullet u/white-bullet u/white-circle
           (char-code #\o)))
 
-(defconstant +list-style-type-glyphs/circle+
+(defvar +list-style-type-glyphs/circle+
     (list ;;u/white-circle u/white-bullet u/bullet u/black-circle
           (char-code #\*)))
 
-(defconstant +list-style-type-glyphs/square+
+(defvar +list-style-type-glyphs/square+
     (list ;;u/black-square u/white-square u/white-bullet u/bullet
           (char-code #\-)))
 
@@ -142,7 +142,7 @@
 
 
 
-(defconstant +null-simple-array+ (vector))
+(defvar +null-simple-array+ (vector))
 
 (defvar *white-space*)
 
@@ -322,10 +322,10 @@
     :accessor element-children)))
 
 (defclass before-pseudo-element (around-pseudo-element)
-  )
+  ())
 
 (defclass after-pseudo-element (around-pseudo-element)
-  )
+  ())
 
 (defmethod pseudo-class-matches-p ((pseudo-class (eql :before)) (element before-pseudo-element))
   t)

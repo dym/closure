@@ -1,4 +1,4 @@
-(defpackage :texpara)
+(defpackage :texpara (:use #:cl))
 
 (in-package :texpara)
 
@@ -42,7 +42,7 @@
 
   )
 
-(defconstant +hfil-glue+
+(defvar +hfil-glue+
     ;; a \hfil fake
     (make-glue :width 0
                :shrink 0

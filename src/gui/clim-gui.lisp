@@ -23,6 +23,9 @@
 ;;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 ;; $Log$
+;; Revision 1.8  2003/03/14 17:06:16  dan
+;; replace defconstants for non-constant variables with defvar, to placate SBCL, which suffers from offensively ANSI behaviour with same
+;;
 ;; Revision 1.7  2003/03/14 14:14:36  gilbert
 ;; adjusted frame-top-level loop
 ;;
@@ -357,9 +360,13 @@
 
 (defun send-closure-command (command &rest args)
   (ensure-closure)
+  #+sbcl
+  (error "unimplemented")
+  #-sbcl
   (with-closure ()
     (mp:process-interrupt *closure-process*
                           #'(lambda () (apply command args)))))
+
 
 (defun closure:visit (&optional (url closure:*home-page*))
   (and url (setf url (parse-url* url)))

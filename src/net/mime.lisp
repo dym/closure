@@ -281,7 +281,7 @@
 |||#
 
 
-(defconstant *base64-codes* "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+(defvar *base64-codes* "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
 
 (defun encode-string-base64 (string &key (start 0) (end (length string)))
   (let ((res nil))

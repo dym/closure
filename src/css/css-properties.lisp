@@ -818,6 +818,7 @@
     :value (list (new-interpret-length (first value) device (prop font-size) pt dpi)
                  (new-interpret-length (second value) device (prop font-size) pt dpi)))
 
+#+emarsden
 (define-css-property empty-cells
     :value (or :show :hide)
     :default-value :show
@@ -936,6 +937,9 @@
 
 
 ;; $Log$
+;; Revision 1.7  2003/03/14 17:06:16  dan
+;; replace defconstants for non-constant variables with defvar, to placate SBCL, which suffers from offensively ANSI behaviour with same
+;;
 ;; Revision 1.6  2003/03/13 19:29:17  gilbert
 ;; lots of hacking
 ;;

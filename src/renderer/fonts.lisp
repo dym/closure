@@ -33,7 +33,7 @@
                                         "times" "symbol" ))
 
 (unless (boundp '+null-width-table+)
-  (defconstant +null-width-table+ (make-array 256 :initial-element -1)))
+  (defvar +null-width-table+ (make-array 256 :initial-element -1)))
 
 ;;;
 ;;; CAUTION: There is a subtle difference between 'font-desc' and 'css-font-desc'
