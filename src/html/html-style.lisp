@@ -389,22 +389,24 @@
 (defun maybe-parse-style-sheet-from-url (url &key (name "anonymous") 
                                                   (supersheet nil)
                                                   (media-type :all))
-  (mp/with-lock (*style-sheet-cache*/lock)
-    (multiple-value-bind (looked presentp) (gethash url *style-sheet-cache*)
-      (cond (presentp
-             (format T "~&;; Serving style sheet ~S [at ~S] from cache.~%"
-                     name url)
-             looked)
-            (t
-             (format T "~&;; fetching and parsing style sheet ~S [at ~S].~%"
-                     name url)
-             (let ((res (maybe-parse-style-sheet-from-url-aux
-                         url 
-                         :name name 
-                         :supersheet supersheet
-                         :media-type media-type)))
-               (setf (gethash url *style-sheet-cache*) res)
-               res))))))
+  (multiple-value-bind (looked presentp)
+      (mp/with-lock (*style-sheet-cache*/lock)
+          (gethash url *style-sheet-cache*))
+    (cond (presentp
+           (format *debug-io* "~&;; Serving style sheet ~S [at ~S] from cache.~%"
+                   name url)
+           looked)
+          (t
+           (format *debug-io* "~&;; fetching and parsing style sheet ~S [at ~S].~%"
+                   name url)
+           (let ((res (maybe-parse-style-sheet-from-url-aux
+                       url 
+                       :name name 
+                       :supersheet supersheet
+                       :media-type media-type)))
+             (mp/with-lock (*style-sheet-cache*/lock)
+                (setf (gethash url *style-sheet-cache*) res))
+             res)))))
 
 (defun maybe-parse-style-sheet-from-url-aux (url &key (name "anonymous") 
                                                   (supersheet nil)
