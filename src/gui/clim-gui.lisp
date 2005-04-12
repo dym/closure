@@ -28,6 +28,21 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.17  2005/04/12 10:28:55  tdalyjr
+;; Since closure-frame-top-level is no longer used, comment it out.
+;;
+;; Use a :before method on run-frame-top-level to set
+;; *closure-inited-p*. (this used to be done by closure-frame-top-level)
+;;
+;; Reimplement the quit command using frame-exit, since the 'closure-quit
+;; catch tag no longer exists.
+;;
+;; Use process-interrupt from the clim-sys package, instead of from the
+;; mp package, since clim-sys should be more portable.
+;;
+;; Turn on scrollbars for the interactor pane, since otherwise it trashes
+;; the status line on the bottom of the window and stops updating.
+;;
 ;; Revision 1.16  2005/03/13 21:17:28  emarsden
 ;;  - Implement PageUp and PageDown support in the CLIM GUI.
 ;;  - Add a Redraw command (with Ctrl-R accelerator)
@@ -135,7 +150,7 @@
     :background (make-rgb-color 1 1 7/8)
     :text-style (make-text-style :sans-serif nil :normal)
     :height 50 :min-height 50 :max-height 50
-    :scroll-bars nil :border nil)
+    :scroll-bars t :border nil)
    (wholine
     :pointer-documentation :width 5 :max-width +fill+
     :height 25
@@ -222,47 +237,49 @@
                             ;;("Forward" :command com-forward)
                             ))
 
-(defmethod closure-frame-top-level
-    ((frame application-frame)
-     &key (command-parser 'command-line-command-parser)
-     (command-unparser 'command-line-command-unparser)
-     (partial-command-parser
-      'command-line-read-remaining-arguments-for-partial-command)
-     (prompt "Closure => "))
-  (catch 'closure-quit
-    (loop
-        (with-simple-restart (forget "Just forget this command, restart the command loop.")
-          (let ((*standard-input* (frame-standard-input frame))
-                (*standard-output* (frame-standard-output frame))
-                (*query-io* (frame-query-io frame))
-                (*pointer-documentation-output* (frame-pointer-documentation-output
-                                                 frame))
-                ;; during development, don't alter *error-output*
-                ;; (*error-output* (frame-error-output frame))
-                (*command-parser* command-parser)
-                (*command-unparser* command-unparser)
-                (*partial-command-parser* partial-command-parser)
-                (prompt-style (make-text-style :sans-serif :bold :normal)))
-            (let ((*application-frame* frame))
-              (when *initial-url*
-                (com-visit-url *initial-url*))
-              (setf *initial-url* nil)
-              (setf *closure-inited-p* t)
-              (when *standard-input*
-                (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
-                (when prompt
-                  (with-text-style (*standard-input* prompt-style)
-                    (if (stringp prompt)
-                        (write-string prompt *standard-input*)
-                        (funcall prompt *standard-input* frame))
-                    (finish-output *standard-input*)))
-                (let ((command (read-frame-command frame)))
-                  (fresh-line *standard-input*)
-                  ;;(window-clear *standard-output*)
-                  (clim:window-clear *query-io*)
-                  (when command
-                    (execute-frame-command frame command))
-                  (fresh-line *standard-input*)))))))))
+;;; This top level has been abandoned in favor of CLIM's built-in one,
+;;; but let's keep it for a little while to pillage.  -- tpd 2005.4.9
+;; (defmethod closure-frame-top-level
+;;     ((frame application-frame)
+;;      &key (command-parser 'command-line-command-parser)
+;;      (command-unparser 'command-line-command-unparser)
+;;      (partial-command-parser
+;;       'command-line-read-remaining-arguments-for-partial-command)
+;;      (prompt "Closure => "))
+;;   (catch 'closure-quit
+;;     (loop
+;;         (with-simple-restart (forget "Just forget this command, restart the command loop.")
+;;           (let ((*standard-input* (frame-standard-input frame))
+;;                 (*standard-output* (frame-standard-output frame))
+;;                 (*query-io* (frame-query-io frame))
+;;                 (*pointer-documentation-output* (frame-pointer-documentation-output
+;;                                                  frame))
+;;                 ;; during development, don't alter *error-output*
+;;                 ;; (*error-output* (frame-error-output frame))
+;;                 (*command-parser* command-parser)
+;;                 (*command-unparser* command-unparser)
+;;                 (*partial-command-parser* partial-command-parser)
+;;                 (prompt-style (make-text-style :sans-serif :bold :normal)))
+;;             (let ((*application-frame* frame))
+;;               (when *initial-url*
+;;                 (com-visit-url *initial-url*))
+;;               (setf *initial-url* nil)
+;;               (setf *closure-inited-p* t)
+;;               (when *standard-input*
+;;                 (setf (cursor-visibility (stream-text-cursor *standard-input*)) t)
+;;                 (when prompt
+;;                   (with-text-style (*standard-input* prompt-style)
+;;                     (if (stringp prompt)
+;;                         (write-string prompt *standard-input*)
+;;                         (funcall prompt *standard-input* frame))
+;;                     (finish-output *standard-input*)))
+;;                 (let ((command (read-frame-command frame)))
+;;                   (fresh-line *standard-input*)
+;;                   ;;(window-clear *standard-output*)
+;;                   (clim:window-clear *query-io*)
+;;                   (when command
+;;                     (execute-frame-command frame command))
+;;                   (fresh-line *standard-input*)))))))))
 
 (define-presentation-type url ())
 (define-presentation-type r2::pt ())
@@ -328,7 +345,7 @@
   (format *query-io* "Images are now on. You may want to reload.~%"))
 
 (define-closure-command (com-quit :name t) ()
-  (throw 'closure-quit nil))
+  (frame-exit *application-frame*))
 
 (defun make-google-search-url (string)
   (url:merge-url
@@ -379,7 +396,6 @@
 ;;;;
 
 (defvar *closure-lock* (clim-sys:make-recursive-lock "Closure"))
-(defvar *closure-inited-p* nil)
 
 (defmacro with-closure (ignore &body body)
   (declare (ignore ignore))
@@ -393,15 +409,14 @@
 
 (defun send-closure-command (command &rest args)
   (ensure-closure)
-  #+sbcl
-  (error "unimplemented")
+
   #+openmcl
   (with-closure ()
     (glisp::process-interrupt *closure-process*
                           #'(lambda () (apply command args))))
-  #-(or sbcl openmcl)
+  #-openmcl
   (with-closure ()
-    (mp:process-interrupt *closure-process*
+    (clim-sys:process-interrupt *closure-process*
                           #'(lambda () (apply command args)))))
 
 
@@ -422,6 +437,11 @@
   (with-closure ()
     (when *closure-process*
       (send-closure-command 'com-quit))))
+
+(defvar *closure-inited-p* nil)
+(defmethod clim:run-frame-top-level :before ((frame closure)
+					     &key &allow-other-keys)
+  (setf *closure-inited-p* t))
 
 (defun ensure-closure ()
   (with-closure ()
