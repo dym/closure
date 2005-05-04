@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CSS; Readtable: GLISP; Encoding: utf-8; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Encoding: utf-8; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CSS selectors
 ;;;            [Split off from css-parse.lisp]
@@ -28,7 +28,7 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-(in-package :CSS)
+(in-package :css)
 
 (defun create-style-sheet (super-sheet &key (name "Anonymous style sheet")
                                             base-url
@@ -435,19 +435,6 @@
     (and r
          (cons (cons 'or (car r)) (cdr r)))))
 
-(defun parse-media-type (string)
-  ;; xxx unicode!
-  (let ((r (parse-media-type-2
-            (tokenize
-             (slurp
-              (cl-char-stream->gstream
-               (make-string-input-stream string)))))))
-    (cond ((and r (null (cdr r)))
-           (car r))
-          (t
-           (warn "Bad media type: ~S." string)
-           nil))))
-
 (defun parse-import-rule (seq)
   (let ((toks (tokenize seq))
         (media-type :all))
@@ -650,7 +637,7 @@
     (tagbody
       loob
       (let ((a (q/simple-selector)))
-        (q/S*)
+        (q/s*)
         (push a res)
         (cond ((member (q/tok) '(:ident :hash :|.| :|[| :|:| :|*|))
                (push 'ancestor res)
@@ -809,6 +796,14 @@
          (setf res (map 'vector #'+ res (css2-selector-specificity (cdr p)))))))
     res))
 
+(defun parse-style-sheet (str)
+  (with-input-from-string (s str)
+    (parse-style-sheet* (slurp s) 0 nil)))
+
+(defun parse-assignment-list-string (str)
+  (with-input-from-string (s str)
+    (parse-assignment-list (slurp s))))
+
 (defun parse-style-sheet* (seq &optional (start 0) (import-ok? t))
   (let (p0 p1)
     (when (setq p0 (position-if-not #'white-space-p* seq :start start))
@@ -823,8 +818,8 @@
                   nil)
                  (t
                   (multiple-value-bind (sel-list condition)
-                      (ignore-errors (parse-css2-selector-list seq p0 p1))
-                    (cond (condition
+                      (parse-css2-selector-list seq p0 p1)
+                   (cond (condition
                            (warn "CSS selector list does not parse: `~A'."
                                  (as-string (subseq seq p0 p1)))
                            (setq sel-list nil)))
@@ -858,13 +853,13 @@
 (defparameter *media-types*
     '(:screen :all))
 
-(defmethod is-of-media-type-p ((medium T) (media-type (eql :all))) t)
+(defmethod is-of-media-type-p ((medium t) (media-type (eql :all))) t)
 (defmethod is-of-media-type-p ((medium (eql :screen)) (media-type (eql :screen))) t)
 
-(defmethod is-of-media-type-p ((medium T) (media-type T)) 
+(defmethod is-of-media-type-p ((medium t) (media-type t)) 
   nil)
 
-(defmethod is-of-media-type-p ((medium T) (media-type cons))
+(defmethod is-of-media-type-p ((medium t) (media-type cons))
   (ecase (car media-type)
     ((OR)
      (some (curry #'is-of-media-type-p medium) media-type))
