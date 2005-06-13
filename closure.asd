@@ -47,14 +47,12 @@
   (handler-bind ((sb-ext:compiler-note #'muffle-warning))
     (call-next-method)))
 
-#|
 ;;; Convenience feature: will stop it from breaking into the debugger
 ;;; under sbcl for full WARNINGs (better to fix the warnings :-).
 #+sbcl
 (defmethod perform :around ((o compile-op) s)
   (setf (operation-on-failure o) :warn)
   (call-next-method o s))
-|#
 
 (defpackage :glisp (:use))
 (asdf:defsystem glisp

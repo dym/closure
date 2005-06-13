@@ -1290,7 +1290,7 @@
     (cond ((string-equal :link (car k))
            (let ((links (netlib:parse-http-link-field (cdr k))))
              (cond ((null links)
-                    (warn "HTTP »Link« header field has illegal syntax: ~S." (cdr k)))
+                    (warn "HTTP \"Link\" header field has illegal syntax: ~S." (cdr k)))
                    (t
                     (dolist (link links)
                       (process-head-child document (sgml:lhtml->pt link)))))))))

@@ -60,7 +60,7 @@
   ;; ## make this element in a way that it is still possible to
   ;; overwrite stuff in the style sheet.
   "Given a list item element 'list-element' return a synthetic element
-which serves the rôle of an before psuedo element containing the list item marker"
+which serves the role of an before psuedo element containing the list item marker"
   (let* ((list-style-type        (cooked-style-list-style-type style))
          (list-style-position    (cooked-style-list-style-position style))
          (list-style-image       (cooked-style-list-style-image style))
