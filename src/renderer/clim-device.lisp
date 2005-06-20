@@ -82,7 +82,7 @@
                           :device self)))
                 (loop
                     for family      in '("Times" "Helvetica" "Courier")
-                    for clim-family in '(:serif  :sans-serif :fixed) 
+                    for clim-family in '(:serif  :sans-serif :fix) 
                     for size-adjust in '(-2 -2 -2) do 
                     (loop
                         for weight+style in '((400 :normal) (400 :italic) (700 :normal) (700 :italic))
@@ -127,7 +127,7 @@
                           :device self)))
                 (loop
                     for family      in '("Times" "Helvetica" "Courier")
-                    for clim-family in '(:serif  :sans-serif :fixed) 
+                    for clim-family in '(:serif  :sans-serif :fix) 
                     for size-adjust in '(-2 0 -2) do 
                     (loop
                         for weight+style in '((400 :normal) (400 :italic) (700 :normal) (700 :italic))
