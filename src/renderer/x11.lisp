@@ -952,9 +952,8 @@
 (defclass x11-device ()
   ((font-database :initform nil)
    (display :initarg :display)
-   (dpi     :initarg :dpi :initform cl-user::*closure-dpi*)
-   (scale-font-desc-cache :initform (make-hash-table :test #'equal))
-   ))
+   (dpi     :initarg :dpi :initform gui:*closure-dpi*)
+   (scale-font-desc-cache :initform (make-hash-table :test #'equal))))
 
 (defmethod r2::device-dpi ((self x11-device))
   (slot-value self 'dpi))

@@ -43,6 +43,23 @@
 
 (in-package :GUI)
 
+(defparameter *home-page* "http://common-lisp.net/project/closure/")
+
+(defvar *user-wants-images-p* t)
+
+(defvar *closure-dpi* 96)
+
+(defvar *zoom-factor* 1.0)
+
+(defparameter *debug-submit-p* nil
+  "Whether to dump the values about to be submit by a <FORM> to the server on the listener.")
+
+;; experimental code that is not activated by default
+(defvar *tex-mode-p* nil)
+(defvar *hyphenate-p* nil)
+
+
+
 (defstruct display-list
   document
   items)

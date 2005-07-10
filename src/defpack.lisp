@@ -126,6 +126,14 @@
    #:make-rectangle*)
 
   (:export
+   #:*home-page*
+   #:*user-wants-images-p*
+   #:*tex-mode-p*
+   #:*hyphenate-p*
+   #:*closure-dpi*
+   #:*zoom-factor*
+   #:*debug-submit-p*
+
    #:display-list
    #:display-list-p
    #:display-list-document

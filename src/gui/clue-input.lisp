@@ -45,9 +45,6 @@
 
 (in-package :CLUE-GUI2)
 
-(defparameter cl-user::*debug-submit-p* nil
-  "Whether to dump the values about to be submit by a <FORM> to the server on the listener.")
-
 ;;; Input elements
 
 ;; Input elements as such are replaced objects and obey to the robj

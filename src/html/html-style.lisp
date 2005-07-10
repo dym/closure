@@ -484,7 +484,7 @@
      elm)
   (declare (ignorable language user-agent))
   (values-list
-   (cond ((and (not closure:*user-wants-images-p*)
+   (cond ((and (not gui:*user-wants-images-p*)
                (member (element-gi elm) '(:IMG)))
           nil)
          ((member (element-gi elm) '(:IMG))

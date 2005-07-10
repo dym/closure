@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.18  2005/07/10 10:57:20  emarsden
+;; Move a number of global variables from the CL-USER to the GUI package.
+;;
 ;; Revision 1.17  2005/04/12 10:28:55  tdalyjr
 ;; Since closure-frame-top-level is no longer used, comment it out.
 ;;
@@ -101,12 +104,10 @@
 ;;;;;;;
 
 (defvar *medium*)
+(defvar *frame*)
+(defvar *pane*)
 
 (defvar *initial-url* nil)
-
-(defvar closure:*home-page* "http://www.stud.uni-karlsruhe.de/~unk6/closure/user.html")
-(defvar closure:*user-wants-images-p* t)
-(defvar closure::*zoom-factor* 1.0)
 
 (defvar *closure-process* nil)
 
@@ -337,11 +338,11 @@
            (foo (first *back-history*))))))
 
 (define-closure-command (com-images-off :name t) ()
-  (setf closure:*user-wants-images-p* nil)
+  (setf gui:*user-wants-images-p* nil)
   (format *query-io* "Images are now off.~%"))
 
 (define-closure-command (com-images-on :name t) ()
-  (setf closure:*user-wants-images-p* t)
+  (setf gui:*user-wants-images-p* t)
   (format *query-io* "Images are now on. You may want to reload.~%"))
 
 (define-closure-command (com-quit :name t) ()
@@ -364,7 +365,7 @@
   (com-visit-url (make-google-search-url what)))
 
 (define-closure-command (com-home :name t) ()
-  (com-visit-url closure:*home-page*))
+  (com-visit-url gui:*home-page*))
 
 (define-presentation-translator fofo
     (url command closure
@@ -420,7 +421,7 @@
                           #'(lambda () (apply command args)))))
 
 
-(defun closure:visit (&optional (url closure:*home-page*))
+(defun closure:visit (&optional (url gui:*home-page*))
   (and url (setf url (parse-url* url)))
   (cond ((and (null *closure-process*) (null url))
          (setf *initial-url* url)
@@ -452,9 +453,6 @@
                              (lambda ()
                                *closure-inited-p*)))))
 
-
-(defvar *frame*)
-(defvar *pane*)
 
 (defun run-closure ()
   ;; Care for proxy
@@ -651,18 +649,18 @@
 
 
 (define-closure-command (com-zoom-100% :name t) ()
-  (setq closure::*zoom-factor* 1.0)
+  (setq gui:*zoom-factor* 1.0)
   (send-closure-command 'com-reflow))
 
 ;; FIXME the :shift here is a McCLIM bug
 (define-closure-command (com-zoom-in :name t :keystroke (#\+ :control :shift)) ()
   (write-status "Zooming in...")
-  (setq closure::*zoom-factor* (* closure::*zoom-factor* 1.2))
+  (setq gui:*zoom-factor* (* gui:*zoom-factor* 1.2))
   (send-closure-command 'com-reflow))
 
 (define-closure-command (com-zoom-out :name t :keystroke (#\- :control :shift)) ()
   (write-status "Zooming out...")
-  (setq closure::*zoom-factor* (* closure::*zoom-factor* 0.8))
+  (setq gui:*zoom-factor* (* gui:*zoom-factor* 0.8))
   (send-closure-command 'com-reflow))
 
 (define-closure-command (com-page-up :name t
