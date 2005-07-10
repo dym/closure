@@ -2304,8 +2304,6 @@
                     (format t "~&**** Test failed on ~S." filename)
                     (fresh-line)
                     (format t "** me: ~A" res)
-                    (fresh-line)
-                    (format t "** he: " res)
                     (finish-output)
                     (with-open-file (in out-filename :direction :input :element-type 'character)
                       (do ((c (read-char in nil nil) (read-char in nil nil)))
@@ -2520,7 +2518,7 @@
     (unless e
       (error "Entity '~A' is not defined." (rod-string name)))
     (unless (eq :internal (cadr e))
-      (error "Entity '~A' is not an internal entity."))
+      (error "Entity '~A' is not an internal entity." (rod-string name)))
     (or (cadddr e)
         (car
          (setf (cdddr e)
