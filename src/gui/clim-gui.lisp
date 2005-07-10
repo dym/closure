@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.19  2005/07/10 11:18:34  emarsden
+;; Distinguish between pane and medium in the CLIM GUI. This should
+;; fix image display.
+;;
 ;; Revision 1.18  2005/07/10 10:57:20  emarsden
 ;; Move a number of global variables from the CL-USER to the GUI package.
 ;;
@@ -124,6 +128,7 @@
   (:menu-bar menubar-command-table)
   (:panes
    (canvas (make-pane 'closure-pane
+            :name 'canvas
             :height 2000
             :width 800
             :display-time nil))
@@ -460,10 +465,10 @@
          (url   (and proxy (url:parse-url proxy))))
     (cond ((and url
                 (equal (url:url-protocol url) "http"))
-           (format t "~&;; Using HTTP proxy ~S port ~S~%"
+           (format t "~:[~&;; Using HTTP proxy ~S port ~S~%~;~]"
+                   (setf netlib::*use-http-proxy-p* t)
                    (setf netlib::*http-proxy-host* (url:url-host url))
-                   (setf netlib::*http-proxy-port* (url:url-port url))
-                   (setf netlib::*use-http-proxy-p* t)))
+                   (setf netlib::*http-proxy-port* (url:url-port url))))
           (t
            ;; we go without one:
            (setf netlib::*use-http-proxy-p* nil))))
@@ -507,76 +512,74 @@
     (clim-sys:make-process
      (lambda ()
        (with-simple-restart (forget "Just forget rendering this page.")
-         (let ((*package* (find-package :r2)))
-           (window-clear (find-pane-named *frame* 'canvas))
-           (progn;;with-sheet-medium (medium *pane*)
-             (let ((*medium* (find-pane-named *frame* 'canvas)))
-               (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
-                 (setq url (r2::parse-url* url))
-                 (let ((request (clue-gui2::make-request :url url :method :get)))
-                   (multiple-value-bind (io header) (clue-gui2::open-document-4 request)
-                     (write-status "Fetching Document ...")
-                     (let* ((doc (make-instance 'r2::document
-                                                :processes-hooks nil
-                                                :location
-                                                (r2::parse-url* url)
-                                                :http-header header
-                                                :pt (clue-gui2::make-pt-from-input 
-                                                     io 
-                                                     (netlib::get-header-field header :content-type) url) )))
-                       (write-status "Rendering ...")
-                       (setf *current-document* doc)
-                       (let ((closure-protocol:*document-language*
-                              (if (sgml::pt-p (r2::document-pt doc))
-                                  (make-instance 'r2::html-4.0-document-language)
-                                  (make-instance 'r2::xml-style-document-language)
-                                  ))
-                             (closure-protocol:*user-agent*
-                              nil)
-                             (r2::*canvas-width*
-                              (bounding-rectangle-width (sheet-parent *medium*))))
-                         (closure-protocol:render
-                          closure-protocol:*document-language* 
-                          doc
-                          device
-                          (setf *current-pt* (r2::document-pt doc))
-                          600           ;xxx width
-                          t             ;?
-                          0)
-                         (let ((x2 (bounding-rectangle-max-x (stream-output-history (find-pane-named *frame* 'canvas))))
-                               (y2 (bounding-rectangle-max-y (stream-output-history (find-pane-named *frame* 'canvas)))))
-                           (setf y2 (max y2 r2::*document-height*))
-                           (clim:change-space-requirements *medium* :width x2 :height y2)
-                           ;; While we are at it, force a repaint
-                           (handle-repaint *medium* (sheet-region (pane-viewport *medium*)))
-                           (xlib:display-finish-output (clim-clx::clx-port-display (find-port))) )))))
-                 (write-status "Done."))))))
-       (xlib:display-finish-output (clim-clx::clx-port-display (find-port)))))))
+         (let* ((*package* (find-package :r2))
+                (*pane* (find-pane-named *frame* 'canvas))
+                (*medium* (sheet-medium *pane*)))
+           (window-clear *pane*)
+           (progn ;; with-sheet-medium (*medium* *pane*)
+             (let ((device (make-instance 'closure/clim-device::clim-device :medium *pane*)))
+               (setq url (r2::parse-url* url))
+               (let ((request (clue-gui2::make-request :url url :method :get)))
+                 (multiple-value-bind (io header) (clue-gui2::open-document-4 request)
+                   (write-status "Fetching Document ...")
+                   (let* ((doc (make-instance 'r2::document
+                                              :processes-hooks nil
+                                              :location
+                                              (r2::parse-url* url)
+                                              :http-header header
+                                              :pt (clue-gui2::make-pt-from-input 
+                                                   io 
+                                                   (netlib::get-header-field header :content-type) url) )))
+                     (write-status "Rendering ...")
+                     (setf *current-document* doc)
+                     (let ((closure-protocol:*document-language*
+                            (if (sgml::pt-p (r2::document-pt doc))
+                                (make-instance 'r2::html-4.0-document-language)
+                                (make-instance 'r2::xml-style-document-language)))
+                           (closure-protocol:*user-agent* nil)
+                           (r2::*canvas-width* (bounding-rectangle-width (sheet-parent *pane*))))
+                       (closure-protocol:render
+                        closure-protocol:*document-language* 
+                        doc
+                        device
+                        (setf *current-pt* (r2::document-pt doc))
+                        600           ;xxx width
+                        t             ;?
+                        0)
+                       (let ((x2 (bounding-rectangle-max-x (stream-output-history *pane*)))
+                             (y2 (bounding-rectangle-max-y (stream-output-history *pane*))))
+                         (setf y2 (max y2 r2::*document-height*))
+                         (clim:change-space-requirements *pane* :width x2 :height y2)
+                         ;; While we are at it, force a repaint
+                         (handle-repaint *pane* (sheet-region (pane-viewport *pane*)))
+                         (xlib:display-finish-output (clim-clx::clx-port-display (find-port))))))))
+               #+nil (write-status "Done.")))))
+       #+nil (xlib:display-finish-output (clim-clx::clx-port-display (find-port)))))))
 
 (defun reflow ()
   (let ((*standard-output* *trace-output*))
     (funcall ;;clim-sys:make-process
      (lambda ()
        (with-simple-restart (forget "Just forget rendering this page.")
-         (let ((*package* (find-package :r2)))
-           (window-clear (find-pane-named *frame* 'canvas))
-           (let* ((*medium* (find-pane-named *frame* 'canvas)) )
+         (let ((*package* (find-package :r2))
+               (*pane* (find-pane-named *frame* 'canvas)))
+           (window-clear *pane*)
+           (with-sheet-medium (*medium* *pane*)
              (write-status "Rendering ...")
              (let ((closure-protocol:*document-language*
                     (if (sgml::pt-p (r2::document-pt *current-document*))
                         (make-instance 'r2::html-4.0-document-language)
                         (make-instance 'r2::xml-style-document-language) ))
-                   (closure-protocol:*user-agent*
-                    nil)
+                   (closure-protocol:*user-agent* nil)
                    (r2::*canvas-width*
-                    (bounding-rectangle-width (sheet-parent *medium*))))
+                    (bounding-rectangle-width (sheet-parent *pane*))))
                (r2::reflow)
-               (let ((x2 (bounding-rectangle-max-x (stream-output-history (find-pane-named *frame* 'canvas))))
-                     (y2 (bounding-rectangle-max-y (stream-output-history (find-pane-named *frame* 'canvas)))))
+               (let ((x2 (bounding-rectangle-max-x (stream-output-history *pane*)))
+                     (y2 (bounding-rectangle-max-y (stream-output-history *pane*))))
                  (setf y2 (max y2 r2::*document-height*))
-                 (clim:change-space-requirements *medium* :width x2 :height y2)
+                 (clim:change-space-requirements *pane* :width x2 :height y2)
                  ;; While we are at it, force a repaint
-                 (handle-repaint *medium* (sheet-region (pane-viewport *medium*)))))
+                 (handle-repaint *pane* (sheet-region (pane-viewport *pane*)))))
              (write-status "Done."))))))))
 
 (defvar *current-document*)

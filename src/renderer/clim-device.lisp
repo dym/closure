@@ -31,7 +31,7 @@
 (defclass clim-device ()
   ((medium :accessor clim-device-medium :initarg :medium)
    (font-database :initform nil)
-   (zoom-factor :initform closure::*zoom-factor* :initarg :zoom-factor)))
+   (zoom-factor :initform gui:*zoom-factor* :initarg :zoom-factor)))
 
 (defmethod device-dpi ((device clim-device))
   (with-slots (zoom-factor) device
@@ -221,6 +221,7 @@
     res))
 
 (defun background-pixmap+mask (document drawable bg)
+  #+emarsden2005-06-23
   (print `(background-pixmap+mask ,bg))
   (cond ((r2::background-%pixmap bg)
          ;; already there
@@ -243,6 +244,62 @@
                   (values (r2::background-%pixmap bg)
                           (r2::background-%mask bg)))))) ))
 
+(defun ws/x11::x11-put-pixmap-tiled (drawable ggc pixmap mask x y w h &optional (xo 0) (yo 0))
+  (cond ((null mask) ;; xxx
+         (xlib:with-gcontext (ggc :exposures :off
+                                  :fill-style :tiled
+                                  :tile pixmap
+                                  :ts-x xo
+                                  :ts-y yo)
+           ;;mask wird momentan noch ignoriert!
+           (xlib:draw-rectangle drawable ggc x y w h t)))
+        (t
+         (let* ((old-clip-mask (car (or (ignore-errors (list (xlib:gcontext-clip-mask ggc)))
+                                        (list :none))))
+                (clip-region (let ((q old-clip-mask))
+                               (if (consp q)
+                                   (region-from-x11-rectangle-list q)
+                                   +everywhere+)))
+                (paint-region (region-intersection 
+                               clip-region
+                               (make-rectangle* x y (+ x w) (+ y h)))) )
+           ;; There is a bug in CLX wrt to clip-x / clip-y
+           ;; Turning off caching helps
+           (setf (xlib:gcontext-cache-p ggc) nil)
+
+           ;; we have to do our own clipping here.
+           (let ((iw (xlib:drawable-width pixmap))
+                 (ih (xlib:drawable-height pixmap)))
+             (loop for i from (floor (- x xo) iw) to (ceiling (- (+ x w) (+ xo iw)) iw)
+                   do
+                   (loop for j from (floor (- y yo) ih) to (ceiling (- (+ y h) (+ yo ih)) ih)
+                         do
+                         (let ((rect (make-rectangle*
+                                      (+ xo (* i iw))
+                                      (+ yo (* j ih))
+                                      (+ (+ xo (* i iw)) iw)
+                                      (+ (+ yo (* j ih)) ih))))
+                           (map-region-rectangles 
+                            (lambda (rx0 ry0 rx1 ry1)
+                              (xlib:with-gcontext (ggc :exposures :off
+                                                       :fill-style :tiled
+                                                       :tile pixmap
+                                                       :clip-mask mask
+                                                       :clip-x (+ xo (* i iw))
+                                                       :clip-y (+ yo (* j ih))
+                                                       :ts-x xo
+                                                       :ts-y yo)
+                                (xlib:draw-rectangle drawable ggc
+                                                     rx0 ry0 (max 0 (- rx1 rx0)) (max 0 (- ry1 ry0))
+                                                     t)))
+                            (region-intersection paint-region rect))))) )
+           ;; turn on caching again (see above)
+           (setf (xlib:gcontext-cache-p ggc) t)
+           ;;
+           ;; and xlib:with-gcontext also is broken!
+           (setf (xlib:gcontext-clip-mask ggc) old-clip-mask)))))
+
+#+emarsden
 #.((lambda (x)
      #+:CMU `(eval ',x)                 ;compiler bug
      #-:CMU x)
@@ -396,8 +453,8 @@
                 (+ x (nth-value 0 (r2::ro/size ro)))
                 (+ y 0)))
 
-(defmethod medium-draw-ro* (medium (self ro/img) x y)
-  (ignore-errors                        ;xxx
+(defmethod medium-draw-ro* ((medium clim:medium) (self ro/img) x y)
+  (progn ;; ignore-errors                        ;xxx
     (progn
       (assert (realp x))
       (assert (realp y))

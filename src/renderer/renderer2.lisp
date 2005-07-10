@@ -1177,6 +1177,7 @@ mounted floating boxen."
 (defvar *zzz* nil)
 (defvar *dyn-elm* nil)
 
+#+emarsden2005-06-23
 (defun tata (mode)
   (let ((clim-user::*medium* (clim:find-pane-named clim-user::*frame* 'clim-user::canvas))
         (closure-protocol:*document-language*
@@ -1262,7 +1263,7 @@ mounted floating boxen."
                 (clim:delete-output-record (para-box-output-record the-pb) papa)
                 ;; now clim is so inherently broken ....
                 (setf (para-box-output-record the-pb)
-                      (clim:with-new-output-record (clim-user::*medium*)
+                      (clim:with-new-output-record (clim-user::*pane*)
                         (funcall (para-box-genesis the-pb)))))
               (tata mode))
             ))
@@ -1272,8 +1273,7 @@ mounted floating boxen."
 (defun format-block (item x1 x2 ss before-markers #||# pos-vertical-margin neg-vertical-margin yy)
   (let (res)
     (setf (block-box-output-record item)
-          (clim:with-new-output-record
-              (clim-user::*medium*) foo
+          (clim:with-new-output-record (clim-user::*pane*) foo
               (setf res
                     (multiple-value-list
                         (case (cooked-style-display (block-box-style item))
@@ -1313,7 +1313,7 @@ mounted floating boxen."
          (yy0 nil)      ;the inner top padding edge
                         ; NIL initially to indicate that we do not know it for now.
          (bg-record
-          (clim:with-new-output-record (clim-user::*medium*)
+          (clim:with-new-output-record (clim-user::*pane*)
             )))
 
     ;; remember the output record of the decoration
@@ -1427,7 +1427,7 @@ mounted floating boxen."
                                         before-markers))))))
 
                  (setf (para-box-output-record item)
-                       (clim:with-new-output-record (clim-user::*medium*)
+                       (clim:with-new-output-record (clim-user::*pane*)
                          (setf (values pos-vertical-margin neg-vertical-margin x1 x2 yy ss block-style)
                                (funcall (para-box-genesis item)))))
 
@@ -1538,9 +1538,9 @@ mounted floating boxen."
                 (minf neg-vertical-margin bm)))
 
           ;;
-          (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
+          (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
             (let ((new-record
-                   (clim:with-new-output-record (clim-user::*medium*)
+                   (clim:with-new-output-record (clim-user::*pane*)
                      ;;
                      (multiple-value-bind (x1 y1 x2 y2)
                          (values (- x1 pl) (+ yy0
@@ -2112,7 +2112,7 @@ border-spacing between the spaned columns is included."
                       (values x1 (+ x1 actual-width))))))
 
 
-           (let ((bg-record (clim:with-new-output-record (clim-user::*medium*))))
+           (let ((bg-record (clim:with-new-output-record (clim-user::*pane*))))
              (setf (table-decoration-output-record table) bg-record)
              (let ((yyy yy)
                    (dangling-cells nil)) ;a list of (rowspan total-rowspan cell) pairs of cells whose row span
@@ -2270,8 +2270,8 @@ border-spacing between the spaned columns is included."
                                   (clim:clear-output-record bg-record)
                                   (multiple-value-bind (xx1 xx2) (table-column-coordinates table column-widths ci (table-cell-colspan cell))
                                     (let ((new-record
-                                           (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
-                                             (clim:with-new-output-record (clim-user::*medium*)
+                                           (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
+                                             (clim:with-new-output-record (clim-user::*pane*)
                                                (draw-box-decoration clim-user::*medium* (+ x1 xx1) y1 (+ x1 xx2) y2
                                                                        (block-box-style (table-cell-content cell)))))))
                                       (clim:delete-output-record new-record (clim:output-record-parent new-record))
@@ -2284,8 +2284,8 @@ border-spacing between the spaned columns is included."
                         (x1 x1)
                         (x2 x2))
                    (let ((new-record
-                          (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
-                            (clim:with-new-output-record (clim-user::*medium*)
+                          (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
+                            (clim:with-new-output-record (clim-user::*pane*)
                               (draw-box-decoration clim-user::*medium* x1 y1 x2 y2
                                                       (table-style table))))))
                      (clim:delete-output-record new-record (clim:output-record-parent new-record))
@@ -5061,6 +5061,10 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.8  2005/07/10 11:18:35  emarsden
+;; Distinguish between pane and medium in the CLIM GUI. This should
+;; fix image display.
+;;
 ;; Revision 1.7  2005/03/13 18:03:25  gbaumann
 ;; Gross license change
 ;;
