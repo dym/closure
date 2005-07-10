@@ -52,6 +52,9 @@
 (defvar *png-magic* '#(137 80 78 71 13 10 26 10)
   "The first eight bytes of a png file.")
 
+;; largest prime smaller than 65536
+(defconstant *adler-base* 65521)
+
 (defstruct png-image 
   ihdr
   idat
@@ -675,9 +678,6 @@
              ;; 
              (funcall cont buf 0 blen))) )
     (setf (zlib-stream-bptr zlib-stream) 0)))
-
-;; largest prime smaller than 65536
-(defconstant *adler-base* 65521)
 
 (defun update-adler32-one (adler byte)
   (let ((s1 (ldb (byte 16 0) adler))
