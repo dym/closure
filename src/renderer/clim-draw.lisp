@@ -171,14 +171,14 @@
     (dolist (deco text-decoration)
       (case deco
         (:underline
-         (clim:draw-line* clim-user::*medium*
+         (clim:draw-line* clim-user::*pane*
           xx1 (+ yy 2) xx (+ yy 2) :ink (clim-user::parse-x11-color color)))
         (:overline
          ;; xxx hack
-         (clim:draw-line* clim-user::*medium*
+         (clim:draw-line* clim-user::*pane*
           xx1 (- yy 12) xx (- yy 12) :ink (clim-user::parse-x11-color color)))
         (:line-through
-         (clim:draw-line* clim-user::*medium*
+         (clim:draw-line* clim-user::*pane*
           xx1 (- yy 6) xx (- yy 6) :ink (clim-user::parse-x11-color color))) ))))
 
 ;;;; Runes

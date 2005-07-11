@@ -435,8 +435,8 @@ used by the table renderer.")
                                                          (open-chunk-dy chunk))
                                                  )))
                                   (when (eql pass 1)
-                                    (clim:draw-text* clim-user::*medium* q x y))
-                                  (incf x (clim:text-size clim-user::*medium* q))))
+                                    (clim:draw-text* clim-user::*pane* q x y))
+                                  (incf x (clim:text-size clim-user::*pane* q))))
                               (push dy ys)
                               (setf dy (open-chunk-dy chunk))
                               (push (bounding-chunk-style chunk) ss)
@@ -451,7 +451,7 @@ used by the table renderer.")
                                 (let (p q res.text-seen-p)
                                   (cond (link
                                          (clim:with-output-as-presentation
-                                             (clim-user::*medium*
+                                             (clim-user::*pane*
                                               (url:unparse-url
                                                (hyper-link-url (imap-area-link link)))
                                               'clim-user::url
@@ -470,8 +470,8 @@ used by the table renderer.")
                                                      (chunk-debug-name q)
                                                      "")))
                                         (when (eql pass 1)
-                                          (clim:draw-text* clim-user::*medium* q x y))
-                                        (incf x (clim:text-size clim-user::*medium* q))
+                                          (clim:draw-text* clim-user::*pane* q x y))
+                                        (incf x (clim:text-size clim-user::*pane* q))
                                         )))
 
                                   (pop ss)
@@ -483,7 +483,7 @@ used by the table renderer.")
                                       ;; replaced objects are different to dimensions of regular
                                       ;; inline boxen.
                                       (cond (replaced-object-p
-                                             (draw-box-decoration clim-user::*medium*
+                                             (draw-box-decoration clim-user::*pane*
                                                                      x1 (- (+ y dy) (open-chunk-height oc)
                                                                            (cooked-style-padding-top (bounding-chunk-style oc))
                                                                            (- (cooked-style-padding-top (bounding-chunk-style oc)))
@@ -499,7 +499,7 @@ used by the table renderer.")
                                                                      :right-halfp (not (bounding-chunk-halfp q))
                                                                      ))
                                             (t
-                                             (draw-box-decoration clim-user::*medium*
+                                             (draw-box-decoration clim-user::*pane*
                                                                      x1 (- (+ y dy) (open-chunk-height oc)
                                                                            (cooked-style-padding-top (bounding-chunk-style oc)))
                                                                      x  (+ (+ y dy) (open-chunk-depth oc)
@@ -528,7 +528,7 @@ used by the table renderer.")
                               (when (eql pass 1)
                                 (setf (clim:medium-ink clim-user::*medium*)
                                       (css-color-ink (cooked-style-color (black-chunk-style chunk))))
-                                (clim-draw-runes* clim-user::*medium*
+                                (clim-draw-runes* clim-user::*pane*
                                                  x (+ dy y)
                                                  (black-chunk-data chunk)
                                                  0 (length (black-chunk-data chunk))
@@ -539,7 +539,7 @@ used by the table renderer.")
                             (let ((ro (replaced-object-chunk-object chunk)))
                               (when (eql pass 1)
                                 (closure/clim-device::medium-draw-ro*
-                                 clim-user::*medium*
+                                 clim-user::*pane*
                                  ro x (+ dy y)))
                               (incf x (chunk-width chunk))) )))))
                    ;;
@@ -1177,99 +1177,6 @@ mounted floating boxen."
 (defvar *zzz* nil)
 (defvar *dyn-elm* nil)
 
-#+emarsden2005-06-23
-(defun tata (mode)
-  (let ((clim-user::*medium* (clim:find-pane-named clim-user::*frame* 'clim-user::canvas))
-        (closure-protocol:*document-language*
-         (make-instance 'r2::html-4.0-document-language))
-        (closure-protocol:*user-agent* nil))
-    (multiple-value-bind (x c)
-        (ignore-errors
-          ;; first find the chunk
-          (let ((offender *dyn-elm*)
-                (the-pb nil))
-            (block suche
-              (labels ((walk (x)
-                         (etypecase x
-                           (marker-box)
-                           (block-box
-                            (mapc #'walk (block-box-content x)))
-                           (para-box
-                            (mapc #'(lambda (z) (walk-chunk x z)) (para-box-items x)))))
-                       (walk-chunk (pb x)
-                         (etypecase x
-                           (floating-chunk)
-                           (bounding-chunk
-                            (setf (bounding-chunk-pt x) offender)
-                            #+NIL
-                            (when (eq (bounding-chunk-pt x) offender)
-                              '(cond ((eql mode :highlight)
-                                      (setf (slot-value (bounding-chunk-style x) 'css::border-left-width) 1
-                                       (slot-value (bounding-chunk-style x) 'css::border-left-style) :solid
-                                       (slot-value (bounding-chunk-style x) 'css::border-right-width) 1
-                                       (slot-value (bounding-chunk-style x) 'css::border-right-style) :solid
-                                       (slot-value (bounding-chunk-style x) 'css::border-top-width) 1
-                                       (slot-value (bounding-chunk-style x) 'css::border-top-style) :solid
-                                       (slot-value (bounding-chunk-style x) 'css::border-bottom-width) 1
-                                       (slot-value (bounding-chunk-style x) 'css::border-bottom-style) :solid))
-                                (t
-                                 (setf (slot-value (bounding-chunk-style x) 'css::border-left-width) 0
-                                  (slot-value (bounding-chunk-style x) 'css::border-left-style) :none
-                                  (slot-value (bounding-chunk-style x) 'css::border-right-width) 0
-                                  (slot-value (bounding-chunk-style x) 'css::border-right-style) :none
-                                  (slot-value (bounding-chunk-style x) 'css::border-top-width) 0
-                                  (slot-value (bounding-chunk-style x) 'css::border-top-style) :none
-                                  (slot-value (bounding-chunk-style x) 'css::border-bottom-width) 0
-                                  (slot-value (bounding-chunk-style x) 'css::border-bottom-style) :none)))
-                              '(setf (slot-value (bounding-chunk-style x) 'css::background-color)
-                                (if (eq mode :highlight)
-                                    "#ccccff"
-                                    :transparent))
-                              '(setf (slot-value (bounding-chunk-style x) 'css::text-decoration)
-                                (if (eq mode :highlight)
-                                    (list :underline)
-                                    :none))
-                              ))
-                           (kern-chunk)
-                           (disc-chunk
-                            (mapc #'(lambda (x) (walk-chunk pb x))
-                                  (disc-chunk-here x))
-                            (mapc #'(lambda (x) (walk-chunk pb x))
-                                  (disc-chunk-after x))
-                            (mapc #'(lambda (x) (walk-chunk pb x))
-                                  (disc-chunk-before x)))
-                           (black-chunk
-                            '(setf (slot-value (black-chunk-style x) 'css::color)
-                              (if (eq mode :highlight)
-                                  "#ff0000"
-                                  "#000000"))
-                            )
-                           (replaced-object-chunk
-                            (when (typep (replaced-object-chunk-object x)
-                                         'lazy-image)
-                              (setf (replaced-object-chunk-object x)
-                                    (replaced-element-p *document* *device* (replaced-object-chunk-element x)))
-                              (setf the-pb pb)
-                              (return-from suche nil))
-                            ))))
-                (walk *zzz*)))
-
-            (dprint "@@@@@@@ offender = ~S." offender)
-            (dprint "@@@@@@@ the-pb = ~S." the-pb)
-            (when the-pb
-              (let (
-                    (papa (clim:output-record-parent (para-box-output-record the-pb))))
-                (dprint "@@@@@@@ papa = ~S." papa)
-                (clim:delete-output-record (para-box-output-record the-pb) papa)
-                ;; now clim is so inherently broken ....
-                (setf (para-box-output-record the-pb)
-                      (clim:with-new-output-record (clim-user::*pane*)
-                        (funcall (para-box-genesis the-pb)))))
-              (tata mode))
-            ))
-      (when c
-        (dprint "Error: ~A." c)))))
-
 (defun format-block (item x1 x2 ss before-markers #||# pos-vertical-margin neg-vertical-margin yy)
   (let (res)
     (setf (block-box-output-record item)
@@ -1549,7 +1456,7 @@ mounted floating boxen."
                                  (+ x2 pr) (- yy
                                               (cooked-style-border-bottom-width s)
                                               ))
-                       (draw-box-decoration clim-user::*medium* x1 y1 x2 y2 block-style)
+                       (draw-box-decoration clim-user::*pane* x1 y1 x2 y2 block-style)
                        (incf y1 (cooked-style-padding-top s))
                        (decf y2 (cooked-style-padding-bottom s))
                        (when (realp (cooked-style-height s))
@@ -1558,7 +1465,7 @@ mounted floating boxen."
                            (error "Fubar")))
                        #+NIL
                        (unless (or (= x1 x2) (= y1 y2))
-                         (clim:draw-rectangle* clim-user::*medium* x1 y1 x2 y2
+                         (clim:draw-rectangle* clim-user::*pane* x1 y1 x2 y2
                                                :ink clim:+red+
                                                :filled nil))
                        )
@@ -2162,7 +2069,7 @@ border-spacing between the spaned columns is included."
                                        (unless (or (= x1 (+ x1 w))
                                                    (= yyy yy))
                                          #-NIL
-                                         (clim:draw-rectangle* clim-user::*medium*
+                                         (clim:draw-rectangle* clim-user::*pane*
                                                                x1 yyy (+ x1 w) yy
                                                                :ink (elt *table-depth-color*
                                                                          (mod *table-depth* (length *table-depth-color*)))
@@ -2272,7 +2179,7 @@ border-spacing between the spaned columns is included."
                                     (let ((new-record
                                            (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
                                              (clim:with-new-output-record (clim-user::*pane*)
-                                               (draw-box-decoration clim-user::*medium* (+ x1 xx1) y1 (+ x1 xx2) y2
+                                               (draw-box-decoration clim-user::*pane* (+ x1 xx1) y1 (+ x1 xx2) y2
                                                                        (block-box-style (table-cell-content cell)))))))
                                       (clim:delete-output-record new-record (clim:output-record-parent new-record))
                                       (clim:add-output-record new-record bg-record)))))))
@@ -2286,7 +2193,7 @@ border-spacing between the spaned columns is included."
                    (let ((new-record
                           (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
                             (clim:with-new-output-record (clim-user::*pane*)
-                              (draw-box-decoration clim-user::*medium* x1 y1 x2 y2
+                              (draw-box-decoration clim-user::*pane* x1 y1 x2 y2
                                                       (table-style table))))))
                      (clim:delete-output-record new-record (clim:output-record-parent new-record))
                      (clim:add-output-record new-record bg-record)))
@@ -2303,7 +2210,7 @@ border-spacing between the spaned columns is included."
                                    (multiple-value-bind (x1 x2) (table-column-coordinates table column-widths j)
                                      (let* (
                                             (y1 (+ yy (loop for k below i sum (elt row-heights k)))))
-                                       (clim:draw-line* clim-user::*medium*
+                                       (clim:draw-line* clim-user::*pane*
                                                         x1 y1 x2 y1
                                                         :ink (clim-user::parse-x11-color color)
                                                         :line-thickness width)))))))
@@ -2317,7 +2224,7 @@ border-spacing between the spaned columns is included."
                                    (let* ((y1 (+ yy (loop for k below i sum (elt row-heights k))))
                                           (y2 (+ y1 (elt row-heights i)))
                                           (x1 (+ x1 (loop for k below j sum (elt column-widths k)))))
-                                     (clim:draw-line* clim-user::*medium*
+                                     (clim:draw-line* clim-user::*pane*
                                                       x1 y1 x1 y2
                                                       :ink (clim-user::parse-x11-color color)
                                                       :line-thickness width)))))) )
@@ -5061,6 +4968,15 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.9  2005/07/11 15:57:56  crhodes
+;; Complete the renaming *MEDIUM* -> *PANE*.
+;;
+;; Panes are CLIM extended-streams, and remember output to them in output
+;; records.  Mediums are much simpler, and don't have this kind of
+;; memory.  So, though the same drawing functions (DRAW-TEXT, DRAW-LINE)
+;; can have the same initial effect applied to a pane and a medium, the
+;; output-record state is very different.
+;;
 ;; Revision 1.8  2005/07/10 11:18:35  emarsden
 ;; Distinguish between pane and medium in the CLIM GUI. This should
 ;; fix image display.

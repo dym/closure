@@ -28,6 +28,15 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.20  2005/07/11 15:58:03  crhodes
+;; Complete the renaming *MEDIUM* -> *PANE*.
+;;
+;; Panes are CLIM extended-streams, and remember output to them in output
+;; records.  Mediums are much simpler, and don't have this kind of
+;; memory.  So, though the same drawing functions (DRAW-TEXT, DRAW-LINE)
+;; can have the same initial effect applied to a pane and a medium, the
+;; output-record state is very different.
+;;
 ;; Revision 1.19  2005/07/10 11:18:34  emarsden
 ;; Distinguish between pane and medium in the CLIM GUI. This should
 ;; fix image display.
@@ -128,7 +137,6 @@
   (:menu-bar menubar-command-table)
   (:panes
    (canvas (make-pane 'closure-pane
-            :name 'canvas
             :height 2000
             :width 800
             :display-time nil))
@@ -620,17 +628,6 @@
 
 ;;;; ----------------------------------------------------------------------------------------------------
 
-#+NIL
-(define-closure-command com-reflow ()
-  (window-clear (find-pane-named *frame* 'canvas))
-  (let ((*medium* (find-pane-named *frame* 'canvas)))
-    (let ((device (make-instance 'closure/clim-device::clim-device :medium *medium*)))
-      (let ((closure-protocol:*document-language*
-             (make-instance 'r2::html-4.0-document-language))
-            (closure-protocol:*user-agent*
-             nil))
-        (r2::reflow)))))
-
 (define-presentation-translator url-from-string
     (string url closure)
   (x)
@@ -684,7 +681,7 @@
                    (min (gadget-max-value scrollbar) (+ current-y (* 0.9 window-height))))))
 
 (define-closure-command (com-redraw :name t :keystroke (#\r :control)) ()
-  (let* ((*medium* (find-pane-named *frame* 'canvas)) )
-    (handle-repaint *medium* (sheet-region (pane-viewport *medium*))))
+  (let* ((*pane* (find-pane-named *frame* 'canvas)) )
+    (handle-repaint *pane* (sheet-region (pane-viewport *pane*))))
   (xlib:display-finish-output (clim-clx::clx-port-display (find-port))))
 

@@ -943,8 +943,8 @@
               (rc-first-line-tasks new-rc) nil
               (rc-left-floating-boxen new-rc) nil
               (rc-right-floating-boxen new-rc) nil)
-        (clim:with-new-output-record (clim-user::*medium* 'clim:standard-sequence-output-record record)
-         (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
+        (clim:with-new-output-record (clim-user::*pane* 'clim:standard-sequence-output-record record)
+         (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
           (let* ((fake-parent (make-bbox))
                  (bbox (brender new-rc (cell-content cell) fake-parent)))
             (if bbox
@@ -1030,15 +1030,15 @@
 (defun render-table (rc pt parent-box)
   ;; Now, while we render a table, we unfortunatly have to disable
   ;; drawing.
-  (clim:with-output-recording-options (clim-user::*medium* :record t :draw nil)
+  (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
    ;;; xxx not yet correct
-   (funcall (if t ;(clim:stream-drawing-p clim-user::*medium*)
+   (funcall (if t ;(clim:stream-drawing-p clim-user::*pane*)
                 #'clim:replay-output-record
                 #'values)
-    (clim:with-new-output-record (clim-user::*medium*)
+    (clim:with-new-output-record (clim-user::*pane*)
      ;; why does drawp nest proper?
      (render-table-2 rc pt parent-box))
-    clim-user::*medium* clim:+everywhere+ 0 0)))
+    clim-user::*pane* clim:+everywhere+ 0 0)))
   
 (defun render-table-2 (rc pt parent-box)
   (let ((table (parse-table pt))
