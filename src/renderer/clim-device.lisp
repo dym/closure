@@ -446,12 +446,17 @@
                    :actual-width  (or width (r2::aimage-width aim))
                    :actual-height (or height (r2::aimage-height aim)))))
 
-#+NIL
-(climi::def-grecording draw-ro (() ro x y)
-        (values x
-                (- y (nth-value 1 (r2::ro/size ro)))
-                (+ x (nth-value 0 (r2::ro/size ro)))
-                (+ y 0)))
+(climi::def-grecording draw-ro (() ro x y) ()
+  (values x
+	  (- y (nth-value 1 (r2::ro/size ro)))
+	  (+ x (nth-value 0 (r2::ro/size ro)))
+	  (+ y 0)))
+(climi::def-graphic-op draw-ro (ro x y))
+
+(defun draw-ro* (sheet ro x y &rest args)
+  (climi::with-medium-options (sheet args)
+    (medium-draw-ro* medium ro x y)))
+
 
 (defmethod medium-draw-ro* ((medium clim:medium) (self ro/img) x y)
   (progn ;; ignore-errors                        ;xxx

@@ -486,10 +486,16 @@
   (let* ((width (imagelib:aimage-width aimage))
          (height (imagelib:aimage-height aimage))
          (idata (imagelib:aimage-data aimage))
-         (xdata (make-array (list height width) :element-type `(unsigned-byte ,depth)))
+	 ;; FIXME: this (and the :BITS-PER-PIXEL, below) is a hack on
+	 ;; top of a hack.  At some point in the past, XFree86 and/or
+	 ;; X.org decided that they would no longer support pixmaps
+	 ;; with 24 bpp, which seems to be what most AIMAGEs want to
+	 ;; be.  For now, force everything to a 32-bit pixmap.
+         (xdata (make-array (list height width) :element-type '(unsigned-byte 32)))
          (ximage (xlib:create-image :width  width
                                     :height height
                                     :depth  depth
+				    :bits-per-pixel 32
                                     :data   xdata)))
     (declare (type (simple-array (unsigned-byte 32) (* *)) idata)
              #+NIL(type (simple-array (unsigned-byte 8) (* *)) xdata)

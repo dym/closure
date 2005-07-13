@@ -538,7 +538,7 @@ used by the table renderer.")
                            (replaced-object-chunk
                             (let ((ro (replaced-object-chunk-object chunk)))
                               (when (eql pass 1)
-                                (closure/clim-device::medium-draw-ro*
+                                (closure/clim-device::draw-ro*
                                  clim-user::*pane*
                                  ro x (+ dy y)))
                               (incf x (chunk-width chunk))) )))))
@@ -4968,6 +4968,18 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.10  2005/07/13 13:44:55  crhodes
+;; Make images work, more or less.
+;;
+;; * restore horrible grecording hack for (medium-)draw-ro*
+;;
+;; * make direct drawing of images to x11 work with my X server (32bpp even
+;; for 24-depth images)
+;;
+;; Obviously this should turn into proper clim support for images, at which
+;; point this horribleness can go away.  However, this now basically works
+;; for me, modulo compiler consistency strangeness at startup.
+;;
 ;; Revision 1.9  2005/07/11 15:57:56  crhodes
 ;; Complete the renaming *MEDIUM* -> *PANE*.
 ;;
