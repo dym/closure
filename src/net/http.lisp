@@ -713,9 +713,10 @@
          (unwind-protect 
              (progn
                (setf stream (ignore-errors (open filename :direction :input
-                                                 :if-does-not-exist nil)))
+                                                 :element-type '(unsigned-byte 8)
+						 :if-does-not-exist nil)))
                (and stream
-                    (ignore-errors (read-char stream nil :eof))))
+                    (ignore-errors (read-byte stream nil :eof))))
            (when stream
              (close stream)) )) ))
 
