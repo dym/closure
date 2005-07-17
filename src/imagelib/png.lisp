@@ -175,9 +175,7 @@
 (defun decode-trns (palette data)
   (when palette
     (dotimes (i (length data))
-      (setf (svref (aref palette i) 3) (aref data i))))
-  (let ((*print-array* t))
-    (print palette)))
+      (setf (svref (aref palette i) 3) (aref data i)))))
 
 (defun read-png-image (input)
   (unless (read-png-signature-p input)

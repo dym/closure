@@ -221,8 +221,6 @@
     res))
 
 (defun background-pixmap+mask (document drawable bg)
-  #+emarsden2005-06-23
-  (print `(background-pixmap+mask ,bg))
   (cond ((r2::background-%pixmap bg)
          ;; already there
          (values (r2::background-%pixmap bg)
@@ -371,6 +369,7 @@
     (unless (eql (r2::background-image bg) :none)
       (multiple-value-bind (pixmap mask)
           (background-pixmap+mask document (sheet-direct-mirror (medium-sheet medium)) bg)
+        #+emarsden2005-07-15
         (print (list 'x11-draw-background pixmap mask))
         (unless (eql pixmap :none)
           (let* ((iw (xlib:drawable-width pixmap))

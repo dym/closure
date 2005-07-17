@@ -79,7 +79,7 @@
                         (t
                          (warn "Auch das hat nix genuetzt.")
                          (cond (deliver-broken-image-p
-                                (format T "~%;; ~A -> using broken image." url)
+                                (format *debug-io* "~%;; ~A -> using broken image." url)
                                 (broken-aimage document))
                                (t
                                 (error "Image mime type `~A' or `~A' not understood."
@@ -88,10 +88,10 @@
     (cond ((null aimage)
            (cond (deliver-broken-image-p
                   (progn
-                    (format T "~%;; ~A -> using broken image. [zweite variante]" url)
+                    (format *debug-io* "~%;; ~A -> using broken image. [zweite variante]" url)
                     (broken-aimage document) ))
                  (t
-                  (format T "~&;; Was unable to read ~S as image, because of:~%;; | ~A."
+                  (format *debug-io* "~&;; Was unable to read ~S as image, because of:~%;; | ~A."
                           url condition)
                   (values nil condition))))
           (t
@@ -173,7 +173,7 @@
       (let ((cmd (format nil "~A <~A >~A" filter-name
                          (namestring (truename temp-filename))
                          (namestring pnm-filename))))
-        (format T "~%;; running: ~A" cmd)
+        (format *debug-io* "~%;; running: ~A" cmd)
         (run-unix-shell-command cmd))
       (progn                            ;ignore-errors
         (with-open-file (input pnm-filename

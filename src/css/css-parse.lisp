@@ -709,7 +709,6 @@
 
 (defun p/integer (tokens)
   (let ((r (p/measure tokens '(1))))
-    (print r)
     (and r
          (integerp (car r))
          r)))

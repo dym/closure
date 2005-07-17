@@ -1160,7 +1160,6 @@
            t))))
 
 (defmethod x11-draw-robj (drawable gcontext (self ro/image) box x y)
-  drawable gcontext self box x y
   (setf x (floor x))
   (setf y (floor y))
   (with-slots (alt awidth aheight aimage url) self
