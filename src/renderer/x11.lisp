@@ -397,7 +397,6 @@
                         (setf worst-index (list red green blue)
                               worst-delta (second (aref cube red green blue)))))))
                 (destructuring-bind (bm bd nd) (apply #'aref cube worst-index)
-                  (print (list worst-index worst-delta bm bd nd))
                   (setf (apply #'aref cube worst-index)
                     (list (list nd (elt my k))
                           0
