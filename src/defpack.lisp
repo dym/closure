@@ -40,6 +40,8 @@
                 #:scale-aimage
                 #:pnm-stream->aimage)
   (:export
+   #:*tex-mode-p*
+   #:*hyphenate-p*
    #:device-font-ascent
    #:device-dpi
    #:device-font-descent
@@ -128,8 +130,6 @@
   (:export
    #:*home-page*
    #:*user-wants-images-p*
-   #:*tex-mode-p*
-   #:*hyphenate-p*
    #:*closure-dpi*
    #:*zoom-factor*
    #:*debug-submit-p*

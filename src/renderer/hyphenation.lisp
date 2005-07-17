@@ -174,18 +174,18 @@
 
 ;;;; Reading Tables
 
-(defun read-hyphen-table-file (filename &key (class 'tree-hyphenation-table))
-  (with-open-file (input filename)
-    (let ((res (make-instance class
-                              :filename filename)))
-      (read-line input nil nil)
-      (do ((line (read-line input nil nil) (read-line input nil nil)))
-          ((null line))
-        (let* ((j (position #\space line))
-               (pattern (map 'vector #'digit-char-p (subseq line (+ j 1)))))
-          (insert-hyphenation-pattern res (subseq line 0 j) pattern)))
-      res)))
-
+(defun read-hyphen-table (url &key (class 'tree-hyphenation-table))
+  (let ((url (if (url:url-p url) url (url:parse-url url))))
+    (netlib:with-open-document ((input mime-type) url)
+      (declare (ignore mime-type))
+      (let ((res (make-instance class :filename url)))
+        (g/read-line input nil nil)
+        (do ((line (g/read-line input nil nil) (g/read-line input nil nil)))
+            ((null line))
+          (let* ((j (position #\space line))
+                 (pattern (map 'vector #'digit-char-p (subseq line (+ j 1)))))
+            (insert-hyphenation-pattern res (subseq line 0 j) pattern)))
+        res))))
 
 
 ;; 100,000x hyphenation of "argument":
@@ -193,6 +193,10 @@
 ;; new:   .57s    2.400,000 bytes [technically zero]
 
 ;; $Log$
+;; Revision 1.4  2005/07/17 09:30:51  emarsden
+;; The hyphenation table can be referenced using an URL, rather than by
+;; an absolute filename.
+;;
 ;; Revision 1.3  2005/03/13 18:03:24  gbaumann
 ;; Gross license change
 ;;

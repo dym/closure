@@ -54,10 +54,6 @@
 (defparameter *debug-submit-p* nil
   "Whether to dump the values about to be submit by a <FORM> to the server on the listener.")
 
-;; experimental code that is not activated by default
-(defvar *tex-mode-p* nil)
-(defvar *hyphenate-p* nil)
-
 
 
 (defstruct display-list
