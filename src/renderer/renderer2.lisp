@@ -4787,7 +4787,7 @@ border-spacing between the spaned columns is included."
 (defun hyphenation-table ()
   (or *hyphenation-table*
       (setf *hyphenation-table*
-            (read-hyphen-table-file "/home/closure/closure/resources/patterns/english.ptn"))))
+            (read-hyphen-table "file://closure/resources/patterns/english.ptn"))))
 
 (defun hyphenate-items (items w)
   "This takes a chunk list and applies hyphenation it it."
@@ -4968,6 +4968,9 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.11  2005/07/17 09:35:47  emarsden
+;; Reference hyphenation table via a file:// URL.
+;;
 ;; Revision 1.10  2005/07/13 13:44:55  crhodes
 ;; Make images work, more or less.
 ;;
