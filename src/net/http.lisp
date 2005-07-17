@@ -99,7 +99,7 @@
 
 (defparameter *user-agent* "Lynx/2.7.1ac-0.98 libwww-FM/2.14")
 (defparameter *user-agent* "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)")
-(defparameter *user-agent* "CLOSURE/0.1")
+(defparameter *user-agent* "Closure/200507")
 
 
 #||
@@ -549,20 +549,19 @@
               response-header)))
         
           ((301 302 303) 
-           ;; moved permanently; moved temponary; see other
-           (multiple-value-bind (input header)
-               (http-open-document
-                (url:parse-url
-                 (or (get-header-field response-header :location)
-                     (error "301/302 Response from ~A lacks a 'Location' field."
-                            (url:url-host url))))
-                :yet-urls (cons url yet-urls))
-             (values input
-                     (append header
-                             (list 
-                              (cons "Location" 
-                                    (get-header-field response-header :location)))))))
-        
+           ;; moved permanently; moved temporary; see other
+           ;;
+           ;; the Location field may be either a complete URI, or just a path
+           (let* ((new-location (or (url:parse-url
+                                     (get-header-field response-header :location))
+                                    (error "301/302 Response from ~A lacks a 'Location' field."
+                                           (url:url-host url))))
+                  (new-url (if (url:url-host new-location) new-location
+                               (url:merge-url new-location url))))
+             (multiple-value-bind (input header)
+                 (apply #'http-open-document new-url :yet-urls (cons url yet-urls) options)
+               (values input `(,@header ("Location" . ,(unparse-url new-url)))))))
+          
           (304
            ;; not modified
            (values (cl-byte-stream->gstream (open (hce-pathname (http-cache) ce) 
