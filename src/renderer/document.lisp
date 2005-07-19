@@ -152,7 +152,6 @@
       (when (and (style-sheet-link-p link)
                  (style-link-does-apply-p link selected-style)
                  (link-href link))
-        (describe link)
         (let* ((media-type 
                 (or (ignore-errors
                      (css::parse-media-type (link-media link)))

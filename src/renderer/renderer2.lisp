@@ -982,7 +982,8 @@ mounted floating boxen."
 
                (when (> cww (- x2 x1))
                  ;; situation persists: give a warning.
-                 (warn "*** Overfull line box."))
+                 (when *debug-tables*
+                   (warn "*** Overfull line box.")))
                ;;
                (dolist (k (reverse cur-word)) (push k cur-line))
                (setf cur-word nil)
@@ -1880,8 +1881,6 @@ objects have something like a baseline contrary to the believe of the W3C)."
 (defparameter *table-depth-color*
   (list clim:+red+ clim:+blue+ clim:+green+ clim:+cyan+))
 
-(defparameter *debug-table* nil)
-
 ;;; Vertical align in a table
 
 ;; When a cell needs to be made larger than otherwise this is thought
@@ -1992,7 +1991,7 @@ border-spacing between the spaned columns is included."
          (let ((column-widths (allocate-table-columns table style x1 x2))
                (row-heights   (loop repeat (table-number-of-rows table) collect 0)))
            ;;
-           (when *debug-table*
+           (when *debug-tables*
              (format *trace-output* "~&=== we have a table at depth ~D.~%" *table-depth*)
              (format *trace-output* "~&=== column minima: ~S.~%"
                      (loop for i below (table-number-of-columns table)
@@ -2065,7 +2064,7 @@ border-spacing between the spaned columns is included."
                                            (t
                                             (push (list (table-cell-rowspan cell) (table-cell-rowspan cell) cell)
                                                   dangling-cells)))
-                                     (when *debug-table*
+                                     (when *debug-tables*
                                        (unless (or (= x1 (+ x1 w))
                                                    (= yyy yy))
                                          #-NIL
@@ -2275,7 +2274,8 @@ border-spacing between the spaned columns is included."
               ;;     compute the dimensions for us, so they should compute
               ;;     in this case too.
               ((eql table.width :auto)
-               (format *trace-output* "~&Using auto layout (table.width = ~d) ~%" table.width)
+               (when *debug-tables*
+                 (format *trace-output* "~&Using auto layout (table.width = ~d) ~%" table.width))
                (if (< (+ max gutter) (- x2 x1))
                    (+ max gutter)
                    (max (- x2 x1)
@@ -2288,7 +2288,8 @@ border-spacing between the spaned columns is included."
               ;; |    columns plus cell spacing or borders (MIN). If W is greater than
               ;; |    MIN, the extra width should be distributed over the columns.
               ((realp table.width)
-               ;;(format *trace-output* "~&Using fixed layout~%")
+               (when *debug-tables*
+                 (format *trace-output* "~&Using fixed layout~%"))
                (max table.width
                     min) )
               (t
@@ -2509,7 +2510,7 @@ border-spacing between the spaned columns is included."
         (cond ((eql :table-cell (cooked-style-display block-style))
                (setf bl 0 br 0)))
         ;;
-        (when *debug-table*
+        (when *debug-tables*
           (format *trace-output* "~&~S (~S): ml=~s, bl=~s, pl=~s, wd=~s, pr=~s, br=~s, mr=~s~%"
                   'minmax-block-content block-style ml bl pl wd pr br mr))
         (dolist (item items)
@@ -2624,7 +2625,7 @@ border-spacing between the spaned columns is included."
                       (show (disc-chunk-after x))))
                    (replaced-object-chunk
                     (let ((w (chunk-width x)))
-                      (when *debug-table*
+                      (when *debug-tables*
                         (format *trace-output* "~&~S: ~S = ~S~%"
                                 'minmax-para `(chunk-width ,x) (chunk-width x)))
                       (setf w (ro/size (replaced-object-chunk-object x)))
@@ -2685,7 +2686,6 @@ border-spacing between the spaned columns is included."
       (error "FLOATING-CHUNK has no width?")))
 
 (defun compute-floating-chunk-width (chunk containing-block-width)
-  (describe (floating-chunk-content chunk))
   ;;; Kludge!
   #+NIL
   (cond ((and (block-box-p (floating-chunk-content chunk))
@@ -2703,14 +2703,14 @@ border-spacing between the spaned columns is included."
           ;; kludge
           (cond ((eq :auto (slot-value style 'css::width))
                  (setf wd (minmax-block (floating-chunk-content chunk)))))
-          (print (list 'compute-floating-chunk-width
-                       (cooked-style-display (block-box-style (floating-chunk-content chunk)))
-                       (cooked-style-display style)
-                       ml pl bl wd br pr mr)
-                 *trace-output*)
-          (finish-output *trace-output*)
-          (+
-           ml pl bl wd br pr mr))))
+          (when *debug-tables*
+            (print (list 'compute-floating-chunk-width
+                         (cooked-style-display (block-box-style (floating-chunk-content chunk)))
+                         (cooked-style-display style)
+                         ml pl bl wd br pr mr)
+                   *trace-output*)
+            (finish-output *trace-output*))
+          (+ ml pl bl wd br pr mr))))
 
 
 ;;;;
@@ -4968,6 +4968,10 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.12  2005/07/19 20:42:09  emarsden
+;; More removal of spurious debugging output, and conditionalization of
+;; some output on *debug-tables*
+;;
 ;; Revision 1.11  2005/07/17 09:35:47  emarsden
 ;; Reference hyphenation table via a file:// URL.
 ;;

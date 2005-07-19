@@ -529,6 +529,9 @@
                                        ;; xxx when exactly to cache?
                                        (and her-date her-expires
                                             (> her-expires her-date))))))
+             ;; the logic below is incomplete; it should also be looking at Cache-control: headers
+             ;; emarsden2005-07-19
+             #+(and) 
              (when cache-p
                (unless really-cache-p
                  (warn "~A will not be cached; cache-p = ~S; header: ~S"
