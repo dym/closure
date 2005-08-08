@@ -49,8 +49,6 @@
     ;;fixme: doc
     nil)
 
-(defparameter *debug-tables* t)
-
 ;; We need to distinguish two models:
 ;;  a. tables with fixed width
 ;;  b. tables with dynamic width (width = :auto)
