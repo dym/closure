@@ -28,6 +28,11 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.21  2005/08/25 15:05:48  crhodes
+;; Work around problems related to *closure-inited-p* (see #lisp logs for
+;; 2005-08-25 for more discussion).  Not clear where the fault lies: sbcl,
+;; clx, mcclim[-freetype] or closure itself.
+;;
 ;; Revision 1.20  2005/07/11 15:58:03  crhodes
 ;; Complete the renaming *MEDIUM* -> *PANE*.
 ;;
@@ -453,19 +458,18 @@
       (send-closure-command 'com-quit))))
 
 (defvar *closure-inited-p* nil)
-(defmethod clim:run-frame-top-level :before ((frame closure)
-					     &key &allow-other-keys)
-  (setf *closure-inited-p* t))
+(defmethod clim:read-frame-command :before ((frame closure)
+                                               &key &allow-other-keys)
+  (unless *closure-inited-p*
+    (setf *closure-inited-p* t)))
 
 (defun ensure-closure ()
   (with-closure ()
     (unless *closure-process*
       (setf *closure-inited-p* nil)
       (run-closure)
-      (clim-sys:process-wait "Waiting for closure init"
-                             (lambda ()
-                               *closure-inited-p*)))))
-
+      (clim-sys:process-wait "Waiting for closure init" 
+                             (lambda () *closure-inited-p*)))))
 
 (defun run-closure ()
   ;; Care for proxy
