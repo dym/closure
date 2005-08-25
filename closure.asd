@@ -70,7 +70,8 @@
 	    #+(AND ALLEGRO ALLEGRO-V5.0)        "dep-acl5"
 	    #+(AND ALLEGRO (NOT ALLEGRO-V5.0))  "dep-acl"
 	    #+GCL                               "dep-gcl"
-	    #-(OR sbcl CLISP CMU ALLEGRO GCL) #.(error "Configure!"))
+	    #+OPENMCL                           "dep-openmcl"
+	    #-(OR sbcl CLISP CMU ALLEGRO GCL OPENMCL) #.(error "Configure!"))
      (:file "package"
 	    :depends-on (dependent))
      (:file "runes"

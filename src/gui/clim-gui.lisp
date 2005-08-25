@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.22  2005/08/25 15:14:14  crhodes
+;; OpenMCL support (from Dave Murray aka JQS)
+;;
 ;; Revision 1.21  2005/08/25 15:05:48  crhodes
 ;; Work around problems related to *closure-inited-p* (see #lisp logs for
 ;; 2005-08-25 for more discussion).  Not clear where the fault lies: sbcl,
@@ -428,12 +431,6 @@
 
 (defun send-closure-command (command &rest args)
   (ensure-closure)
-
-  #+openmcl
-  (with-closure ()
-    (glisp::process-interrupt *closure-process*
-                          #'(lambda () (apply command args))))
-  #-openmcl
   (with-closure ()
     (clim-sys:process-interrupt *closure-process*
                           #'(lambda () (apply command args)))))

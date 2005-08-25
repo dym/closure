@@ -167,7 +167,7 @@
     (get-host-name))
   
 ;;; GET-BEST-AUTHORIZATION
-
+  #-openmcl
   (defun get-best-authorization (host display protocol)
     (labels ((read-short (stream &optional (eof-errorp t))
                (let ((high-byte (read-byte stream eof-errorp nil)))

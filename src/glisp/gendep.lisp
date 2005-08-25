@@ -337,7 +337,8 @@
   #+(AND ALLEGRO ALLEGRO-V5.0) "acl5"
   #+(AND ALLEGRO (NOT ALLEGRO-V5.0)) "acl"
   #+GCL     "gcl"
-  #-(OR CLISP CMU ALLEGRO GCL)
+  #+OPENMCL "openmcl"
+  #-(OR CLISP CMU ALLEGRO GCL OPENMCL)
   #.(error "Configure!"))
 
 ;; all symbols, which are defined by gray streams
@@ -379,6 +380,7 @@
     #+:CMU                   '(:ext)
     #+:ALLEGRO               '(:excl)
     #+:HARLEQUIN-COMMON-LISP '(:stream)
+    #+:OPENMCL               '(:ccl)
     )
 
 (defun seek-symbol (name packages)
