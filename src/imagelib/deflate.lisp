@@ -28,16 +28,6 @@
 
 (in-package :PNG)
 
-(defpackage :deflate
-  (:use :glisp)
-  (:export
-   #:make-deflator
-   #:stuff-deflator
-   #:end-deflator
-   #:make-inflator
-   #:stuff-inflator
-   #:end-inflator))
-
 ;; This code should really move into another package
 
 ;; Note: This implementation is inherently sloooow.
