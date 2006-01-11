@@ -60,6 +60,7 @@
 			       (make-pathname :name nil :type nil
 					      :defaults *load-truename*))
     :default-component-class closure-source-file
+    :depends-on (:clim #+sbcl :sb-bsd-sockets)
     :components
     ((:file dependent
 	    :pathname
