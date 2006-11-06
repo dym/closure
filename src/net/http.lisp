@@ -348,7 +348,9 @@
             (header (append (if (and (or *send-host-field-never-the-less-p*
                                          proxyp)
                                      (not (member :host header :test #'string-equal :key #'car)))
-                                (list (cons "Host" host))
+                                (if (and (numberp (url:url-port url)) (not (= (url:url-port url) 80)))
+                                    (list (cons "Host" (format nil "~A:~A" host (url:url-port url))))
+                                    (list (cons "Host" host)))
                               nil)
                             (if *referer*
                                 (list (cons "Referer" (if (url:url-p *referer*)
