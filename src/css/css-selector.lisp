@@ -833,7 +833,7 @@
                                                  (subseq seq (+ p1 1) p2)))
                            (parse-style-sheet* seq (+ p2 1) nil)) )))))
             (t
-             (warn "Bad css syntax: " (as-string seq))
+             (warn "Bad css syntax: ~A" (as-string seq))
              nil)))))
 
 

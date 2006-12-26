@@ -394,10 +394,8 @@
                            'new-interpret-length)
                      (round (* a dpi 12) 72))
                     (t
-                     (* a font-size))
-                    (t
-                     (round (* a dpi 12) 72))))
-	     (:ex 
+                     (* a font-size))))
+	     (:ex
               (cond ((and pt (not (realp font-size)))
                      (warn "In ~S: font-size not available -- fix your programm."
                            'new-interpret-length)
@@ -459,6 +457,9 @@
 
 
 ;; $Log$
+;; Revision 1.5  2006/12/26 14:19:18  emarsden
+;; Trivial bugfixes.
+;;
 ;; Revision 1.4  2005/03/13 18:00:58  gbaumann
 ;; Gross license change
 ;;
