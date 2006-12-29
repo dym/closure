@@ -197,7 +197,7 @@
     (let ((x 0))
       (loop for i from start to (1- end) do
             (let* ((rune (aref runes i)))
-              (if (white-space-rune-p rune) (setf rune 32))
+              (if (white-space-rune-p rune) (setf rune #/U+0020))
               (progn
                 (let ((cw (+ (if (white-space-rune-p rune)
                                  (+ (rune-width font rune) word-spacing)
@@ -236,12 +236,12 @@
                 (type css-font-desc $font))
        (let ((x 0)
              ($rune 0))
-         (declare (type rune $rune))
+         (declare (type fixnum $rune))
          (declare (type fixnum x))
          (loop for i #-GCL of-type #-GCL fixnum from ,start to (the fixnum (1- ,end)) do
                (locally
                    (declare (fixnum i))
-                 (setq $rune (aref (the rod ,runes) i))
+                 (setq $rune (rune-code (aref (the rod ,runes) i)))
                  (if (white-space-rune-p*/no-nl $rune)
                      (setf $rune 32))
                  (let (($cw 0))
@@ -278,10 +278,10 @@
       (let ((buffer-size (length buffer)))
         (prog1
             (iterate-over-runes
-             (lambda (rune index x cw)
+             (lambda (code index x cw)
                index
-               (let ((fid (css-font-desc-glyph-fid (text-style-font text-style) rune))
-                     (i   (css-font-desc-glyph-index (text-style-font text-style) rune)))
+               (let* ((fid (css-font-desc-glyph-fid (text-style-font text-style) code))
+		      (i   (css-font-desc-glyph-index (text-style-font text-style) code)))
                  (when (or (not (eq font fid))
                            (= bptr buffer-size))
                    ;; we have to spill

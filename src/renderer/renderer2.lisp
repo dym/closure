@@ -2261,8 +2261,8 @@ border-spacing between the spaned columns is included."
                        collect (table-column-maximum-width (table-column table i))))
            (min (reduce #'+ mins))
            (max (reduce #'+ maxs))
-           (gutter (* (1+ (table-number-of-columns table)) (table-horizontal-border-spacing table))))
-      ;;
+           (gutter (* (1+ (table-number-of-columns table)) (table-horizontal-border-spacing table)))) 
+     ;;
       (setf table.width
             (cond
               ;; | 2. If the 'table' or 'inline-table' element has 'width: auto', the
@@ -2761,12 +2761,13 @@ border-spacing between the spaned columns is included."
             before-markers)
     ;; first off the first thing must be a block-open
     (unless (eq (caar q) :open)
-      (error "Barf!"))
+      (error "Barf! (1)"))
     (push (my-setup-style (cadar q) (car ss) cbss) ss)
     ;;
     (setf mes (car ss))
     (unless (cooked-style-block-element-p (car ss))
-      (error "Barf!"))
+      (error "Barf! (2) -- Expected cooked-style-block-element, found ~A"
+	     (cooked-style-display (car ss))))
     (setf me (cadar q))
     (pop q)
 
@@ -2960,9 +2961,8 @@ border-spacing between the spaned columns is included."
 (defun make-black-chunk* (char style)
   (cons-black-chunk
    :style style
-   :data (map '(simple-array (unsigned-byte 16) (*))
-              #'identity
-              (list char))))
+   :data (map 'rod ;; war: (simple-array (unsigned-byte 16) (*))
+	   #'identity (list char))))
 
 ;;; first-letter pseudo elements
 
@@ -3072,7 +3072,7 @@ border-spacing between the spaned columns is included."
           for i fixnum from 0 do
           (cond
             ,@(AND (EQL :PRE WHITE-SPACE)
-                   (list `((= c 10)
+                   (list `((eql c #/U+0010)
                            (let ((ocontext context))
                              ,(OR LETTER-SPACING-APPLICABLE-P
                                   '(unless (= blacki i)
@@ -3152,10 +3152,10 @@ border-spacing between the spaned columns is included."
                                                    (reverse ncontext))
                                    :%here ,(IF LETTER-SPACING-APPLICABLE-P
                                                `(if (eql word-spacing :normal)
-                                                    (list (make-black-chunk* 32 (car ss)))
-                                                    (list (make-black-chunk* 32 (car ss))
+                                                    (list (make-black-chunk* #/U+0020 (car ss)))
+                                                    (list (make-black-chunk* #/U+0020 (car ss))
                                                           (make-kern-chunk word-spacing)))
-                                               `(list (make-black-chunk* 32 (car ss))))))
+                                               `(list (make-black-chunk* #/U+0020 (car ss))))))
                             #-NIL
                             (push (make-instance
                                    'disc-chunk
@@ -3169,30 +3169,30 @@ border-spacing between the spaned columns is included."
                                                    (reverse ncontext))
                                    :%here ,(IF LETTER-SPACING-APPLICABLE-P
                                                `(if (eql word-spacing :normal)
-                                                    (list (make-black-chunk* 32 (car ss)))
-                                                    (list (make-black-chunk* 32 (car ss))
+                                                    (list (make-black-chunk* #/U+0020 (car ss)))
+                                                    (list (make-black-chunk* #/U+0020 (car ss))
                                                           (make-kern-chunk word-spacing)))
-                                               `(list (make-black-chunk* 32 (car ss)))))
+                                               `(list (make-black-chunk* #/U+0020 (car ss)))))
                              res)))
                          ((:PRE)
                           `(progn
                             ,(IF LETTER-SPACING-APPLICABLE-P
                                  `(if (eql word-spacing :normal)
-                                   (push (make-black-chunk* 32 (car ss)) res)
+                                   (push (make-black-chunk* #/U+0020 (car ss)) res)
                                    (progn
-                                     (push (make-black-chunk* 32 (car ss)) res)
+                                     (push (make-black-chunk* #/U+0020 (car ss)) res)
                                      (push (make-kern-chunk word-spacing) res)))
-                                 `(push (make-black-chunk* 32 (car ss)) res) )
+                                 `(push (make-black-chunk* #/U+0020 (car ss)) res) )
                             (setf blacki (+ i 1))))
                          ((:NOWRAP)
                           `(progn
                             ,(IF LETTER-SPACING-APPLICABLE-P
                                  `(if (eql word-spacing :normal)
-                                   (push (make-black-chunk* 32 (car ss)) res)
+                                   (push (make-black-chunk* #/U+0020 (car ss)) res)
                                    (progn
-                                     (push (make-black-chunk* 32 (car ss)) res)
+                                     (push (make-black-chunk* #/U+0020 (car ss)) res)
                                      (push (make-kern-chunk word-spacing) res)))
-                                 `(push (make-black-chunk* 32 (car ss)) res) )))))))
+                                 `(push (make-black-chunk* #/U+0020 (car ss)) res) )))))))
 
             (t
              ,(AND LETTER-SPACING-APPLICABLE-P
@@ -4969,6 +4969,10 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.16  2006/12/29 21:29:39  dlichteblau
+;;
+;; Use CXML's rune implementation and XML parser.
+;;
 ;; Revision 1.15  2006/11/06 19:43:01  thenriksen
 ;; Remove compiler-killing evil character from comment.
 ;;

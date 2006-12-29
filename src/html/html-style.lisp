@@ -94,7 +94,7 @@
 
 (defun pt-all-data (x)
   (cond ((member (element-gi x) '(:pcdata :comment))
-	 (map 'string (lambda (x) (or (code-char x) #\?))
+	 (map 'string (lambda (x) (or (rune-char x) #\?))
               (element-text x)))
 	((apply 'concatenate 'string
                 (mapcar #'pt-all-data (element-children x))))))
@@ -112,7 +112,7 @@
 (defun pt-attr/latin1 (pt attr &optional default)
   (let ((r (pt-attr/low pt attr)))
     (if r
-        (map 'string (lambda (x) (if (< x 256) (code-char x) #\?)) r)
+        (map 'string (lambda (x) (if (< (rune-code x) 256) (rune-char x) #\?)) r)
       default)))
 
 (defmethod closure-protocol:element-explicit-style (document (pt sgml::pt))
@@ -191,9 +191,6 @@
         (t
          (format nil "[invalid html-length: ~S]" value))))
 
-(defun rune->char (x)
-  (or (code-char x) #\?))
-
 (defun rod->string (x)
   (map 'simple-string (lambda (x) (or (code-char x) #\?)) x))
 
@@ -233,7 +230,7 @@
            (let ((val (some (lambda (key)
                               (and (= (length s) (length (symbol-name key)))
                                    (every (lambda (x y)
-                                            (char-equal (rune->char x) y))
+                                            (char-equal (rune-char x) y))
                                           s (symbol-name key))
                                    key))
                             keys)))

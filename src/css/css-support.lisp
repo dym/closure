@@ -39,7 +39,7 @@
 
 (defun intern-attribute-name (string)
   ;; XXX hack
-  (intern (string-upcase (map 'string (lambda (x) (or (code-char x) #\?)) string)) :keyword))
+  (intern (string-upcase (map 'string (lambda (x) (or (rune-char x) #\?)) string)) :keyword))
 
 (defun intern-gi (string)
   (intern-attribute-name string))

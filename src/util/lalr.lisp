@@ -7,7 +7,7 @@
 ;;;  (c) 1988 Mark Johnson
 
 (defpackage :lalr
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export #:DEFINE-GRAMMAR))
 
 (in-package :LALR)

@@ -29,7 +29,7 @@
 (in-package :CL-USER)
 
 (defpackage :sgml
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export #:SGML-PARSE 
            #:PPT 
            #:SGML-UNPARSE 

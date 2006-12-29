@@ -30,7 +30,7 @@
 
 (defun pt-data (x)
   (cond ((text-element-p x)
-	 (map 'string #'code-char (element-text x)))
+	 (map 'string #'rune-char (element-text x)))
 	((apply 'concatenate 'string
                 (mapcar #'pt-data (element-children x))))))
 

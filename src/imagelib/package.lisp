@@ -29,7 +29,7 @@
 (in-package :CL-USER)
 
 (defpackage :imagelib
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export
    #:aimage
    #:aimage-width

@@ -91,15 +91,15 @@
 
 (defvar +list-style-type-glyphs/disc+
     (list ;;u/black-circle u/bullet u/white-bullet u/white-circle
-          (char-code #\o)))
+          (char-rune #\o)))
 
 (defvar +list-style-type-glyphs/circle+
     (list ;;u/white-circle u/white-bullet u/bullet u/black-circle
-          (char-code #\*)))
+          (char-rune #\*)))
 
 (defvar +list-style-type-glyphs/square+
     (list ;;u/black-square u/white-square u/white-bullet u/bullet
-          (char-code #\-)))
+          (char-rune #\-)))
 
 
 ;;;;
@@ -117,7 +117,7 @@
 ;;; ---- Believed to be correct -----------------------------------------------
 
 (defsubst rune-width (font rune)
-  (css-font-desc-glyph-width font rune))
+  (css-font-desc-glyph-width font (rune-code rune)))
 
 (defun parse-url* (url)
   (cond ((url:url-p url) url)

@@ -216,14 +216,16 @@
           (t (subseq string start)))))
 
 (defun sanify-rod (string &optional (begin? t) (end? t) (start 0))
-  (let ((i (position-if #'white-space-rune-p string :start start)))
+  (let ((i (position-if #'runes:white-space-rune-p string :start start)))
     (cond (i
-           (let ((j (position-if-not #'white-space-rune-p string :start i)))
+           (let ((j (position-if-not #'runes:white-space-rune-p
+				     string
+				     :start i)))
              (if j
-                 (concatenate 'rod (subseq string start i)
+                 (concatenate 'runes:rod (subseq string start i)
                               (if (and (= i start) begin?) '#() '#(32))
                               (sanify-rod string nil end? j))
-               (concatenate 'rod (subseq string start i)
+               (concatenate 'runes:rod (subseq string start i)
                             (if (not end?) '#(32) '#())))))
           (t (subseq string start)))))
 

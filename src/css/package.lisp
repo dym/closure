@@ -28,7 +28,7 @@
 
 (in-package :CL-USER)
 (defpackage :css
-  (:use :glisp)
+  (:use :glisp :runes)
   ;;
   (:import-from "CLOSURE-PROTOCOL"
    ;; basic element protocol

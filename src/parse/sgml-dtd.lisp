@@ -367,7 +367,7 @@
 	((eq (car def) 'def-entity)
 	 (push (cons (second def) 
                      (resolve-entities-in-string 
-                      (map '(simple-array (unsigned-byte 16) (*)) #'char-code (third def))
+                      (string-rod (third def))
                       (dtd-entities dtd)))
 	       (dtd-entities dtd)))
 	((eq (car def) 'defelement)

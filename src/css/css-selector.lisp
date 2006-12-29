@@ -272,22 +272,22 @@
              
           ((pclass)
            (cond ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "first-child") (cadr pred)))
+                       (rod-equal #"first-child" (cadr pred)))
                   (null (pt-predecessor element)))
                  ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "link") (cadr pred)))
+                       (rod-equal #"link" (cadr pred)))
                   (pseudo-class-matches-p :link element))
                  ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "first-line") (cadr pred)))
+                       (rod-equal #"first-line" (cadr pred)))
                   (pseudo-class-matches-p :first-line element))
                  ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "first-letter") (cadr pred)))
+                       (rod-equal #"first-letter" (cadr pred)))
                   (pseudo-class-matches-p :first-letter element))
                  ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "before") (cadr pred)))
+                       (rod-equal #"before" (cadr pred)))
                   (pseudo-class-matches-p :before element))
                  ((and (= (length (cdr pred)) 1)
-                       (rod-equal #.(map 'vector #'char-code "after") (cadr pred)))
+                       (rod-equal #"after" (cadr pred)))
                   (pseudo-class-matches-p :after element))
                  ;; lang fehlt.
                  (t
@@ -374,13 +374,13 @@
   ;; what should (rod-contains-p .. "" ..) yield?
   (dotimes (i (- (length haystack) (length needle) -1) nil)
     (when (and (or (= i 0)
-                   (white-space-rune-p (rune haystack (1- i))))
+                   (white-space-hieroglyph-p (hieroglyph haystack (1- i))))
                (or (= (+ i (length needle)) (length haystack))
-                   (white-space-rune-p (rune haystack (+ i (length needle))))))
+                   (white-space-hieroglyph-p (hieroglyph haystack (+ i (length needle))))))
       (when (dotimes (j (length needle) t)
               (unless (if case-sensitive-p
-                          (rune= (rune needle j) (rune haystack (+ i j)))
-                        (rune-equal (rune needle j) (rune haystack (+ i j))))
+                          (hieroglyph= (hieroglyph needle j) (hieroglyph haystack (+ i j)))
+                        (hieroglyph-equal (hieroglyph needle j) (hieroglyph haystack (+ i j))))
                 (return nil)))
         (return t)))))
 
@@ -392,7 +392,7 @@
              (rod= (subseq v 0 (length string)) string)
            (rod-equal (subseq v 0 (length string)) string))
          (or (= (length string) (length v))
-             (rune= (code-rune #.(char-code #\-)) (rune v (length string)))))))
+             (hieroglyph= (code-hieroglyph #.(char-code #\-)) (hieroglyph v (length string)))))))
 
 (defun skip-group (seq p &optional (level 0))
   (cond ((>= p (length seq))
@@ -825,8 +825,9 @@
                   (multiple-value-bind (sel-list condition)
                       (ignore-errors (parse-css2-selector-list seq p0 p1))
                     (cond (condition
-                           (warn "CSS selector list does not parse: `~A'."
-                                 (as-string (subseq seq p0 p1)))
+                           (warn "CSS selector list does not parse: `~A'.~% [~A]"
+                                 (as-string (subseq seq p0 p1))
+				 condition)
                            (setq sel-list nil)))
                     (nconc (multiplex-selectors sel-list
                                                 (parse-assignment-list

@@ -41,7 +41,7 @@
 ;(require :glisp)
 
 (defpackage :url
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export
    #:parse-url
    #:unparse-url
@@ -206,11 +206,7 @@
 (declaim (inline ascii-digit-char-p))
 
 (defun parse-url (input &key (plain-query-p t))
-  (cond ((sloopy-rod-p input)
-         ;; zzz use UTF-8
-         (parse-url (map 'string (lambda (x) (or (code-char x) #\?)) input) 
-                    :plain-query-p plain-query-p))
-        ((stringp input)
+  (cond ((stringp input)
          (let ((anchor nil)
                (protocol nil)
                (net-loc nil)
@@ -263,6 +259,10 @@
                            :path       (mapcar #'unescape-string path)
                            :query      (if plain-query-p query (parse-query query))
                            :anchor     (unescape-string anchor)) )))))
+         ((sloopy-rod-p input)
+	  ;; zzz use UTF-8
+	  (parse-url (map 'string (lambda (x) (or (rune-char x) #\?)) input) 
+		     :plain-query-p plain-query-p))
          ((eq input NIL)
           (warn "Saw NIL as input to URL:PARSE-URL; fix your program.")
           (parse-url "" :plain-query-p plain-query-p))

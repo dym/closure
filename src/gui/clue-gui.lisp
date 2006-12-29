@@ -115,7 +115,7 @@
                       ((member mime-type (list (netlib:find-mime-type "text/html")))
                        (sgml::parse-html input charset))
                       ((member mime-type (list (netlib:find-mime-type "text/xml")))
-                       (xml::parse-stream input))
+                       (cxml:parse-stream input (cxml-dom:make-dom-builder) :recode nil))
 
                       ((or t
                            #+NIL
@@ -213,6 +213,10 @@
    (proxee       :initarg :proxee)
    (serial       :initarg :serial)
    (dumpee       :initarg :dumpee       :initform nil) ) )
+
+(defmethod runes::figure-encoding ((stream glisp:gstream))
+  ;; For HTML iso-8859-1 is the default
+  (values (cxml::find-encoding :iso-8859-1) nil))
 
 (defmethod g/read-byte ((stream pb-stream)  &optional (eof-error-p t) eof-value)
   (with-slots (nread ntotal proxee dumpee) stream

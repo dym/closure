@@ -28,7 +28,7 @@
 
 (defpackage :renderer
   (:nicknames :r2)
-  (:use :glisp)
+  (:use :glisp :runes)
   (:import-from :imagelib 
                 #:aimage
                 #:aimage-width
@@ -94,18 +94,18 @@
    ))
 
 (defpackage :ws/x11
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export
    #:aimage->ximage))
 
 (defpackage :gif
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export #:gif-stream->aimage))
 
 (defpackage :ws/charset
   ;;(:nicknames :charset)
   ;; Arg! CLISP now defines a package called "charset".
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export #:CHARSET
            #:CHARSET-DECODE
            #:CHARSET-ENCODE
@@ -118,7 +118,7 @@
 ;;zzz(defpackage :ws/estk (:use :glisp))     ;should die
 
 (defpackage :gui
-  (:use :glisp)
+  (:use :glisp :runes)
 
   (:import-from #:clim
    #:+nowhere+
@@ -197,7 +197,7 @@
    ))
 
 
-(defpackage :gtk-gui (:use :glisp))
+(defpackage :gtk-gui (:use :glisp :runes))
 
 (defpackage :closure
     (:use)
@@ -234,9 +234,4 @@
                 "DEVICE-FONT-UNDERLINE-THICKNESS"
                 ))
 
-(defpackage :clue-gui2 (:use #||:glue :clue||# :glisp))
-
-
-
-
-
+(defpackage :clue-gui2 (:use #||:glue :clue||# :glisp :runes))

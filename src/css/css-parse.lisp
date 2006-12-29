@@ -1145,7 +1145,16 @@
 (defmacro generate-slot-constants ()
   (generate-slot-constants-1))
 
+;;; Fixme! Some parts of the CSS parser use code integers rather than runes.
+;;; Here some dummy definitions to use in those cases:
+(defun white-space-hieroglyph-p (x)
+  (white-space-rune-p (code-rune x)))
+(defun hieroglyph= (a b)
+  (eql a b))
+(defun hieroglyph-equal (a b)
+  (equal a b))
+
 (defun find-value-parser (slot)
+  (unless (typep slot 'rod)
+    (setf slot (map 'rod #'code-rune slot)))
   (gethash (rod-downcase slot) *value-parsers*))
-
-

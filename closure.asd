@@ -60,7 +60,7 @@
 			       (make-pathname :name nil :type nil
 					      :defaults *load-truename*))
     :default-component-class closure-source-file
-    :depends-on (:clim #+sbcl :sb-bsd-sockets)
+    :depends-on (:cxml :mcclim #+sbcl :sb-bsd-sockets)
     :components
     ((:file dependent
 	    :pathname
@@ -75,12 +75,10 @@
 	    #-(OR sbcl CLISP CMU ALLEGRO GCL OPENMCL) #.(error "Configure!"))
      (:file "package"
 	    :depends-on (dependent))
-     (:file "runes"
-	    :depends-on ("package" dependent))
      (:file "util"
-	    :depends-on ("package" dependent "runes"))
+	    :depends-on ("package" dependent))
      (:file "match"
-	    :depends-on ("package" dependent "runes" "util"))))
+	    :depends-on ("package" dependent "util"))))
 
 
 (asdf:defsystem closure
@@ -121,20 +119,6 @@
 			 (:file "css-support")))
 
 	       ;; Libraries
-	       
-	       (:module xml
-			:components
-			((:file "package")
-			 (:file "encodings"       :depends-on ("package"))
-			 (:file "encodings-data"  :depends-on ("package" "encodings"))
-			 (:file "sax-handler")
-			 (:file "dompack")
-			 (:file "dom-impl"        :depends-on ("dompack"))
-			 (:file "dom-builder"     :depends-on ("dom-impl" "sax-handler"))
-			 (:file "xml-stream"      :depends-on ("package"))
-			 (:file "xml-name-rune-p" :depends-on ("package"))
-			 (:file "xml-parse"       :depends-on ("package" "dompack" "sax-handler"))
-			 (:file "xml-canonic"     :depends-on ("package" "dompack" "xml-parse"))  ))
 
 	       ;; CLEX and LALR
 	       

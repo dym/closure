@@ -112,19 +112,19 @@ of it wrt to item numbering."
     (:circle (coerce (vector (elt +list-style-type-glyphs/circle+ 0)) 'rod))
     (:square (coerce (vector (elt +list-style-type-glyphs/square+ 0)) 'rod))
     (:decimal
-     (map 'rod #'char-code 
+     (map 'rod #'char-rune 
           (format nil "~D." n)))
     (:lower-roman
-     (map 'rod #'char-code 
+     (map 'rod #'char-rune 
           (format nil "~(~@R~)." n)))
     (:upper-roman
-     (map 'rod #'char-code 
+     (map 'rod #'char-rune 
           (format nil "~:@(~@R~)." n)))
     (:lower-alpha
-     (map 'rod #'char-code 
+     (map 'rod #'char-rune 
           (format nil "~(~A~)." (integer->abc n))))
     (:upper-alpha
-     (map 'rod #'char-code 
+     (map 'rod #'char-rune 
           (format nil "~:@(~A~)." (integer->abc n))))
     (:none
      (map 'rod #'identity nil))))

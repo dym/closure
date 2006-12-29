@@ -240,36 +240,36 @@
 
 (defmacro a-read-byte (input)
   (let ((c (gensym)))
-    `(let ((,c (xml:read-rune ,input)))
+    `(let ((,c (runes:read-rune ,input)))
        (if (eq ,c :eof) nil ,c))))
 
 (defmacro a-peek-byte (input)
   (let ((c (gensym)))
-    `(let ((,c (xml:peek-rune ,input)))
+    `(let ((,c (runes:peek-rune ,input)))
        (if (eq ,c :eof) nil ,c))))
 
 (defmacro a-unread-byte (byte input)
-  `(xml:unread-rune ,byte ,input))
+  `(runes:unread-rune ,byte ,input))
 
 (defmacro a-stream-position (input)
-  `(xml:xstream-position ,input))
+  `(runes:xstream-position ,input))
 
 (defun make-a-stream (&key cl-stream)
-  (xml:make-xstream cl-stream :initial-speed 1 :speed 8192))
+  (runes:make-xstream cl-stream :initial-speed 1 :speed 8192))
 
-(defmethod xml::read-octets (sequence (stream glisp:gstream) start end)
+(defmethod runes::read-octets (sequence (stream glisp:gstream) start end)
   (glisp:g/read-byte-sequence sequence stream :start start :end end))
 
-(defmethod xml::xstream/close ((stream glisp:gstream))
+(defmethod runes::xstream/close ((stream glisp:gstream))
   (glisp:g/close stream))
 
 ;; a fake definition -- XXX non-reentrant!
 
 (defun a-stream-scratch (input)
-  (getf (xml::xstream-plist input) 'scratch-pad))
+  (getf (runes::xstream-plist input) 'scratch-pad))
 
 (defun (setf a-stream-scratch) (new-value input)
-  (setf (getf (xml::xstream-plist input) 'scratch-pad) new-value))
+  (setf (getf (runes::xstream-plist input) 'scratch-pad) new-value))
 
 ;;;; -------------------------------------------------------------------------
 ;;;;  Reporting Errors
@@ -295,8 +295,8 @@
     (when (>= level *parse-warn-level*)
       (unless *options/parser-silent-p*
         (let ((preample (format nil ";; Parser warning: ~11@<Line ~D,~> ~11@<column ~D~>: ~5A "
-                                (and input (ignore-errors (xml:xstream-line-number input)))
-                                (and input (ignore-errors (xml:xstream-column-number input)))
+                                (and input (ignore-errors (runes:xstream-line-number input)))
+                                (and input (ignore-errors (runes:xstream-column-number input)))
                                 (make-string level :initial-element #\*))))
           (fresh-line *trace-output*)
           (write-string preample *trace-output*)
@@ -351,7 +351,10 @@
     (declare (type fixnum sp se))
     (loop
       (let ((ch (a-read-byte input)))
-        (declare (type (or null (unsigned-byte 8)) ch))
+	;; FIXME: why was this declared as (u-b 8), not (u-b 16)?
+	;; a-read-byte returns a rune.
+;;; 	(declare (type (or null (unsigned-byte 8)) ch))
+        (declare (type (or null rune) ch))
         (cond ((null ch)                                ;eof
                (return))
               ((rune= ch #/<)                 ;end of pcdata
@@ -622,7 +625,8 @@
            (read-sloopy-value input))
           (t
            (read-tag-error input "Bad value '~A' seen"
-                           (or (code-char ch) (format nil "U+~4,'0X" ch)))))))
+                           (or (rune-char ch)
+			       (format nil "U+~4,'0X" (rune-code ch))))))))
 
 (defun read-literal (input dtd delim)
   (let* ((scratch (a-stream-scratch input))             ;scratch pad
@@ -633,7 +637,10 @@
     (declare (type fixnum sp se))
     (loop
       (let ((ch (a-read-byte input)))
-        (declare (type (or null (unsigned-byte 8)) ch))
+	;; FIXME: why was this declared as (u-b 8), not (u-b 16)?
+	;; a-read-byte returns a rune.
+;;; 	(declare (type (or null (unsigned-byte 8)) ch))
+        (declare (type (or null rune) ch))
         (cond ((null ch)                                ;eof
                (read-tag-error input "Eof in literal"))
               ((rune= ch delim)
@@ -1038,8 +1045,8 @@
                     (handle-meta-tag-in-parser input (caddr ausgabe))))
              ;; when the BODY tag is openend, switch the streams speed to full speed.
              (cond ((and (eq (cadr ausgabe) :body))
-                    (setf (xml::xstream-speed input)
-                      (length (xml::xstream-os-buffer input)))))
+                    (setf (runes::xstream-speed input)
+                      (length (runes::xstream-os-buffer input)))))
              (let ((n (sgml::make-pt/low 
                        :name (cadr ausgabe)
                        :attrs (caddr ausgabe)
@@ -1294,7 +1301,7 @@
 
 (defun parse-html (input &optional (charset :iso-8859-1))
   (let ((dtd cl-user::*html-dtd*))
-    (let ((input (xml:make-xstream input :initial-speed 1 :speed 128)))
+    (let ((input (runes:make-xstream input :initial-speed 1 :speed 128)))
       (setf (a-stream-scratch input)
         (make-array #.(* 2 *buf-size*) :element-type 'rune))
       (setup-code-vector input charset)
@@ -1583,9 +1590,9 @@
 ;;  
 
 (defun setup-code-vector (input charset)
-  (let ((enc (xml::find-encoding charset)))
+  (let ((enc (cxml::find-encoding charset)))
     (cond ((not (null enc))
-           (setf (xml:xstream-encoding input) enc))
+           (setf (runes:xstream-encoding input) enc))
           (t
            (parse-warn input 4 "There is no such encoding: ~S." charset)))))
 
@@ -1795,7 +1802,7 @@
 
 #||
     (format T "~&;; Parse error (line ~D column ~D): [~A] Saw ~A in ~A."
-            (xml:xstream-line-number input)
-            (xml:xstream-column-number input))
+            (runes:xstream-line-number input)
+            (runes:xstream-column-number input))
 
 ||#

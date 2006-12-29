@@ -28,7 +28,7 @@
 
 
 (defpackage :XTERM
-  (:use :glisp)
+  (:use :glisp :runes)
   (:export
    #:open-terminal
    ))
