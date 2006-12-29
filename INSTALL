@@ -1,5 +1,8 @@
 Preliminary Installation Instructions
 
+(See also: http://common-lisp.net/project/closure/quickstart.html)
+
+
 Provide yourself with:
 
  1. CMUCL, SBCL, or another supported implementation
