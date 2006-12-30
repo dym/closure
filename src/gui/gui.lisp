@@ -394,9 +394,6 @@
 ;;;;  profiling
 ;;;;
 
-(defparameter cl-user::*profile-closure-p* nil)
-(defparameter cl-user::*closure-dpi* 88)           ;this doesn't belong here
-
 (defclass prim-ht-view ()
   ((display-list        :initform nil)
    (active-pt           :initform nil)
