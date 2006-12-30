@@ -91,7 +91,7 @@
 ;;;;;;
 
 (defun glisp::g/make-string (length &rest options)
-  (apply #'make-array length :element-type 'base-char options))
+  (apply #'make-array length :element-type 'character options))
 
 
 
