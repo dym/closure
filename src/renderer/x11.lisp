@@ -1354,4 +1354,38 @@
 ;; environment.
 
 
+(defun parse-x11-color (string &aux sym r gb)
+  ;; ### pff this really needs to be more robust.
+  (cond ((and (= (length string) 4) (char= (char string 0) #\#))
+         (clim:make-rgb-color
+          (/ (parse-integer string :start 1 :end 2 :radix 16) #xF)
+          (/ (parse-integer string :start 2 :end 3 :radix 16) #xF)
+          (/ (parse-integer string :start 3 :end 4 :radix 16) #xF)))
+        ((and (= (length string) 7) (char= (char string 0) #\#))
+         (clim:make-rgb-color
+          (/ (parse-integer string :start 1 :end 3 :radix 16) #xFF)
+          (/ (parse-integer string :start 3 :end 5 :radix 16) #xFF)
+          (/ (parse-integer string :start 5 :end 7 :radix 16) #xFF)))
+        ((and (= (length string) 6) (every #'(lambda (x) (digit-char-p x 16)) string))
+         (let ((r (parse-integer (subseq string 0 2) :radix 16))
+               (g (parse-integer (subseq string 2 4) :radix 16))
+               (b (parse-integer (subseq string 4 6) :radix 16)))
+           (warn "Malformed color specifier: ~S" string)
+           (and r g b 
+                (clim:make-rgb-color (/ r 255) (/ g 255) (/ b 255)))))
+        ((and (= (length string) 13) (char= (char string 0) #\#))
+         (clim:make-rgb-color
+          (/ (parse-integer string :start 1 :end 5 :radix 16) #xFFFF)
+          (/ (parse-integer string :start 5 :end 9 :radix 16) #xFFFF)
+          (/ (parse-integer string :start 9 :end 13 :radix 16) #xFFFF)))
+        ((and (setf sym (find-symbol (concatenate 'string "+" (string-upcase string) "+")
+                                     (find-package :clim)))
+              (boundp sym)
+              (clim:colorp (symbol-value sym)))
+         (symbol-value sym))
+        (t
+         (warn "Malformed color specifier: ~S" string)
+         clim:+red+)))
+
+
 ; LocalWords:  colormap RGB

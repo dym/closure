@@ -158,7 +158,9 @@
   (cond ((member name '(black-chunk))
          `(progn
            (defstruct (,name (:constructor
-                              ,(intern (format nil "CONS-~A" name))
+                              ,(intern
+                                (with-standard-io-syntax
+                                  (format nil "CONS-~A" name)))
                               (&key ,@(mapcar (lambda (slot)
                                                 (let ((slot (if (consp slot) (car slot) slot)))
                                                   slot))
@@ -182,27 +184,39 @@
                                         (list :initarg (intern (symbol-name slot) :keyword))
                                         ;; emarsden2003-03-12
                                         (unless (member :initform opts) (list :initform nil))
-                                        (list :accessor (intern (format nil "~A-~A" name slot)))))))
+                                        (list :accessor (intern
+                                                         (with-standard-io-syntax
+                                                           (format nil "~A-~A" name slot))))))))
                       slots))
            ;;
-           (defun ,(intern (format nil "CONS-~A" name))
+           (defun ,(intern
+                    (with-standard-io-syntax
+                      (format nil "CONS-~A" name)))
                (&rest args)
              (apply #'make-instance ',name args))
            ;;
-           (defun ,(intern (format nil "~A-P" name))
+           (defun , (intern
+                     (with-standard-io-syntax
+                       (format nil "~A-P" name)))
                (object)
              (typep object ',name))
            ;;
-           (defun ,(intern (format nil "~A-MODIF" name))
+           (defun ,(intern
+                    (with-standard-io-syntax
+                      (format nil "~A-MODIF" name)))
                (.object. &key ,@(mapcar (lambda (slot)
                                           (let ((slot (if (consp slot) (car slot) slot)))
-                                            (list slot nil (intern (format nil ".P.~A" slot)))))
+                                            (list slot nil (intern
+                                                            (with-standard-io-syntax
+                                                              (format nil ".P.~A" slot))))))
                                         slots))
              (make-instance ',name
                             ,@(mapcan (lambda (slot)
                                         (let ((slot (if (consp slot) (car slot) slot)))
                                           (list (intern (symbol-name slot) :keyword)
-                                                `(if ,(intern (format nil ".P.~A" slot))
+                                                `(if ,(intern
+                                                       (with-standard-io-syntax
+                                                         (format nil ".P.~A" slot)))
                                                   ,slot
                                                   (slot-value .object. ',slot)))))
                                       slots))))) ))
@@ -2212,7 +2226,7 @@ border-spacing between the spaned columns is included."
                                             (y1 (+ yy (loop for k below i sum (elt row-heights k)))))
                                        (clim:draw-line* clim-user::*pane*
                                                         x1 y1 x2 y1
-                                                        :ink (clim-user::parse-x11-color color)
+                                                        :ink (ws/x11::parse-x11-color color)
                                                         :line-thickness width)))))))
                    ;; vertical borders
                    (loop for i from 0 below (array-dimension vborders 0) do
@@ -2226,7 +2240,7 @@ border-spacing between the spaned columns is included."
                                           (x1 (+ x1 (loop for k below j sum (elt column-widths k)))))
                                      (clim:draw-line* clim-user::*pane*
                                                       x1 y1 x1 y2
-                                                      :ink (clim-user::parse-x11-color color)
+                                                      :ink (ws/x11::parse-x11-color color)
                                                       :line-thickness width)))))) )
                  ;; Kludge, in our book a table also has a baseline. We set it up manually, since
                  ;; we moved the rendered output of table cells.
@@ -3239,9 +3253,9 @@ border-spacing between the spaned columns is included."
     (:none
      rod)
     (:uppercase
-     (glisp::register-rod (map 'rod #'rune-upcase rod)))
+     (map 'rod #'rune-upcase rod))
     (:lowercase
-     (glisp::register-rod (map 'rod #'rune-downcase rod)))
+     (map 'rod #'rune-downcase rod))
     (:capitalize
      ;; more complicated
      (let ((res (make-rod (length rod))))
@@ -3249,8 +3263,8 @@ border-spacing between the spaned columns is included."
              for d across rod
              for i from 0 do
              (setf (rune res i)
-                   (cond ((glisp::rune-upper-case-letter-p c) d)
-                         ((glisp::rune-lower-case-letter-p c) (rune-downcase d))
+                   (cond ((runes::rune-upper-case-letter-p c) d)
+                         ((runes::rune-lower-case-letter-p c) (rune-downcase d))
                          (t                                   (rune-upcase d)))))
        res))))
 
@@ -4969,6 +4983,11 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.17  2006/12/30 15:13:55  emarsden
+;; - use CL from Closure packages
+;; - minor rod fixes
+;; - move PARSE-X11-COLOR from clim-user to ws/x11 package
+;;
 ;; Revision 1.16  2006/12/29 21:29:39  dlichteblau
 ;;
 ;; Use CXML's rune implementation and XML parser.

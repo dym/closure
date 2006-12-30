@@ -34,7 +34,7 @@
 (defun css-color-ink (color)
   ;; xxx, we still sometimes wind up with bogus values here
   (if (stringp color)
-      (clim-user::parse-x11-color color)
+      (ws/x11::parse-x11-color color)
       clim:+black+))
 
 (defun 3d-light-color (base-color)
@@ -172,14 +172,14 @@
       (case deco
         (:underline
          (clim:draw-line* clim-user::*pane*
-          xx1 (+ yy 2) xx (+ yy 2) :ink (clim-user::parse-x11-color color)))
+          xx1 (+ yy 2) xx (+ yy 2) :ink (ws/x11::parse-x11-color color)))
         (:overline
          ;; xxx hack
          (clim:draw-line* clim-user::*pane*
-          xx1 (- yy 12) xx (- yy 12) :ink (clim-user::parse-x11-color color)))
+          xx1 (- yy 12) xx (- yy 12) :ink (ws/x11::parse-x11-color color)))
         (:line-through
          (clim:draw-line* clim-user::*pane*
-          xx1 (- yy 6) xx (- yy 6) :ink (clim-user::parse-x11-color color))) ))))
+          xx1 (- yy 6) xx (- yy 6) :ink (ws/x11::parse-x11-color color))) ))))
 
 ;;;; Runes
 

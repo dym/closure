@@ -28,7 +28,7 @@
 
 (defpackage :renderer
   (:nicknames :r2)
-  (:use :glisp :runes)
+  (:use :glisp :runes :cl)
   (:import-from :imagelib 
                 #:aimage
                 #:aimage-width
@@ -94,18 +94,18 @@
    ))
 
 (defpackage :ws/x11
-  (:use :glisp :runes)
+  (:use :glisp :runes :cl)
   (:export
    #:aimage->ximage))
 
 (defpackage :gif
-  (:use :glisp :runes)
+  (:use :glisp :runes :cl)
   (:export #:gif-stream->aimage))
 
 (defpackage :ws/charset
   ;;(:nicknames :charset)
   ;; Arg! CLISP now defines a package called "charset".
-  (:use :glisp :runes)
+  (:use :glisp :runes :cl)
   (:export #:CHARSET
            #:CHARSET-DECODE
            #:CHARSET-ENCODE
@@ -118,7 +118,7 @@
 ;;zzz(defpackage :ws/estk (:use :glisp))     ;should die
 
 (defpackage :gui
-  (:use :glisp :runes)
+  (:use :glisp :runes :cl)
 
   (:import-from #:clim
    #:+nowhere+
@@ -208,9 +208,9 @@
      #:start
      #:stop))
 
-'(defpackage "WS/POSTSCRIPT"
-  (:nicknames "WS/PS")
-  (:use "GLISP")
+'(defpackage :ws/postscript
+  (:nicknames :ws/ps)
+  (:use :glisp :cl)
   (:export )
   (:import-from "R2"
                 "DEVICE-FONT-ASCENT"
@@ -234,4 +234,4 @@
                 "DEVICE-FONT-UNDERLINE-THICKNESS"
                 ))
 
-(defpackage :clue-gui2 (:use #||:glue :clue||# :glisp :runes))
+(defpackage :clue-gui2 (:use #||:glue :clue||# :glisp :runes :cl))
