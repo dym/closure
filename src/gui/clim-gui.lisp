@@ -28,6 +28,12 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.24  2006/12/30 15:07:31  emarsden
+;; Minor improvements to user interface:
+;;   - enable double buffering
+;;   - wait until page has been downloaded before erasing previous page
+;;   - enable busy cursor while downloading and rendering
+;;
 ;; Revision 1.23  2006/12/29 17:37:07  dlichteblau
 ;; Make closure start on Gtkairo:
 ;;
@@ -162,6 +168,8 @@
     :min-height 100
     :max-width 300
     :max-height 20000
+    :incremental-redisplay t
+    :double-buffering t
     :display-function 'aux-display
     :display-time :command-loop)
    (status :pointer-documentation
@@ -192,7 +200,7 @@
    (default
        (vertically ()
          (spacing (:thickness 5)
-                  (scrolling (:width 830 :height 600 :min-height 600 :max-height 20000
+                  (scrolling (:width 830 :height 600 :min-height 400 :max-height 20000
                               :scroll-bar :vertical)
                     canvas))
          (spacing (:thickness 5)
@@ -531,9 +539,9 @@
          (let* ((*package* (find-package :r2))
                 (*pane* (find-pane-named *frame* 'canvas))
                 (*medium* (sheet-medium *pane*)))
-           (window-clear *pane*)
            (progn ;; with-sheet-medium (*medium* *pane*)
              (let ((device (make-instance 'closure/clim-device::clim-device :medium *pane*)))
+               (setf (sheet-pointer-cursor *pane*) :busy)
                (setq url (r2::parse-url* url))
                (let ((request (clue-gui2::make-request :url url :method :get)))
                  (multiple-value-bind (io header) (clue-gui2::open-document-4 request)
@@ -554,6 +562,7 @@
                                 (make-instance 'r2::xml-style-document-language)))
                            (closure-protocol:*user-agent* nil)
                            (r2::*canvas-width* (bounding-rectangle-width (sheet-parent *pane*))))
+                       (window-clear *pane*)
                        (closure-protocol:render
                         closure-protocol:*document-language* 
                         doc
@@ -569,7 +578,8 @@
                          ;; While we are at it, force a repaint
                          (handle-repaint *pane* (sheet-region (pane-viewport *pane*)))
                          (clim-backend:port-force-output (find-port)))))))
-               #+nil (write-status "Done.")))))
+               (setf (sheet-pointer-cursor *pane*) :default)
+               (write-status "Done.")))))
        #+nil (clim-backend:port-force-output (find-port))))))
 
 (defun reflow ()
