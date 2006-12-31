@@ -1153,6 +1153,10 @@
   (eql a b))
 (defun hieroglyph-equal (a b)
   (equal a b))
+(defun hieroglyph-char (x)
+  (code-char x))
+(defun papyrus-string (v)
+  (map 'string (lambda (x) (or (hieroglyph-char x) #\?)) v))
 
 (defun find-value-parser (slot)
   (unless (typep slot 'rod)

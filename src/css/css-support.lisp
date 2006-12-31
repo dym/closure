@@ -37,9 +37,12 @@
 
 ;;; hmmm
 
-(defun intern-attribute-name (string)
+(defun intern-attribute-name (papyrus)
   ;; XXX hack
-  (intern (string-upcase (map 'string (lambda (x) (or (rune-char x) #\?)) string)) :keyword))
+  (intern (string-upcase (if (stringp papyrus)
+			     papyrus
+			     (papyrus-string papyrus)))
+	  :keyword))
 
 (defun intern-gi (string)
   (intern-attribute-name string))

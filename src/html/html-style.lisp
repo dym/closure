@@ -191,9 +191,6 @@
         (t
          (format nil "[invalid html-length: ~S]" value))))
 
-(defun rod->string (x)
-  (map 'simple-string (lambda (x) (or (code-char x) #\?)) x))
-
 (defun pt-attr/with-parser (pt slot default parser pretty-type-name)
   (let ((s (pt-attr* pt slot)))
     (if (not s)
@@ -203,7 +200,7 @@
             value
           (progn
             (pt-attr-warn pt "The value of the ~A attribute, ~S, is not ~A."
-                          slot (rod->string s) pretty-type-name)
+                          slot (rod-string s) pretty-type-name)
             default))))))
 
 (defun pt-attr/integer (pt slot &optional default)
@@ -238,7 +235,7 @@
                  (progn
                    (pt-attr-warn pt "The value of the ~A attribute, ~
                                      should be ~{\"~A\"~#[~; or ~:;, ~]~}, but not ~S."
-                                 slot keys (rod->string s))
+                                 slot keys (rod-string s))
                    default)))))))
 
 (defun pt-attr/table.frame (pt slot &optional default)
@@ -298,28 +295,28 @@
 (defun html/parse-integer (s)
   (if-match (s :type rod :test #'rune=) 
             (& (w*) (= $res (integer)) (w*))
-            (parse-integer (rod->string (subseq s $res-start $res-end)))))
+            (parse-integer (rod-string (subseq s $res-start $res-end)))))
 
 (defun html/parse-length (s)
   (or
    (if-match (s :type rod :test #'rune=) 
              (& (w*) (= $res (integer)) (w*))
-             (cons :px (parse-integer (rod->string (subseq s $res-start $res-end)))))
+             (cons :px (parse-integer (rod-string (subseq s $res-start $res-end)))))
    (if-match (s :type rod :test #'rune=) 
              (& (w*) (= $res (integer)) #.(char-code #\%) (w*))
-             (cons :% (parse-integer (rod->string (subseq s $res-start $res-end)))))))
+             (cons :% (parse-integer (rod-string (subseq s $res-start $res-end)))))))
 
 (defun html/parse-multi-length (s)
   (or
    (html/parse-length s)
    (if-match (s :type rod :test #'rune=) 
              (& (w*) (= $res (integer)) #.(char-code #\*) (w*))
-             (cons '* (parse-integer (rod->string (subseq s $res-start $res-end)))))
+             (cons '* (parse-integer (rod-string (subseq s $res-start $res-end)))))
    ;; This below is illegal syntax '*i' is not allowed
    #+(OR)
    (if-match (s :type rod :test #'rune=) 
              (& (w*) #.(char-code #\*) (= $res (integer)) (w*))
-             (cons '* (parse-integer (rod->string (subseq s $res-start $res-end)))))
+             (cons '* (parse-integer (rod-string (subseq s $res-start $res-end)))))
    ;; "*" is abbrev for "1*"
    (if-match (s :type rod :test #'rune=) 
              (& (w*) #.(char-code #\*) (w*))

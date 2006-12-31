@@ -392,7 +392,7 @@
           (t
            (parse-warn input 3
                        "Saw character '~A' after '&' -- bad entity reference?!" 
-                       (or (code-char ch)
+                       (or (rune-char ch)
                            (format nil "&#x~4,'0X" ch)))
            (a-unread-byte ch input)     ;it might be something interesting
            (push-on-scratch input sp #/&)) )))
@@ -438,7 +438,7 @@
     (do ((ch (a-read-byte input) (a-read-byte input)))
         ((or (null ch) (not (digit-rune-p ch radix)))
          ;; Ok. [s1..sp) now is the digit sequence
-         (let ((num (parse-integer (map 'string #'code-char 
+         (let ((num (parse-integer (map 'string #'rune-char
                                         (subseq (a-stream-scratch input) s1 sp))
                                    :radix radix)))
            (cond ((<= 0 num #xFFFF)
@@ -446,7 +446,7 @@
                   (when (and (not (null ch)) (not (rune= ch #/\;)))
                     (a-unread-byte ch input))
                   ;; Rewind scratch pad to `s0' and push character `num'
-                  (setf sp (push-on-scratch input s0 num)))
+                  (setf sp (push-on-scratch input s0 (code-rune num))))
                  (t
                   ;; num too large; emit warning and leave scratch pad alone
                   (when (not (null ch))
@@ -537,7 +537,7 @@
              (read-start-tag input dtd))
             (t
              (parse-warn input 3 "Bad character after '<': '~A' -- ignored."
-                         (code-char ch))
+                         (rune-char ch))
              (let ((res (string-rod "<")))
                (values :pcdata res))) ))) )
 
@@ -669,7 +669,7 @@
           (t
            (read-tag-error input 
                            "Expected sloopy name, got ~A"
-                           (or (code-char ch) (format nil "U+~4,'0X" ch)) )) )))
+                           (or (rune-char ch) (format nil "U+~4,'0X" ch)) )) )))
 
 (defun read-sloopy-value (input)
   (let ((ch (a-peek-byte input))
@@ -683,7 +683,7 @@
              (setf sp (push-on-scratch input sp ch))))
           (t
            (read-tag-error input "Expected sloopy value, got ~A"
-                           (or (code-char ch) (format nil "U+~4,'0X" ch)) )) )))
+                           (or (rune-char ch) (format nil "U+~4,'0X" ch)) )) )))
 
 (defun read-define-tag (input dtd)
   (let ((ch (a-peek-byte input)))
