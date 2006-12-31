@@ -150,7 +150,13 @@
 
 (defun ppt (pt &optional (prefix "") (barp nil))
   (cond ((eq (pt-name pt) :pcdata)
-         (let ((s (map 'string #'(lambda (x) (if (eql x 10) #\space (code-char x))) (progn (pt-attrs pt)))) flag)
+         (let ((s (map 'string
+		    #'(lambda (x)
+			(if (eql x #/U+000a)
+			    #\space
+			    (rune-char x)))
+		    (progn (pt-attrs pt))))
+	       flag)
            (if (and (> (- 120 (length prefix)) 0)
                     (> (length s) (- 120 (length prefix))))
                (setq s (concatenate 'string (subseq s 0 (- 120 (length prefix))))
@@ -188,7 +194,7 @@
            value)
           (t
            (warn "~S: prop=~S." 'pt-attr prop)
-           (map 'string (lambda (x) (or (code-char x) #\?)) value)))))
+           (map 'string (lambda (x) (or (rune-char x) #\?)) value)))))
 
 (defun (setf pt-attr) (value pt prop)
   (setf (getf (pt-attrs pt) prop) value))
@@ -216,7 +222,7 @@
   (cond ((typep tree 'rod)
          (sgml::make-pt :name :pcdata :attrs tree))
         ((stringp tree)
-         (sgml::make-pt :name :pcdata :attrs (map '(vector (unsigned-byte 16)) #'char-code tree)))
+         (sgml::make-pt :name :pcdata :attrs (string-rod tree)))
         ((sgml::pt-p tree) tree)
         ((and (consp tree) (keywordp (car tree)))
          (let ((attrs nil)
