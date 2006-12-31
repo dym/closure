@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.26  2006/12/31 13:26:23  emarsden
+;; - add basic wholine support (currently title & last-modified information)
+;; - add "TeX mode On" and "TeX mode Off" commands (experimental)
+;;
 ;; Revision 1.25  2006/12/30 15:13:54  emarsden
 ;; - use CL from Closure packages
 ;; - minor rod fixes
@@ -183,7 +187,7 @@
     :height 20
     :min-height 20
     :max-height 20
-    :width 200
+    :width 300
     :background +black+
     :foreground +white+)
    (interactor
@@ -536,6 +540,13 @@
   (write-string string (find-pane-named *frame* 'status))
   (clim-backend:port-force-output (find-port)))
 
+(defun write-wholine (string)
+  (let ((wholine (find-pane-named *frame* 'wholine)))
+    (window-clear wholine)
+    (write-string string wholine)
+    (clim-backend:port-force-output (find-port))))
+
+
 (defun foo (url)
   (let ((*standard-output* *trace-output*))
     (clim-sys:make-process
@@ -553,8 +564,7 @@
                    (write-status "Fetching Document ...")
                    (let* ((doc (make-instance 'r2::document
                                               :processes-hooks nil
-                                              :location
-                                              (r2::parse-url* url)
+                                              :location (r2::parse-url* url)
                                               :http-header header
                                               :pt (clue-gui2::make-pt-from-input 
                                                    io 
@@ -576,6 +586,10 @@
                         600           ;xxx width
                         t             ;?
                         0)
+                       (write-wholine (format nil "Title: ~A~%~@[Modified: ~A~]"
+                                              (renderer::document-title *current-document*)
+                                              (or (netlib::get-header-field header :last-modified)
+                                                  (netlib::get-header-field header :date))))
                        (let ((x2 (bounding-rectangle-max-x (stream-output-history *pane*)))
                              (y2 (bounding-rectangle-max-y (stream-output-history *pane*))))
                          (setf y2 (max y2 r2::*document-height*))
@@ -600,7 +614,7 @@
              (let ((closure-protocol:*document-language*
                     (if (sgml::pt-p (r2::document-pt *current-document*))
                         (make-instance 'r2::html-4.0-document-language)
-                        (make-instance 'r2::xml-style-document-language) ))
+                        (make-instance 'r2::xml-style-document-language)))
                    (closure-protocol:*user-agent* nil)
                    (r2::*canvas-width*
                     (bounding-rectangle-width (sheet-parent *pane*))))
@@ -675,3 +689,15 @@
     (handle-repaint *pane* (sheet-region (pane-viewport *pane*))))
   (clim-backend:port-force-output (find-port)))
 
+(define-closure-command (com-tex-mode-on :name t) ()
+  (setq renderer:*tex-mode-p* t)
+  (setq renderer:*hyphenate-p* t)
+  (send-closure-command 'com-reflow))
+
+(define-closure-command (com-tex-mode-off :name t) ()
+  (setq renderer:*tex-mode-p* nil)
+  (setq renderer:*hyphenate-p* nil)
+  (send-closure-command 'com-reflow))
+
+
+;; EOF
