@@ -29,7 +29,7 @@
 (in-package :CL-USER)
 
 (defpackage :imagelib
-  (:use :glisp :runes)
+  (:use :cl :glisp :runes)
   (:export
    #:aimage
    #:aimage-width
@@ -42,9 +42,9 @@
    #:pnm-stream->aimage))
 
 (defpackage :imagelib.gif
-  (:use :glisp :imagelib))
+  (:use :cl :glisp :imagelib))
 
 (defpackage :png
-  (:use :glisp :imagelib)
+  (:use :cl :glisp :imagelib)
   (:export #:png-stream->aimage))
 

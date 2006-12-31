@@ -41,7 +41,7 @@
 ;(require :glisp)
 
 (defpackage :url
-  (:use :glisp :runes)
+  (:use :cl :glisp :runes)
   (:export
    #:parse-url
    #:unparse-url

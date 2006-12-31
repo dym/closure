@@ -197,7 +197,7 @@
    ))
 
 
-(defpackage :gtk-gui (:use :glisp :runes))
+(defpackage :gtk-gui (:use :cl :glisp :runes))
 
 (defpackage :closure
     (:use)

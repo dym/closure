@@ -440,7 +440,7 @@
       (format sink "~%    #:~(~A~)" k))
     (format sink "))")
     (format sink "~%")
-    (format sink "~%(defpackage :gluser (:use :glisp))")
+    (format sink "~%(defpackage :gluser (:use :cl :glisp))")
     (format sink "~%") )
   (terpri sink))
 

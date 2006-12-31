@@ -27,7 +27,7 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defpackage :CLOSURE-PROTOCOL
-    (:use :glisp :runes)
+    (:use :cl :glisp :runes)
   (:export
    ;; Basic Element Protocol
    #:element-p

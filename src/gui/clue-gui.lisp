@@ -115,7 +115,7 @@
                       ((member mime-type (list (netlib:find-mime-type "text/html")))
                        (sgml::parse-html input charset))
                       ((member mime-type (list (netlib:find-mime-type "text/xml")))
-                       (cxml:parse-stream input (cxml-dom:make-dom-builder) :recode nil))
+                       (cxml:parse-stream input (rune-dom:make-dom-builder) :recode nil))
 
                       ((or t
                            #+NIL
