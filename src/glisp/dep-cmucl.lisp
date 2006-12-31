@@ -200,12 +200,6 @@ target:code/run-program.lisp
 (defun glisp:run-unix-shell-command (command)
   (ext:process-exit-code (ext:run-program "/bin/sh" (list "-c" command) :wait t :input nil :output nil)))
 
-(defmacro glisp::defsubst (name args &body body)
-  `(progn
-     (declaim (inline ,name))
-     (defun ,name ,args .,body)))
-
-
 ;;; MP
 
 (export 'glisp::mp/process-yield :glisp)

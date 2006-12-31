@@ -120,11 +120,6 @@
   (apply #'xlib:draw-glyphs drawable gcontext x y (vector elt) more))
 ||#
 
-(defmacro glisp::defsubst (name args &body body)
-  `(progn
-     (declaim (inline ,name))
-     (defun ,name ,args .,body)))
-
 (export 'glisp::getenv :glisp)
 (defun glisp::getenv (var)
   (sys::getenv var))

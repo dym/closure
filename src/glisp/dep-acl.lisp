@@ -110,23 +110,5 @@
 (defun glisp::mp/process-wait (whostate predicate)
   (mp:process-wait whostate predicate))
 
-;; ACL is incapable to define compiler macros on (setf foo)
-;; Unfortunately it is also incapable to declaim such functions inline.
-;; So we revoke the DEFUN hack from dep-gcl here.
-
-(defmacro glisp::defsubst (fun args &body body)
-  (if (and (consp fun) (eq (car fun) 'setf))
-      (let ((fnam (intern (concatenate 'string "(SETF " (symbol-name (cadr fun)) ")")
-                          (symbol-package (cadr fun)))))
-        `(progn
-           (defsetf ,(cadr fun) (&rest ap) (new-value) (list* ',fnam new-value ap))
-           (glisp::defsubst ,fnam ,args .,body)))
-    `(progn
-       (defun ,fun ,args .,body)
-       (define-compiler-macro ,fun (&rest .args.)
-         (cons '(lambda ,args .,body)
-               .args.)))))
-
-
 (defun glisp::getenv (string)
   (sys:getenv string))
