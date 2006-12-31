@@ -68,9 +68,9 @@
     ((:file dependent
 	    :pathname
 	    #+CLISP                             "dep-clisp"
-	    #+(AND :CMU (NOT :PTHREAD))         "dep-cmucl"
+	    #+(AND :CMU (NOT SCL))              "dep-cmucl"
 	    #+sbcl                              "dep-sbcl"
-	    #+(AND :CMU :PTHREAD)               "dep-cmucl-dtc"
+	    #+SCL                               "dep-scl"
 	    #+ALLEGRO                           "dep-acl"
 	    #+GCL                               "dep-gcl"
 	    #+OPENMCL                           "dep-openmcl"

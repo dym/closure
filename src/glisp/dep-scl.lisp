@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CL-USER; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: CMUCL dependent stuff + fixups
+;;;     Title: [Originally CMUCL dependent stuff + fixups], probably for SCL
 ;;;   Created: 1999-05-25 22:32
 ;;;    Author: Gilbert Baumann <gilbert@base-engineering.com>
 ;;;   License: MIT style (see below)
