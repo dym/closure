@@ -414,7 +414,7 @@
     (cond ((probe-file fn)
            (with-open-file (stream fn :direction :input)
              (let ((*package* (symbol-package 'http-cache-entry)))
-               (let ((res (make-http-cache :lock (mp/make-lock :name "HTTP cache lock")
+               (let ((res (make-http-cache :lock (bordeaux-threads:make-lock "HTTP cache lock")
                                            :directory directory
                                            :entries (make-hash-table :test #'equal))))
                  (setf (http-cache-serial res) (read stream))
@@ -424,13 +424,13 @@
                    (put-hce res x))
                  res))))
           (t
-           (make-http-cache :lock (mp/make-lock :name "HTTP cache lock")
+           (make-http-cache :lock (bordeaux-threads:make-lock "HTTP cache lock")
                             :directory directory
                             :entries (make-hash-table :test #'equal)
                             :serial 0)) )))
 
 (defun commit-cache (&optional (cache (http-cache)))
-  (mp/with-lock ((http-cache-lock cache))
+  (bordeaux-threads:with-recursive-lock-held ((http-cache-lock cache))
     (with-open-file (sink (merge-pathnames "index" (http-cache-directory cache))
                      :direction :output :if-exists :new-version)
       (let ((*print-pretty* nil)
@@ -443,15 +443,15 @@
                  (http-cache-entries cache)) ))) )
 
 (defun invent-cache-filename (cache)
-  (mp/with-lock ((http-cache-lock cache))
+  (bordeaux-threads:with-recursive-lock-held ((http-cache-lock cache))
     (format nil "~5,'0D" (incf (http-cache-serial cache)))))
 
 (defun get-hce (cache url)
-  (mp/with-lock ((http-cache-lock cache))
+  (bordeaux-threads:with-recursive-lock-held ((http-cache-lock cache))
     (gethash url (http-cache-entries cache))))
 
 (defun put-hce (cache hce)
-  (mp/with-lock ((http-cache-lock cache))
+  (bordeaux-threads:with-recursive-lock-held ((http-cache-lock cache))
     ;; if there was already an entry for that URL with under a different filename,
     ;; delete the old file
     (let ((old-ce (gethash (hce-url hce) (http-cache-entries cache))))

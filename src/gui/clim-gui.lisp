@@ -28,6 +28,15 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.27  2006/12/31 15:42:40  dlichteblau
+;;
+;; Use Bordeaux Threads for all threading primitives, so that non-GUI parts of
+;; Closure don't have to depend on CLIM anymore.
+;;
+;;   - Removed all mp/ functions from glisp.
+;;
+;;   - Use condition variables instead of process-wait.
+;;
 ;; Revision 1.26  2006/12/31 13:26:23  emarsden
 ;; - add basic wholine support (currently title & last-modified information)
 ;; - add "TeX mode On" and "TeX mode Off" commands (experimental)
@@ -445,7 +454,7 @@
 
 (defmacro with-closure (ignore &body body)
   (declare (ignore ignore))
-  `(clim-sys:with-lock-held (*closure-lock*)
+  `(clim-sys:with-recursive-lock-held (*closure-lock*)
     ,@body))
 
 (defun parse-url* (url)

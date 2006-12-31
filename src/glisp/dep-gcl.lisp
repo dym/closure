@@ -100,15 +100,6 @@
               index)
     value))
 
-(defun glisp::mp/make-lock (&key name)
-  name
-  nil)
-
-(defmacro glisp::mp/with-lock ((lock) &body body)
-  (declare (ignore lock))
-  `(progn
-     ,@body))
-
 (defmacro glisp::with-timeout ((&rest ignore) &body body)
   (declare (ignore ignore))
   `(progn

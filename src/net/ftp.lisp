@@ -683,11 +683,11 @@
 ||#
 
 (defvar *connection-pool* nil)
-(defvar *connection-pool-lock* (mp/make-lock :name "FTP connections pool lock"))
+(defvar *connection-pool-lock* (bordeaux-threads:make-lock "FTP connections pool lock"))
 
 (defmacro with-ftp-connection-pool (dummy &body body)
   dummy
-  `(mp/with-lock (*connection-pool-lock*)
+  `(bordeaux-threads:with-recursive-lock-held (*connection-pool-lock*)
      ,@body))
 
 (defun put-ftp-connection-into-pool (connection)

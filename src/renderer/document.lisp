@@ -39,8 +39,10 @@
 
    ;; list of all processes working for this document
    (processes      :initform nil :accessor document-processes)
-   (processes/lock :initform (mp/make-lock :name "doc-proc-list Lock")
+   (processes/lock :initform (bordeaux-threads:make-lock "doc-proc-list Lock")
                    :accessor document-processes/lock) ;this needs a lock
+   (processes/cv :initform (bordeaux-threads:make-condition-variable)
+		 :accessor document-processes/cv)
    (processes-hooks
     ;; a list of hooks to call when ever the value of processes changes.
     :initform nil
@@ -89,33 +91,44 @@
   ;; Runs a process on behalf of a document, `continuation' is the
   ;; function to be run within the new process.
   ;; Returns the new process created.
-  (mp/with-lock ((document-processes/lock document))
+  (bordeaux-threads:with-recursive-lock-held ((document-processes/lock document))
     (let (new-process)
       (setf new-process
-        (mp/process-run-function
-         name
+        (bordeaux-threads:make-thread
          ;; << child
          (lambda ()
-           (unwind-protect
-               (funcall continuation)
-             ;; remove myself from the list of processes
-             (progn
-               (mp/with-lock ((document-processes/lock document))
-                 (setf (document-processes document)
-                   (delete new-process (document-processes document)))) )))
+           (catch 'quit-dce-process
+	     (unwind-protect
+		 (funcall continuation)
+	       ;; remove myself from the list of processes
+	       (progn
+		 (bordeaux-threads:with-recursive-lock-held ((document-processes/lock document))
+		   (setf (document-processes document)
+			 (delete new-process (document-processes document)))
+		   (bordeaux-threads:condition-notify
+		    (document-processes/cv document)))))))
          ;; >>
-         ))
+	 :name name))
       ;; add new process to list of process
       (push new-process (document-processes document))
       new-process)))
             
+;; bordeaux-threads says that kill-thread might not unwind cleanly.
+;; Let's use interrupt-thread then.
+(defun kill-dce-thread (thread)
+  (bordeaux-threads:interrupt-thread
+   thread
+   (lambda () (throw 'quit-dce-process nil))))
+
 (defun kill-all-document-processes (document)
   (setf (document-dead-p document) t)
-  (mp/with-lock ((document-processes/lock document))
-    (mapc #'mp/process-kill (document-processes document)))
-  (mp/process-wait "Waiting for documents processes dying."
-                   (lambda ()
-                     (null (document-processes document))))
+  (bordeaux-threads:with-recursive-lock-held ((document-processes/lock document))
+    (mapc #'kill-dce-thread (document-processes document)))
+  (loop
+    (bordeaux-threads:with-recursive-lock-held ((document-processes/lock document))
+      (unless (document-processes document)
+	(return))
+      (bordeaux-threads:condition-wait (document-processes/cv document))))
   (values))
 
 (defstruct image-entry

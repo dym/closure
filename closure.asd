@@ -86,7 +86,8 @@
 (asdf:defsystem closure
     :depends-on (:clim
                  :clim-clx
-                 :glisp)
+                 :glisp
+		 :bordeaux-threads)
     :default-component-class closure-source-file
     :components
     ((:module src

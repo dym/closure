@@ -29,14 +29,6 @@
 (export 'glisp::read-byte-sequence :glisp)
 (export 'glisp::read-char-sequence :glisp)
 (export 'glisp::run-unix-shell-command :glisp)
-(export 'glisp::mp/process-run-function :glisp)
-(export 'glisp::mp/process-kill :glisp)
-(export 'glisp::mp/seize-lock :glisp)
-(export 'glisp::mp/release-lock :glisp)
-(export 'glisp::mp/transfer-lock-owner :glisp)
-(export 'glisp::mp/current-process :glisp)
-(export 'glisp::mp/process-yield :glisp)
-(export 'glisp::mp/process-wait :glisp)
 (export 'glisp::getenv :glisp)
 
 (defun glisp::read-byte-sequence (&rest ap)
@@ -67,13 +59,6 @@
 )
 ||#
 
-(defun glisp::mp/make-lock (&key name)
-  (mp:make-process-lock :name name))
-
-(defmacro glisp::mp/with-lock ((lock) &body body)
-  `(mp:with-process-lock (,lock)
-     ,@body))
-
 (defmacro glisp::with-timeout ((&rest options) &body body)
   `(mp:with-timeout ,options . ,body))
 
@@ -82,33 +67,6 @@
 
 (defun glisp:run-unix-shell-command (cmd)
   (excl:shell cmd))
-
-(defun glisp:mp/process-run-function (name fn &rest args)
-  (apply #'mp:process-run-function name fn args))
-
-(defun glisp:mp/process-kill (proc)
-  (mp:process-kill proc))
-
-(defun glisp:mp/current-process ()
-  sys:*current-process*)
-
-(defun glisp::mp/seize-lock (lock &key whostate)
-  whostate
-  (mp:process-lock lock))
-
-(defun glisp::mp/transfer-lock-owner (lock old-process new-process)
-  (assert (eql (mp:process-lock-locker lock) old-process))
-  (setf (mp:process-lock-locker lock) new-process)
-  )
-
-(defun glisp::mp/release-lock (lock)
-  (mp:process-unlock lock))
-
-(defun glisp::mp/process-yield (&optional process-to-run)
-  (mp:process-allow-schedule process-to-run))
-
-(defun glisp::mp/process-wait (whostate predicate)
-  (mp:process-wait whostate predicate))
 
 (defun glisp::getenv (string)
   (sys:getenv string))

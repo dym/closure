@@ -172,41 +172,5 @@ target:code/run-program.lisp
 
 ;;; MP
 
-(export 'glisp::mp/process-yield :glisp)
-(export 'glisp::mp/process-wait :glisp)
-(export 'glisp::mp/process-run-function :glisp)
-(export 'glisp::mp/make-lock :glisp)
-(export 'glisp::mp/current-process :glisp)
-(export 'glisp::mp/process-kill :glisp)
-
-(defun glisp::mp/make-lock (&key name)
-  (pthread::make-lock name))
-
-(defmacro glisp::mp/with-lock ((lock) &body body)
-  `(pthread::with-lock-held (,lock)
-     ,@body))
-
-(defun glisp::mp/process-yield (&optional process-to-run)
-  (declare (ignore process-to-run))
-  (PTHREAD:SCHED-YIELD))
-
-(defun glisp::mp/process-wait (whostate predicate)
-  (do ()
-      ((funcall predicate))
-    (sleep .1)))
-
-(defun glisp::mp/process-run-function (name fun &rest args)
-  (pthread::thread-create
-   (lambda ()
-     (apply fun args))
-   :name name))
-
-(defun glisp::mp/current-process ()
-  'blah)
-
-(defun glisp::mp/process-kill (process)
-  (warn "*** Define GLISP:MP/PROCESS-KILL for CMUCL."))
-
 (defun glisp::getenv (string)
   (cdr (assoc string ext:*environment-list* :test #'string-equal)))
-

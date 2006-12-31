@@ -100,41 +100,5 @@
    (sb-ext:run-program "/bin/sh" (list "-c" command) :wait t :input nil
 		       :output nil)))
 
-;;; MP
-
-(export 'glisp::mp/process-yield :glisp)
-(export 'glisp::mp/process-wait :glisp)
-(export 'glisp::mp/process-run-function :glisp)
-(export 'glisp::mp/make-lock :glisp)
-(export 'glisp::mp/current-process :glisp)
-(export 'glisp::mp/process-kill :glisp)
-
-(defun glisp::mp/make-lock (&key name)
-  (clim-sys::make-lock name))
-
-(defmacro glisp::mp/with-lock ((lock) &body body)
-  `(clim-sys:with-lock-held (,lock)
-    ,@body))
-
-(defun glisp::mp/process-yield (&optional process-to-run)
-  (declare (ignore process-to-run))
-  (clim-sys:process-yield))
-
-(defun glisp::mp/process-wait (whostate predicate)
-  (clim-sys:process-wait whostate predicate))
-
-(defun glisp::mp/process-run-function (name fun &rest args)
-  (clim-sys:make-process
-   (lambda ()
-     (apply fun args))
-   :name name))
-
-(defun glisp::mp/current-process ()
-  (clim-sys:current-process))
-
-(defun glisp::mp/process-kill (process)
-  (clim-sys:destroy-process process))
-
 (defun glisp::getenv (string)
   (sb-ext:posix-getenv string))
-

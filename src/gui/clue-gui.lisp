@@ -41,7 +41,7 @@
 (in-package :clue-gui2)
 
 (defparameter *dcache* nil)
-(defparameter *dcache-lock* (mp/make-lock :name "dcache"))
+(defparameter *dcache-lock* (bordeaux-threads:make-lock "dcache"))
 
 (defparameter *pixmap-cache*
     nil)

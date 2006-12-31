@@ -378,13 +378,13 @@
     (make-hash-table :test #'equalp))
 
 (defparameter *style-sheet-cache*/lock
-    (mp/make-lock :name "*style-sheet-cache*"))
+    (bordeaux-threads:make-lock "*style-sheet-cache*"))
 
 (defun maybe-parse-style-sheet-from-url (url &key (name "anonymous") 
                                                   (supersheet nil)
                                                   (media-type :all))
   (multiple-value-bind (looked presentp)
-      (mp/with-lock (*style-sheet-cache*/lock)
+      (bordeaux-threads:with-recursive-lock-held (*style-sheet-cache*/lock)
           (gethash url *style-sheet-cache*))
     (cond (presentp
            (format *debug-io* "~&;; Serving style sheet ~S [at ~S] from cache.~%"
@@ -398,7 +398,7 @@
                        :name name 
                        :supersheet supersheet
                        :media-type media-type)))
-             (mp/with-lock (*style-sheet-cache*/lock)
+             (bordeaux-threads:with-recursive-lock-held (*style-sheet-cache*/lock)
                 (setf (gethash url *style-sheet-cache*) res))
              res)))))
 

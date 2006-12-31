@@ -47,27 +47,28 @@
                             &key lazy-p callback)
   (let ((url (if (url:url-p url) (url:unparse-url url) url)))
     (let* ((dce
-            (mp/with-lock (*dcache-lock*)
+            (bordeaux-threads:with-recursive-lock-held (*dcache-lock*)
               (or
                (find-if (lambda (el)
                           (and (equal (dce-url el) url)
                                (eq (dce-presentation el) presentation)))
                         *dcache*)
-               (let ((new-dce (make-dce :url url
-                                        :presentation presentation
-                                        :data :work-in-progress
-                                        :lock (mp/make-lock :name "dce lock")))
-                     (flag nil))
-                 (r2::run-process-on-behalf-of-document
-                  document
-                  (lambda ()
-                    (mp/with-lock ((dce-lock new-dce))
-                      (setf flag t)
-                      (setf (dce-data new-dce)
-                            (dcache-generate-presentation presentation document url)) )))
-                 (mp/process-wait "foo"
-                                  (lambda () flag))
-                 (push new-dce *dcache*)
+               (let* ((lock (bordeaux-threads:make-lock "dce lock"))
+		      (new-dce (make-dce :url url
+					 :presentation presentation
+					 :data :work-in-progress
+					 :lock lock))
+		      (flag (bordeaux-threads:make-condition-variable)))
+                 (bordeaux-threads:with-recursive-lock-held (lock)
+		   (r2::run-process-on-behalf-of-document
+		    document
+		    (lambda ()
+		      (bordeaux-threads:with-recursive-lock-held (lock)
+			(bordeaux-threads:condition-notify flag)
+			(setf (dce-data new-dce)
+			      (dcache-generate-presentation presentation document url)) )))
+		   (bordeaux-threads:condition-wait flag lock)
+		   (push new-dce *dcache*))
                  new-dce)))))
       (if lazy-p
           (progn
@@ -75,10 +76,10 @@
              document
              (lambda ()
                (funcall callback
-                        (mp/with-lock ((dce-lock dce))
+                        (bordeaux-threads:with-recursive-lock-held ((dce-lock dce))
                           (dce-data dce)))))
             nil)
-          (mp/with-lock ((dce-lock dce))
+          (bordeaux-threads:with-recursive-lock-held ((dce-lock dce))
             (dce-data dce)) ))))
 
 (defmethod dcache-generate-presentation ((presentation (eql :aimage)) document url)

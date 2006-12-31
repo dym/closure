@@ -32,8 +32,6 @@
   (:use :cl)
   (:export "DEFSUBST"
 	   "G/MAKE-STRING"
-	   "MP/MAKE-LOCK"
-	   "MP/WITH-LOCK"
 	   "WITH-TIMEOUT"
 	   "OPEN-INET-SOCKET"
 	   ;; util.lisp :
