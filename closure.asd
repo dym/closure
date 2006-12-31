@@ -71,8 +71,7 @@
 	    #+(AND :CMU (NOT :PTHREAD))         "dep-cmucl"
 	    #+sbcl                              "dep-sbcl"
 	    #+(AND :CMU :PTHREAD)               "dep-cmucl-dtc"
-	    #+(AND ALLEGRO ALLEGRO-V5.0)        "dep-acl5"
-	    #+(AND ALLEGRO (NOT ALLEGRO-V5.0))  "dep-acl"
+	    #+ALLEGRO                           "dep-acl"
 	    #+GCL                               "dep-gcl"
 	    #+OPENMCL                           "dep-openmcl"
 	    #-(OR sbcl CLISP CMU ALLEGRO GCL OPENMCL) #.(error "Configure!"))
