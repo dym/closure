@@ -60,8 +60,7 @@
 			       (make-pathname :name nil :type nil
 					      :defaults *load-truename*))
     :default-component-class closure-source-file
-    :depends-on (:cxml :mcclim
-		       ;; uncomment this if we actually need gray streams:
+    :depends-on (:cxml ;; uncomment this if we actually need gray streams:
 		       ;; :trivial-gray-streams
 		       #+sbcl :sb-bsd-sockets)
     :components
