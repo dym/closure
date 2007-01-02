@@ -119,7 +119,13 @@
 	   ;; match.lisp
 	   "DEFINE-MATCH-MACRO"
 	   "IF-MATCH"
-	   "GSTREAM-AS-STRING"))
+	   "GSTREAM-AS-STRING"
+
+	   ;; dep-*
+	   "READ-BYTE-SEQUENCE"
+	   "READ-CHAR-SEQUENCE"
+	   "RUN-UNIX-SHELL-COMMAND"
+	   "GETENV"))
 
 (defpackage "GLUSER"
   (:use "CL" "GLISP"))

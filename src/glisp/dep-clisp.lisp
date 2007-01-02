@@ -30,14 +30,6 @@
 
 (setq lisp:*load-paths* '(#P"./"))
 
-(import 'lisp:read-byte-sequence :glisp)
-(export 'lisp:read-byte-sequence :glisp)
-(import 'lisp:read-char-sequence :glisp)
-(export 'lisp:read-char-sequence :glisp)
-(export 'glisp::run-unix-shell-command :glisp)
-(export 'glisp::make-server-socket :glisp)
-
-
 (defmacro glisp::with-timeout ((&rest ignore) &body body)
   (declare (ignore ignore))
   `(progn
@@ -48,6 +40,7 @@
    (lisp:socket-connect port hostname)
    :byte))
 
+(export 'glisp::make-server-socket :glisp)
 (defun glisp:make-server-socket (port)
   (lisp:socket-server port))
 

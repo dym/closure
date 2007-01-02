@@ -26,12 +26,6 @@
 ;;;  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(export 'glisp::read-byte-sequence :glisp)
-(export 'glisp::read-char-sequence :glisp)
-(export 'glisp::run-unix-shell-command :glisp)
-
-(export 'glisp::getenv :glisp)
-
 (defun glisp::read-byte-sequence (&rest ap)
   (apply #'read-sequence ap))
 

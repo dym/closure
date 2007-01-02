@@ -26,15 +26,6 @@
 ;;;  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(export 'glisp::read-byte-sequence :glisp)
-(export 'glisp::read-char-sequence :glisp)
-(export 'glisp::run-unix-shell-command :glisp)
-
-(export 'glisp::getenv :glisp)
-
-(export 'glisp::make-server-socket :glisp)
-(export 'glisp::close-server-socket :glisp)
-
 (defun glisp::read-byte-sequence (&rest ap)
   (apply #'read-sequence ap))
 
@@ -61,6 +52,7 @@
 
 
 #||
+(export 'glisp::make-server-socket :glisp)
 (defun glisp::make-server-socket (port &key (element-type '(unsigned-byte 8)))
   (make-server-socket-struct :fd (ext:create-inet-listener port)
                              :element-type element-type
@@ -78,6 +70,7 @@
          (t
           :char))))
 
+(export 'glisp::close-server-socket :glisp)
 (defun glisp::close-server-socket (socket)
   (unix:unix-close (server-socket-fd socket)))
 ||#
