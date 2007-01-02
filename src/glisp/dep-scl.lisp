@@ -62,17 +62,6 @@
           (t
            r))))
 
-#||
-(defun glisp::read-char-sequence (sequence input &key (start 0) (end (length sequence)))
-  (let (c (i start))
-    (loop
-      (cond ((= i end) (return i)))
-      (setq c (read-byte input nil :eof))
-      (cond ((eql c :eof) (return i)))
-      (setf (aref sequence i) c)
-      (incf i) )))
-||#
-
 (defmacro glisp::with-timeout ((&rest ignore) &body body)
   (declare (ignore ignore))
   `(progn
@@ -91,86 +80,8 @@
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length :element-type 'base-char options))
 
-#||
-
-RUN-PROGRAM is an external symbol in the EXTENSIONS package.
-Function: #<Function RUN-PROGRAM {12E7B79}>
-Function arguments:
-  (program args &key (env *environment-list*) (wait t) pty input
-   if-input-does-not-exist output (if-output-exists :error) (error :output)
-   (if-error-exists :error) status-hook)
-Function documentation:
-  Run-program creates a new process and runs the unix progam in the
-   file specified by the simple-string program.  Args are the standard
-   arguments that can be passed to a Unix program, for no arguments
-   use NIL (which means just the name of the program is passed as arg 0).
-
-   Run program will either return NIL or a PROCESS structure.  See the CMU
-   Common Lisp Users Manual for details about the PROCESS structure.
-
-   The keyword arguments have the following meanings:
-     :env -
-        An A-LIST mapping keyword environment variables to simple-string
-        values.
-     :wait -
-        If non-NIL (default), wait until the created process finishes.  If
-        NIL, continue running Lisp until the program finishes.
-     :pty -
-        Either T, NIL, or a stream.  Unless NIL, the subprocess is established
-        under a PTY.  If :pty is a stream, all output to this pty is sent to
-        this stream, otherwise the PROCESS-PTY slot is filled in with a stream
-        connected to pty that can read output and write input.
-     :input -
-        Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard
-        input for the current process is inherited.  If NIL, /dev/null
-        is used.  If a pathname, the file so specified is used.  If a stream,
-        all the input is read from that stream and send to the subprocess.  If
-        :STREAM, the PROCESS-INPUT slot is filled in with a stream that sends 
-        its output to the process. Defaults to NIL.
-     :if-input-does-not-exist (when :input is the name of a file) -
-        can be one of:
-           :error - generate an error.
-           :create - create an empty file.
-           nil (default) - return nil from run-program.
-     :output -
-        Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard
-        output for the current process is inherited.  If NIL, /dev/null
-        is used.  If a pathname, the file so specified is used.  If a stream,
-        all the output from the process is written to this stream. If
-        :STREAM, the PROCESS-OUTPUT slot is filled in with a stream that can
-        be read to get the output. Defaults to NIL.
-     :if-output-exists (when :input is the name of a file) -
-        can be one of:
-           :error (default) - generates an error if the file already exists.
-           :supersede - output from the program supersedes the file.
-           :append - output from the program is appended to the file.
-           nil - run-program returns nil without doing anything.
-     :error and :if-error-exists - 
-        Same as :output and :if-output-exists, except that :error can also be
-        specified as :output in which case all error output is routed to the
-        same place as normal output.
-     :status-hook -
-        This is a function the system calls whenever the status of the
-        process changes.  The function takes the process as an argument.
-Its defined argument types are:
-  (T T &KEY (:ENV T) (:WAIT T) (:PTY T) (:INPUT T) (:IF-INPUT-DOES-NOT-EXIST T)
-   (:OUTPUT T) (:IF-OUTPUT-EXISTS T) (:ERROR T) (:IF-ERROR-EXISTS T)
-   (:STATUS-HOOK T))
-Its result type is:
-  (OR EXTENSIONS::PROCESS NULL)
-On Wednesday, 7/1/98 12:48:51 pm [-1] it was compiled from:
-target:code/run-program.lisp
-  Created: Saturday, 6/20/98 07:13:08 pm [-1]
-  Comment: $Header$
-||#
-
-;; (process-exit-code (run-program "/bin/sh" (list "-c" "ls") :wait t :input nil :output nil))
-
 (defun glisp:run-unix-shell-command (command)
   (ext:process-exit-code (ext:run-program "/bin/sh" (list "-c" command) :wait t :input nil :output nil)))
-
-
-;;; MP
 
 (defun glisp::getenv (string)
   (cdr (assoc string ext:*environment-list* :test #'string-equal)))

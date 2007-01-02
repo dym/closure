@@ -28,37 +28,15 @@
 
 (in-package :CL-USER)
 
-(eval-when (compile load eval)
-  (if (fboundp 'cl::define-compiler-macro)
-      (pushnew 'define-compiler-macro *features*)))
-
 (setq lisp:*load-paths* '(#P"./"))
 
 (import 'lisp:read-byte-sequence :glisp)
 (export 'lisp:read-byte-sequence :glisp)
 (import 'lisp:read-char-sequence :glisp)
 (export 'lisp:read-char-sequence :glisp)
-(export 'glisp::compile-file :glisp)
 (export 'glisp::run-unix-shell-command :glisp)
 (export 'glisp::make-server-socket :glisp)
 
-
-#||
-(export 'glisp::read-byte-sequence :glisp) 
-(defun glisp::read-byte-sequence (sequence input &key (start 0) (end (length sequence)))
-  (let (c (i start))
-    (loop
-      (cond ((= i end) (return i)))
-      (setq c (read-byte input nil :eof))
-      (cond ((eql c :eof) (return i)))
-      (setf (aref sequence i) c)
-      (incf i) )))
-||#
-
-
-(defun glisp::compile-file (&rest ap)
-  (and (apply #'compile-file ap)
-       (apply #'compile-file-pathname ap)))
 
 (defmacro glisp::with-timeout ((&rest ignore) &body body)
   (declare (ignore ignore))
@@ -93,32 +71,6 @@
 
 (defun glisp:run-unix-shell-command (command)
   (lisp:shell command))
-
-#+DEFINE-COMPILER-MACRO
-(cl:define-compiler-macro ldb (bytespec value &whole whole)
-  (let (pos size)
-    (cond ((and (consp bytespec)
-                (= (length bytespec) 3)
-                (eq (car bytespec) 'byte)
-                (constantp (setq size (second bytespec)))
-                (constantp (setq pos (third bytespec))))
-           `(logand ,(if (eql pos 0) value `(ash ,value (- ,pos)))
-                    (1- (ash 1 ,size))))
-          (t
-           whole))))
-
-#-DEFINE-COMPILER-MACRO
-(progn
-  (export 'glisp::define-compiler-macro :glisp)
-  (defmacro glisp::define-compiler-macro (name args &body body)
-    (declare (ignore args body))
-    `(progn
-       ',name)))
-
-#||
-(defun xlib:draw-glyph (drawable gcontext x y elt &rest more)
-  (apply #'xlib:draw-glyphs drawable gcontext x y (vector elt) more))
-||#
 
 (export 'glisp::getenv :glisp)
 (defun glisp::getenv (var)

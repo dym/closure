@@ -37,27 +37,12 @@
 (defun glisp::read-char-sequence (&rest ap)
   (apply #'read-sequence ap))
 
-#+ALLEGRO-V5.0
 (defun glisp::open-inet-socket (hostname port)
   (values
    (socket:make-socket :remote-host hostname 
                        :remote-port port 
                        :format :binary)
    :byte))
-
-#-ALLEGRO-V5.0
-(defun glisp::open-inet-socket (hostname port)
-  (values
-   (ipc:open-network-stream :host hostname
-                            :port port
-                            :element-type '(unsigned-byte 8) 
-                            :class 'EXCL::BIDIRECTIONAL-BINARY-SOCKET-STREAM)
-   :byte))
-
-#||
-(defun glisp::make-server-socket (port &key (element-type '(unsigned-byte 8)))
-)
-||#
 
 (defmacro glisp::with-timeout ((&rest options) &body body)
   `(mp:with-timeout ,options . ,body))
