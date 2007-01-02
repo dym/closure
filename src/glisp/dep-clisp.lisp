@@ -35,11 +35,6 @@
   `(progn
      ,@body))
 
-(defun glisp::open-inet-socket (hostname port)
-  (values
-   (lisp:socket-connect port hostname)
-   :byte))
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length 
          :element-type 

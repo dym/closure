@@ -37,18 +37,8 @@
   `(progn
      ,@body))
 
-(defun glisp::open-inet-socket (hostname port)
-  (values
-   (ccl::make-socket :address-family :internet
-		     :type :stream
-		     :remote-host hostname
-		     :remote-port port)
-   :byte))
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length :element-type 'base-char options))
-
-
 
 (defun glisp::run-unix-shell-command (command)
   (nth-value 1 (ccl:external-process-status

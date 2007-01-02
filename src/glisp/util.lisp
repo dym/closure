@@ -671,14 +671,6 @@ Hmm unter PCL geht das nicht            ;-(
 (defun cl-char-stream->gstream (stream)
   (make-instance 'cl-char-stream :cl-stream stream))
 
-(defun g/open-inet-socket (&rest args)
-  (multiple-value-bind (stream kind) (apply #'open-inet-socket args)
-    (ecase kind
-      #-CMU
-      (:char (cl-char-stream->gstream stream))
-      (:byte (cl-byte-stream->gstream stream)) )))
-
-
 ;;; ----------------------------------------------------------------------------------------------------
 
 (defvar *all-temporary-files* nil

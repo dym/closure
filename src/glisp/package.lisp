@@ -33,7 +33,7 @@
   (:export "DEFSUBST"
 	   "G/MAKE-STRING"
 	   "WITH-TIMEOUT"
-	   "OPEN-INET-SOCKET"
+
 	   ;; util.lisp :
 	   "ALWAYS"
 	   "CL-BYTE-STREAM"
@@ -87,7 +87,6 @@
 
 	   "CL-BYTE-STREAM->GSTREAM"
 	   "CL-CHAR-STREAM->GSTREAM"
-	   "G/OPEN-INET-SOCKET"
 
 	   "FIND-TEMPORARY-FILE"
 	   "DELETE-TEMPORARY-FILE"

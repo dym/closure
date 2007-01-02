@@ -310,22 +310,24 @@
   ;; -> io proxyp
   (let* ((host (or (url:url-host url) "localhost"))
          (https-p (string= (url:url-protocol url) "https"))
+	 ;; ### HTTPS support doesn't exist
          (port (or (url:url-port url)
                    (if https-p
                        443
-                     80)))
-         (opener (if https-p
-                     #'glisp::g/open-inet-socket-ssl
-                   #'g/open-inet-socket))
+		       80)))
          (proxyp (and *use-http-proxy-p*
                       (= port 80)
                       (not (url:url-port url))
                       (not (string-equal host "localhost")))))
     (values
-     (cond (proxyp
-            (funcall opener *http-proxy-host* *http-proxy-port*))
-           (t
-            (funcall opener host port)))
+     (cl-byte-stream->gstream
+      (if proxyp
+	  (trivial-sockets:open-stream *http-proxy-host*
+				       *http-proxy-port*
+				       :element-type '(unsigned-byte 8))
+	  (trivial-sockets:open-stream host
+				       port
+				       :element-type '(unsigned-byte 8))))
      proxyp)))
 
 (defun http-make-request (method url header post-data)

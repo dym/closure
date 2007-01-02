@@ -86,7 +86,8 @@
     :depends-on (:mcclim
                  :clim-clx
                  :glisp
-		 :bordeaux-threads)
+		 :bordeaux-threads
+		 :trivial-sockets)
     :default-component-class closure-source-file
     :components
     ((:module src

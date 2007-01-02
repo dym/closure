@@ -32,13 +32,6 @@
 (defun glisp::read-char-sequence (&rest ap)
   (apply #'read-sequence ap))
 
-(defun glisp::open-inet-socket (hostname port)
-  (values
-   (socket:make-socket :remote-host hostname 
-                       :remote-port port 
-                       :format :binary)
-   :byte))
-
 (defmacro glisp::with-timeout ((&rest options) &body body)
   `(mp:with-timeout ,options . ,body))
 

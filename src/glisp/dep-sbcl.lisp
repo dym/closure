@@ -37,24 +37,8 @@
   `(progn
      ,@body))
 
-(defun glisp::open-inet-socket (hostname port)
-  (values
-   (sb-bsd-sockets:socket-make-stream 
-    (let ((host (car (sb-bsd-sockets:host-ent-addresses
-		      (sb-bsd-sockets:get-host-by-name hostname)))))
-      (when host
-	(let ((s (make-instance 'sb-bsd-sockets:inet-socket
-				:type :stream :protocol :tcp)))
-	  (sb-bsd-sockets:socket-connect s host port)
-	  s)))
-    :element-type '(unsigned-byte 8)
-    :input t :output t)
-   :byte))
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length :element-type 'character options))
-
-
 
 (defun glisp::run-unix-shell-command (command)
   (sb-impl::process-exit-code

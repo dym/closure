@@ -61,16 +61,6 @@
   `(progn
      ,@body))
 
-(defun glisp::open-inet-socket (hostname port)
-  (let ((fd (extensions:connect-to-inet-socket hostname port)))
-    (values
-     (sys:make-fd-stream fd
-                         :input t
-                         :output t
-                         :element-type '(unsigned-byte 8)
-                         :name (format nil "Network connection to ~A:~D" hostname port))
-     :byte)))
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length :element-type 'base-char options))
 
