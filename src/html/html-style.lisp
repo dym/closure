@@ -286,7 +286,7 @@
 ;; NOTE: The if-match macro is defined in match.lisp
 
 (define-match-macro integer (&optional (radix 10))
-  `(& (? (/ #.(char-code #\+) #.(char-code #\-)))
+  `(& (? (/ #/+ #/-))
       (+ (p (lambda (ch) (digit-rune-p ch ,radix))))))
 
 (define-match-macro w* ()
@@ -303,14 +303,14 @@
              (& (w*) (= $res (integer)) (w*))
              (cons :px (parse-integer (rod-string (subseq s $res-start $res-end)))))
    (if-match (s :type rod :test #'rune=) 
-             (& (w*) (= $res (integer)) #.(char-code #\%) (w*))
+             (& (w*) (= $res (integer)) #/% (w*))
              (cons :% (parse-integer (rod-string (subseq s $res-start $res-end)))))))
 
 (defun html/parse-multi-length (s)
   (or
    (html/parse-length s)
    (if-match (s :type rod :test #'rune=) 
-             (& (w*) (= $res (integer)) #.(char-code #\*) (w*))
+             (& (w*) (= $res (integer)) #/* (w*))
              (cons '* (parse-integer (rod-string (subseq s $res-start $res-end)))))
    ;; This below is illegal syntax '*i' is not allowed
    #+(OR)
@@ -319,7 +319,7 @@
              (cons '* (parse-integer (rod-string (subseq s $res-start $res-end)))))
    ;; "*" is abbrev for "1*"
    (if-match (s :type rod :test #'rune=) 
-             (& (w*) #.(char-code #\*) (w*))
+             (& (w*) #/* (w*))
              (cons '* 1)) ))
 
 (defun html/parse-length-list (s)
