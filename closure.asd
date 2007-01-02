@@ -83,7 +83,7 @@
 
 
 (asdf:defsystem closure
-    :depends-on (:clim
+    :depends-on (:mcclim
                  :clim-clx
                  :glisp
 		 :bordeaux-threads)
