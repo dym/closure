@@ -160,34 +160,35 @@
         (t
          spec)))
 
-(defun background-pixmap+mask (document drawable bg)
-  (cond ((r2::background-%pixmap bg)
-         (values (r2::background-%pixmap bg)
-                 (r2::background-%mask bg)))
-        (t
-         (setf (r2::background-%pixmap bg) :none)
-         (funcall ;;r2::run-process-on-behalf-of-document document
-          (lambda ()  
-            (let ((aimage (clue-gui2::aimage-from-url document (r2::background-image bg))))
-              (cond ((eq aimage :error)
-                     (setf (r2::background-%pixmap bg) :none)
-                     (values (r2::background-%pixmap bg)
-                             (r2::background-%mask bg)))
-                    (t
-                     (let ((pm (ws/x11::aimage->pixmap+mask drawable aimage)))
-                       (setf (r2::background-%pixmap bg) (car pm)
-                             (r2::background-%mask bg) (cadr pm))
-                       #+NIL
-                       (clue-gui2::gui-post
-                        nil
-                        ;; we do it the hard way via an exposure round trip.
-                        'xlib:clear-area
-                        drawable
-                        :exposures-p t))))))
-          ;;:name "Lazy Document background fetch."
-          )
-         (values (r2::background-%pixmap bg)
-                 (r2::background-%mask bg)))))
+;; newer definition below
+;;;(defun background-pixmap+mask (document drawable bg)
+;;;  (cond ((r2::background-%pixmap bg)
+;;;         (values (r2::background-%pixmap bg)
+;;;                 (r2::background-%mask bg)))
+;;;        (t
+;;;         (setf (r2::background-%pixmap bg) :none)
+;;;         (funcall ;;r2::run-process-on-behalf-of-document document
+;;;          (lambda ()  
+;;;            (let ((aimage (clue-gui2::aimage-from-url document (r2::background-image bg))))
+;;;              (cond ((eq aimage :error)
+;;;                     (setf (r2::background-%pixmap bg) :none)
+;;;                     (values (r2::background-%pixmap bg)
+;;;                             (r2::background-%mask bg)))
+;;;                    (t
+;;;                     (let ((pm (ws/x11::aimage->pixmap+mask drawable aimage)))
+;;;                       (setf (r2::background-%pixmap bg) (car pm)
+;;;                             (r2::background-%mask bg) (cadr pm))
+;;;                       #+NIL
+;;;                       (clue-gui2::gui-post
+;;;                        nil
+;;;                        ;; we do it the hard way via an exposure round trip.
+;;;                        'xlib:clear-area
+;;;                        drawable
+;;;                        :exposures-p t))))))
+;;;          ;;:name "Lazy Document background fetch."
+;;;          )
+;;;         (values (r2::background-%pixmap bg)
+;;;                 (r2::background-%mask bg)))))
 
 (defmethod update-lazy-object (document (self null))
   nil)
