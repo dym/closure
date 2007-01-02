@@ -45,38 +45,6 @@
 		     :remote-port port)
    :byte))
 
-(defstruct (server-socket (:constructor make-server-socket-struct))
-  fd
-  element-type
-  port)
-
-
-#||
-(export 'glisp::make-server-socket :glisp)
-(defun glisp::make-server-socket (port &key (element-type '(unsigned-byte 8)))
-  (make-server-socket-struct :fd (ext:create-inet-listener port)
-                             :element-type element-type
-                             :port port))
-
-
-(defun glisp::accept-connection/low (socket)
-  (mp:process-wait-until-fd-usable (server-socket-fd socket) :input)
-  (values
-   (sys:make-fd-stream (ext:accept-tcp-connection (server-socket-fd socket))
-                       :input t :output t
-                       :element-type (server-socket-element-type socket))
-   (cond ((subtypep (server-socket-element-type socket) 'integer)
-          :byte)
-         (t
-          :char))))
-
-(export 'glisp::close-server-socket :glisp)
-(defun glisp::close-server-socket (socket)
-  (unix:unix-close (server-socket-fd socket)))
-||#
-
-;;;;;;
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length :element-type 'base-char options))
 

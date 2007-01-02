@@ -40,17 +40,6 @@
    (lisp:socket-connect port hostname)
    :byte))
 
-(export 'glisp::make-server-socket :glisp)
-(defun glisp:make-server-socket (port)
-  (lisp:socket-server port))
-
-(defun glisp::accept-connection/low (socket)
-  (let ((stream (lisp:socket-accept socket)))
-    (setf (stream-element-type stream) '(unsigned-byte 8))
-    (values 
-     stream
-     :byte)))
-
 (defun glisp::g/make-string (length &rest options)
   (apply #'make-array length 
          :element-type 

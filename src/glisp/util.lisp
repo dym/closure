@@ -678,18 +678,6 @@ Hmm unter PCL geht das nicht            ;-(
       (:char (cl-char-stream->gstream stream))
       (:byte (cl-byte-stream->gstream stream)) )))
 
-#||
-(defun g/open-inet-socket-ssl (host port)
-  (multiple-value-bind (stream) (gluser::make-ssl-client-socket host port)
-    (cl-byte-stream->gstream stream)))
-||#
-
-(defun accept-connection (socket)
-  (multiple-value-bind (stream kind) (accept-connection/low socket)
-    (ecase kind
-      (:char (cl-char-stream->gstream stream))
-      (:byte (cl-byte-stream->gstream stream)) )))
-
 
 ;;; ----------------------------------------------------------------------------------------------------
 
