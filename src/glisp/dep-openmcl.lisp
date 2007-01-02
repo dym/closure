@@ -1,54 +1,3 @@
-BABYL OPTIONS: -*- rmail -*-
-Version: 5
-Labels:
-Note:   This is the header of an rmail file.
-Note:   If you are seeing it in rmail,
-Note:    it means the file has no messages in it.
-
-1,,
-X-From-Line: splittist@yahoo.com Thu Aug 25 15:53:13 2005
-Return-path: <splittist@yahoo.com>
-Envelope-to: real-csr21@localhost
-Delivery-date: Thu, 25 Aug 2005 15:53:13 +0100
-Received: from [127.0.0.1] (helo=localhost)
-	by mu with esmtp (Exim 4.52)
-	id 1E8J6P-0003Ya-6b
-	for real-csr21@localhost; Thu, 25 Aug 2005 15:53:13 +0100
-Received: from imap.hermes.cam.ac.uk [131.111.8.159]
-	by localhost with IMAP (fetchmail-6.2.5.1)
-	for real-csr21@localhost (single-drop); Thu, 25 Aug 2005 15:53:13 +0100 (BST)
-Received: from ppsw-9-intramail.csi.cam.ac.uk ([192.168.128.139])
-	by cyrus-5.csi.private.cam.ac.uk (Cyrus v2.1.16-HERMES)
-	with LMTP; Thu, 25 Aug 2005 15:47:51 +0100
-X-Sieve: CMU Sieve 2.2
-X-Cam-SpamScore: ss
-X-Cam-SpamDetails: scanned, SpamAssassin (score=2.174,
-	FORGED_YAHOO_RCVD 2.17)
-X-Cam-AntiVirus: No virus found
-X-Cam-ScannerInfo: http://www.cam.ac.uk/cs/email/scanner/
-Received: from cmailg1.svr.pol.co.uk ([195.92.195.171]:3765)
-	by ppsw-9.csi.cam.ac.uk (mx.cam.ac.uk [131.111.8.149]:25)
-	with esmtp (csa=unknown) id 1E8J16-0005kv-Tr (Exim 4.51) for csr21@cam.ac.uk
-	(return-path <splittist@yahoo.com>); Thu, 25 Aug 2005 15:47:44 +0100
-Received: from user-2261.l2.c5.dsl.pol.co.uk ([81.76.40.213] helo=[192.168.1.26])
-	by cmailg1.svr.pol.co.uk with esmtp (Exim 4.41)
-	id 1E8J12-0007ZL-9M; Thu, 25 Aug 2005 15:47:40 +0100
-X-Gnus-Mail-Source: file:/var/mail/csr21
-Message-ID: <430DDA0B.3010307@yahoo.com>
-Date: Thu, 25 Aug 2005 15:47:39 +0100
-From: John Q Splittist <splittist@yahoo.com>
-User-Agent: Mozilla Thunderbird 1.0.6 (Macintosh/20050716)
-X-Accept-Language: en-us, en
-MIME-Version: 1.0
-To:  closure-devel@common-lisp.net
-CC: Christophe Rhodes <csr21@cam.ac.uk>
-Subject: Openmcl patches
-Content-Type: multipart/mixed;
- boundary="------------030203070203000802030803"
-Lines: 285
-Xref: mu list.closure-devel:8
-
-*** EOOH ***
 ;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CL-USER; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: OpenMCL dependent stuff + fixups
@@ -147,4 +96,3 @@ Xref: mu list.closure-devel:8
 
 (defun glisp::getenv (string)
   (ccl::getenv string))
-
