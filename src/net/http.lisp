@@ -959,39 +959,33 @@
 ;; </FUTURE>
 
 ;; Back to what is actually implemented. To read a document from within a zip
-;; archive, we simply pass the request to the `unzip' command. So you must
-;; have installed this for a working zip protocol.
+;; archive, we simply use the ZIP library.  So you must have it installed
+;; for a working zip protocol.
 
 ;; TODO
 ;;  - detect non-existing archives and non-existing archive documents.
 ;;  - when no archive file name is given, attempt to format the zip file
 ;;    directory as HTML, to be able to inspect the zip file.
-;;  - detect the non-existence of the `unzip' command and give a reasonable 
-;;    error message.
 
 (defun open-zip-document (url)
-  (multiple-value-bind (zip-archive-pathname archive-component-file-name) (split-zip-url url)
-    (cond ((null zip-archive-pathname)
-           (error "Bad zip url: ~S" url))
-          (t
-           (with-temporary-file (temp-filename)
-             (let ((res (run-unix-shell-command (format nil "unzip -p ~A ~A >~A"
-                                                        (namestring zip-archive-pathname)
-                                                        archive-component-file-name
-                                                        temp-filename))))
-               (cond ((zerop res)
-                      (values
-                       (cl-byte-stream->gstream (open temp-filename
-                                                      :direction :input
-                                                      :element-type '(unsigned-byte 8)))
-                       (list (cons "Content-Type" 
-                                   (let ((mt (find-mime-type-from-extension
-                                              (url-extension url))))
-                                     (if mt
-                                         (mime-type-name mt)
-                                       "text/plain"))))))
-                     (t
-                      (error "unzip failed on ~S" url)) )))))))
+  (multiple-value-bind (zip-archive-pathname archive-component-file-name)
+      (split-zip-url url)
+    (cond
+      ((null zip-archive-pathname)
+	(error "Bad zip url: ~S" url))
+      (t
+	(values
+	 (cl-byte-stream->gstream
+	  (flexi-streams:make-in-memory-input-stream
+	   (zip:with-zipfile (zip zip-archive-pathname)
+	     (zip:zipfile-entry-contents
+	      (zip:get-zipfile-entry archive-component-file-name zip))))) 
+	 (list (cons "Content-Type" 
+		     (let ((mt (find-mime-type-from-extension
+				(url-extension url))))
+		       (if mt
+			   (mime-type-name mt)
+			   "text/plain")))))))))
 
 (defun split-zip-url (url)
   ;; -> zip-archive-pathname ; archive-component-file-name

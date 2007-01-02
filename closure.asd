@@ -87,7 +87,9 @@
                  :clim-clx
                  :glisp
 		 :bordeaux-threads
-		 :trivial-sockets)
+		 :trivial-sockets
+		 :zip
+		 :flexi-streams)
     :default-component-class closure-source-file
     :components
     ((:module src

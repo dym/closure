@@ -17,11 +17,14 @@ Provide yourself with:
 
     [Debian package gif2png]
 
- 4. McCLIM, Closure XML, Bordeaux Threads, and their dependencies
+ 4. McCLIM, Closure XML, Bordeaux Threads, Flexi-Streams, ZIP
+    and their dependencies
 
     [ http://common-lisp.net/project/mcclim/
       http://common-lisp.net/project/cxml/
-      http://common-lisp.net/project/bordeaux-threads/ ]
+      http://common-lisp.net/project/bordeaux-threads/ 
+      http://common-lisp.net/project/zip/ 
+      http://weitz.de/flexi-streams/ ]
 
 
 Compile closure using ASDF: Register closure.asd in your central
