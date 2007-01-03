@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.29  2007/01/03 16:14:57  emarsden
+;; - new function RENDER-LHTML that renders LHTML
+;; - new command "Inspect Page" that runs Clouseau on the current document
+;;
 ;; Revision 1.28  2007/01/03 11:34:45  emarsden
 ;; GUI: implement beginning-of-page and end-of-page commands; add
 ;; keyboard shortcuts for back & forward.
@@ -343,6 +347,31 @@
 (define-presentation-type url ())
 (define-presentation-type r2::pt ())
 (define-presentation-type r2::hyper-link ())
+
+;; renders LHTML as per http://opensource.franz.com/xmlutils/xmlutils-dist/phtml.htm
+(defun render-lhtml (location lhtml)
+  (with-simple-restart (forget "Just forget rendering this page.")
+    (let* ((*package* (find-package :r2))
+           (*pane* (find-pane-named *frame* 'canvas))
+           (*medium* (sheet-medium *pane*))
+           (device (make-instance 'closure/clim-device::clim-device :medium *pane*))
+           (doc (make-instance 'r2::document
+                               :processes-hooks nil
+                               :location location
+                               :http-header nil
+                               :pt (sgml::lhtml->pt lhtml)))
+           (*current-document* doc)
+           (closure-protocol:*user-agent* nil)
+           (closure-protocol:*document-language* (make-instance 'r2::html-4.0-document-language))
+           (r2::*canvas-width* (bounding-rectangle-width (sheet-parent *pane*))))
+      (window-clear *pane*)
+      (closure-protocol:render closure-protocol:*document-language*
+                               doc
+                               device
+                               (setf *current-pt* (r2::document-pt doc))
+                               600 t 0)
+      (clim-backend:port-force-output (find-port))
+      (reflow))))
 
 ;;;; ----------------------------------------------------------------------------------------------------
 ;;;; Commands
@@ -721,6 +750,13 @@
   (setq renderer:*tex-mode-p* nil)
   (setq renderer:*hyphenate-p* nil)
   (send-closure-command 'com-reflow))
+
+;; for Closure developers
+(define-closure-command (com-inspect-page :name t) ()
+  (write-status "Loading Clouseau")
+  (asdf:oos 'asdf:load-op :clouseau)
+  (write-status "Starting inspector")
+  (funcall (find-symbol "INSPECTOR" :clouseau) *current-document* :new-process t))
 
 
 ;; EOF
