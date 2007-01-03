@@ -33,7 +33,7 @@
   (apply #'read-sequence ap))
 
 (defmacro glisp::with-timeout ((&rest options) &body body)
-  (declare (ignore ignore))
+  (declare (ignore options))
   `(progn
      ,@body))
 

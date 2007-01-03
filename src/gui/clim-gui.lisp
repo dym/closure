@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.28  2007/01/03 11:34:45  emarsden
+;; GUI: implement beginning-of-page and end-of-page commands; add
+;; keyboard shortcuts for back & forward.
+;;
 ;; Revision 1.27  2006/12/31 15:42:40  dlichteblau
 ;;
 ;; Use Bordeaux Threads for all threading primitives, so that non-GUI parts of
@@ -365,7 +369,7 @@
 (define-closure-command (com-reflow :name t) ()
   (reflow))
 
-(define-closure-command (com-back :name t) ()
+(define-closure-command (com-back :name t :keystroke (:left :control)) ()
   (let ((*standard-output* *query-io*)) 
     (cond ((null (cdr *back-history*))
            (format t "There is nowhere you can go back to.~%"))
@@ -374,8 +378,8 @@
            (format t "Going back to ~S.~%" (first *back-history*))
            (foo (first *back-history*))))))
 
-(define-closure-command (com-forward :name t) ()
-  (let ((*standard-output* *query-io*)) 
+(define-closure-command (com-forward :name t :keystroke (:right :control)) ()
+  (let ((*standard-output* *query-io*))
     (cond ((null *forw-history*)
            (format t "There is nowhere you can go forward to.~%"))
           (t
@@ -399,7 +403,7 @@
   (setf gui:*user-wants-images-p* t)
   (format *query-io* "Images are now on. You may want to reload.~%"))
 
-(define-closure-command (com-quit :name t) ()
+(define-closure-command (com-quit :name t :keystroke (#\q :control)) ()
   (frame-exit *application-frame*))
 
 (defun make-google-search-url (string)
@@ -562,9 +566,8 @@
      (lambda ()
        (with-simple-restart (forget "Just forget rendering this page.")
          (let* ((*package* (find-package :r2))
-                (*pane* (find-pane-named *frame* 'canvas))
-                (*medium* (sheet-medium *pane*)))
-           (progn ;; with-sheet-medium (*medium* *pane*)
+                (*pane* (find-pane-named *frame* 'canvas)))
+           (with-sheet-medium (*medium* *pane*)
              (let ((device (make-instance 'closure/clim-device::clim-device :medium *pane*)))
                (setf (sheet-pointer-cursor *pane*) :busy)
                (setq url (r2::parse-url* url))
@@ -665,13 +668,12 @@
   (setq gui:*zoom-factor* 1.0)
   (send-closure-command 'com-reflow))
 
-;; FIXME the :shift here is a McCLIM bug
-(define-closure-command (com-zoom-in :name t :keystroke (#\+ :control :shift)) ()
+(define-closure-command (com-zoom-in :name t :keystroke (#\+ :control)) ()
   (write-status "Zooming in...")
   (setq gui:*zoom-factor* (* gui:*zoom-factor* 1.2))
   (send-closure-command 'com-reflow))
 
-(define-closure-command (com-zoom-out :name t :keystroke (#\- :control :shift)) ()
+(define-closure-command (com-zoom-out :name t :keystroke (#\- :control)) ()
   (write-status "Zooming out...")
   (setq gui:*zoom-factor* (* gui:*zoom-factor* 0.8))
   (send-closure-command 'com-reflow))
@@ -692,6 +694,18 @@
          (window-height (bounding-rectangle-height (pane-viewport-region pane))))
     (scroll-extent pane 0
                    (min (gadget-max-value scrollbar) (+ current-y (* 0.9 window-height))))))
+
+(define-closure-command (com-beginning-of-page :name t
+                                               :keystroke (:home :control)) ()
+  (let* ((pane (find-pane-named *frame* 'canvas))
+         (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar)))
+    (scroll-extent pane 0 (gadget-min-value scrollbar))))
+
+(define-closure-command (com-end-of-page :name t
+                                         :keystroke (:end :control)) ()
+  (let* ((pane (find-pane-named *frame* 'canvas))
+         (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar)))
+    (scroll-extent pane 0 (gadget-max-value scrollbar))))
 
 (define-closure-command (com-redraw :name t :keystroke (#\r :control)) ()
   (let* ((*pane* (find-pane-named *frame* 'canvas)) )
