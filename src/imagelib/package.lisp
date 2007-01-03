@@ -39,10 +39,10 @@
    #:aimage-plist
    #:make-aimage
    #:scale-aimage
-   #:pnm-stream->aimage))
-
-(defpackage :imagelib.gif
-  (:use :cl :glisp :imagelib))
+   #:gif-stream->aimage
+   #:jpeg-stream->aimage
+   #:pnm-stream->aimage
+   #:any->aimage-by-filter))
 
 (defpackage :png
   (:use :cl :glisp :imagelib)

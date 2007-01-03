@@ -89,7 +89,8 @@
 		 :bordeaux-threads
 		 :trivial-sockets
 		 :zip
-		 :flexi-streams)
+		 :flexi-streams
+                 :skippy)
     :default-component-class closure-source-file
     :components
     ((:module src
@@ -99,7 +100,7 @@
 	       (:module patches
 			:components
 			((:file  "clx-patch")))
-	       
+
 	       ;; Images
      
 	       (:module imagelib
@@ -108,12 +109,14 @@
 			((:file "package")
 			 (:file "basic")
 			 (:file "deflate")
-			 (:file  "png")))
+			 (:file "png")
+                         (:file "gif")
+                         (:file "jpeg")))
 	       
 	       ;; Early package definitions
 	       
 	       (:file "defpack")
-     
+
 	       ;; Closure Protocol Declarations first
      
 	       (:module protocols

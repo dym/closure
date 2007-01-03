@@ -297,3 +297,83 @@
                      :alpha-p nil)))
 
 
+(defun any->aimage-by-filter (filter-name input)
+  (with-temporary-file (temp-filename)
+    (with-temporary-file (pnm-filename)
+      (with-open-file (sink temp-filename
+                       :direction :output
+                       :if-exists :overwrite
+                       :element-type '(unsigned-byte 8))
+        (let ((sink (make-instance 'glisp:cl-byte-stream :cl-stream sink)))
+          (let ((tmp (make-array 4096 :element-type '(unsigned-byte 8))))
+            (do ((n (g/read-byte-sequence tmp input)
+		    (g/read-byte-sequence tmp input)))
+                ((= n 0))
+              (g/write-byte-sequence tmp sink :end n)))))
+      (let ((cmd (format nil "~A <~A >~A" filter-name
+                         (namestring (truename temp-filename))
+                         (namestring pnm-filename))))
+        (format *debug-io* "~%;; running: ~A" cmd)
+        (run-unix-shell-command cmd))
+      (progn                            ;ignore-errors
+        (with-open-file (input pnm-filename
+                         :direction :input
+                         :element-type '(unsigned-byte 8))
+          (pnm-stream->aimage
+           (make-instance 'cl-byte-stream :cl-stream input)))) )))
+
+
+;;; Image writers
+
+(defun write-ppm-image (aimage sink)
+  ;; We write P3/P6 images
+  (let ((binary-p (subtypep (stream-element-type sink) '(unsigned-byte 8))))
+    (let ((header
+           (with-output-to-string (bag)
+             (format bag "~A~%" (if binary-p "P6" "P3"))
+             (format bag "~D ~D ~D" (aimage-width aimage) (aimage-height aimage) 255))))
+      (if binary-p
+          (write-sequence (map '(array (unsigned-byte 8) (*)) #'char-code header) sink)
+        (write-string header sink))
+      (cond (binary-p
+             (write-byte 10 sink)
+             (let ((buffer (make-array (* 3 (aimage-width aimage)) :element-type '(unsigned-byte 8)))
+                   (width (aimage-width aimage))
+                   (data (aimage-data aimage))
+                   (i 0))
+               (declare (type (simple-array (unsigned-byte 8) (*)) buffer)
+                        (type (array (unsigned-byte 32) (* *)) data)
+                        (type fixnum width)
+                        (type fixnum i))
+               (dotimes (y (aimage-height aimage))
+                 (setf i 0)
+                 (do ((x 0 (the fixnum (+ x 1))))
+                     ((= x width))
+                   (declare (type fixnum x))
+                   (let ((byte (aref data y x)))
+                     (declare (type (unsigned-byte 8) byte))
+                     (setf (aref buffer i) (ldb (byte 8 0) byte))
+                     (setf i (the fixnum (+ i 1)))
+                     (setf (aref buffer i) (ldb (byte 8 8) byte))
+                     (setf i (the fixnum (+ i 1)))
+                     (setf (aref buffer i) (ldb (byte 8 16) byte))
+                     (setf i (the fixnum (+ i 1)))))
+                 (write-sequence buffer sink))))
+            (t
+             (dotimes (y (aimage-height aimage))
+               (dotimes (x (aimage-width aimage))
+                 (when (= (mod x 4) 0)
+                   (terpri sink))
+                 (let ((byte (aref (aimage-data aimage) y x)))
+                   (format sink " ~D ~D ~D"
+                           (ldb (byte 8 0) byte)
+                           (ldb (byte 8 8) byte)
+                           (ldb (byte 8 16) byte)) )))
+             (terpri sink))))))
+
+(defun blu (aimage)
+  (with-open-file (sink "/tmp/a.ppm" 
+                   :direction :output
+                   :if-exists :new-version
+                   :element-type '(unsigned-byte 8))
+    (write-ppm-image aimage sink)))
