@@ -148,7 +148,7 @@
       (setf (pt-parent k) res))
     res))
 
-(defun ppt (pt &optional (prefix "") (barp nil))
+(defun ppt (pt &optional (stream *standard-output*) (prefix "") (barp nil))
   (cond ((eq (pt-name pt) :pcdata)
          (let ((s (map 'string
 		    #'(lambda (x)
@@ -162,15 +162,16 @@
                (setq s (concatenate 'string (subseq s 0 (- 120 (length prefix))))
                      flag t))
            (write-string (format nil "~%~A| ~S ~A" prefix s
-                                 (if flag "..." "")))))
+                                 (if flag "..." "")) stream)))
         (t
-         (write-string (format nil "~%~A| ~A" prefix (pt-name pt)))
+         (write-string (format nil "~%~A| ~A" prefix (pt-name pt)) stream)
          (when (pt-children pt)
            (write-string (format nil "~%~A~A-~A." 
                                  prefix 
                                  (if barp "+" "`")
                                  (make-string (length (symbol-name (pt-name pt))) 
-                                             :initial-element #\- )))
+                                             :initial-element #\- ))
+                         stream)
            (let ((prefix1 (concatenate 'string 
                             prefix (if barp "|" " ")
                             (make-string (length (symbol-name (pt-name pt))) 
@@ -178,7 +179,7 @@
                             " ")))
              (do ((q (pt-children pt) (cdr q)))
                  ((null q))
-               (ppt (car q) prefix1 (if (cdr q) 't 'nil))))))))
+               (ppt (car q) stream prefix1 (if (cdr q) 't 'nil))))))))
 
 ;;; -------------------------------------------------------------------------------------------
 
@@ -218,27 +219,33 @@
   (cond ((null pt) nil)
         ((cons (pt-name pt) (pt-full-name-path (pt-parent pt))))))
 
-(defun lhtml->pt (tree)
-  (cond ((typep tree 'rod)
-         (sgml::make-pt :name :pcdata :attrs tree))
-        ((stringp tree)
-         (sgml::make-pt :name :pcdata :attrs (string-rod tree)))
-        ((sgml::pt-p tree) tree)
-        ((and (consp tree) (keywordp (car tree)))
-         (let ((attrs nil)
-               (gi (car tree)))
-           (do ((q (cdr tree) (cddr q)))
-               ((or (null q)
-                    (not (keywordp (car q))))
-		(sgml::make-pt :name gi
-			       :attrs (nreverse attrs)
-			       :children (mapcar #'lhtml->pt q)))
-             (push (car q) attrs)
-             (push (rod (cadr q)) attrs))))
-        (t
-         (error "~S does not look like LHTML." tree)) ))
+(defun walk-lhtml (lhtml tag-callback text-callback)
+  (if (stringp lhtml)
+      (funcall text-callback lhtml)
+      (destructuring-bind (tag &rest body)
+          (if (consp lhtml) lhtml (list lhtml))
+        (destructuring-bind (tag-name &rest attributes)
+            (if (consp tag) tag (list tag))
+          (funcall tag-callback tag-name attributes body)))))
+
+(defun lhtml->pt (lhtml)
+  (walk-lhtml lhtml
+              ;; tag callback
+              (lambda (tag-name attributes body)
+                (make-pt :name tag-name
+                         :attrs (loop :for (key value) :on attributes :by #'cddr
+                                      :collect key
+                                      :collect (etypecase value
+                                                 (string (runes:string-rod value))
+                                                 (sgml::rod value)))
+                         :children (mapcar #'lhtml->pt body)))
+              ;; text callback
+              (lambda (string)
+                (assert (stringp string))
+                (make-pt :name :pcdata :attrs (runes:string-rod string)))))
 
 (defun lhtml-reader (stream subchar arg)
+  (declare (ignore subchar arg))
   `(lhtml->pt
     ,(funcall (get-macro-character #\`) stream nil)))
 
