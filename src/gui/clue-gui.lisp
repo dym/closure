@@ -97,15 +97,18 @@
                       (let ((cs (assoc :charset parameters :test #'string-equal)))
                         (when cs
                           (setf charset (cdr cs))))
-                      (netlib::find-mime-type (format nil "~A/~A" type subtype)))))
+                      (netlib::find-mime-type (format nil "~A/~A" type subtype))))
+         (url-text (url:unparse-url url)))
     (let ((pt (progn 
                 (cond ((member mime-type (list (netlib:find-mime-type "image/png")
                                                (netlib:find-mime-type "image/gif")
                                                (netlib:find-mime-type "image/jpeg")))
                        (sgml:lhtml->pt
                         `(:HTML
+                          (:HEAD
+                           (:TITLE ,url-text))
                           (:BODY
-                           (:IMG :SRC ,(url:unparse-url url))))))
+                           ((:IMG :SRC ,url-text))))))
                       ((member mime-type (list (netlib:find-mime-type "text/lml")))
                        (sgml:lhtml->pt (read-from-string (with-output-to-string (bag)
                                                            (do ((x (glisp:g/read-byte input nil nil)
@@ -123,6 +126,8 @@
                                                    (netlib:find-mime-type "text/css"))))
                        (sgml:lhtml->pt
                         `(:HTML
+                          (:HEAD
+                           (:TITLE ,url-text))
                           (:BODY
                            (:PRE
                             ,(gstream-as-string input))))))
