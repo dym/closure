@@ -159,7 +159,7 @@
 			((:file "package")
 			 (:file "pt"              :depends-on ("package"))
 			 (:file "sgml-dtd"        :depends-on ("package"))
-			 (:file "sgml-parse"      :depends-on ("package" "sgml-dtd")) ))
+			 (:file "sgml-parse"      :depends-on ("package" "sgml-dtd" "pt")) ))
 
 	       ;; More Random Utilities
      

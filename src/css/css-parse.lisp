@@ -1019,6 +1019,7 @@
 
 (defun parse-style-sheet-from-url (url &key (name "Anonymous Sheet"))
   (netlib:with-open-document ((input mime-type) url)
+    (declare (ignore mime-type))
     (css:parse-style-sheet input nil
                            :name name
                            :base-url url)))
@@ -1118,8 +1119,7 @@
         r))))
 
 (defun generate-slot-constants-1 ()
-  (let ((defconstants nil)
-        (k 0))
+  (let ((defconstants nil))
     ;; we go to some length to keep the indicies stable ...
     (let ((props nil)
           (taken nil))

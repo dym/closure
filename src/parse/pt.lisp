@@ -78,7 +78,6 @@
                             (pprint k stream)))
     ;; (pprint-newline :mandatory stream)
     '(format stream "</~A>" (gi object)) ))
-||#
 
 #-CLISP
 (defun print-pt (self sink depth)
@@ -136,11 +135,7 @@
             #'prin1 
             sink)
            (write-string ")" sink)))))
-
-
-(defun print-pt (self sink depth)
-  (declare (ignore depth))
-  (format sink "#<~S ~A ..>" (type-of self) (pt-name self)))
+||#
 
 (defun make-pt (&key name attrs children)
   (let ((res (make-pt/low :name name :attrs attrs :children children)))

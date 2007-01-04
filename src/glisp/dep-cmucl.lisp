@@ -65,7 +65,7 @@
   (apply #'make-array length :element-type 'base-char options))
 
 
-(defun glisp:run-unix-shell-command (command)
+(defun glisp::run-unix-shell-command (command)
   (ext:process-exit-code (ext:run-program "/bin/sh" (list "-c" command) :wait t :input nil :output nil)))
 
 (defun glisp::getenv (string)

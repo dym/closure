@@ -157,10 +157,6 @@
   ;; STYLE and combine, as if they occured via @import.
   (let ((sheets nil)
         (pt (document-pt doc)))
-
-    (setq cl-user::pt pt)
-    
-    ;;
     (dolist (link (document-links doc))
       (when (and (style-sheet-link-p link)
                  (style-link-does-apply-p link selected-style)
