@@ -4823,8 +4823,8 @@ border-spacing between the spaned columns is included."
                (let ((data (black-chunk-data x)))
                  (loop for j from 0
                        for c across data do
-                       (cond ((or (<= #/a c #/z)
-                                  (<= #/A c #/Z))
+                       (cond ((or (rune<= #/a c #/z)
+                                  (rune<= #/A c #/Z))
                               (push (list i j c) curword))
                              (t
                               (spill-word))))))
@@ -4836,7 +4836,7 @@ border-spacing between the spaned columns is included."
       ;; #+NIL
       (let ((hps nil))
         (dolist (word words)
-          (let* ((s (map 'string (lambda (x) (code-char (third x))) word))
+          (let* ((s (map 'string (lambda (x) (rune-char (third x))) word))
                  (z (hyphen-points (hyphenation-table) s)))
             (dolist (k (reverse z)) (push (elt word k) hps))))
         ;; an assert a day keeps the surprise away.
@@ -4983,6 +4983,9 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.18  2007/01/05 11:19:30  crhodes
+;; Rune fixes for TeX Mode
+;;
 ;; Revision 1.17  2006/12/30 15:13:55  emarsden
 ;; - use CL from Closure packages
 ;; - minor rod fixes
