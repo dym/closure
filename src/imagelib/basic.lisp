@@ -304,7 +304,7 @@
     (make-aimage/low :width (array-dimension arr 1)
                      :height (array-dimension arr 0)
                      :data arr
-                     :alpha-p nil)))
+                     :alphap nil)))
 
 
 (defun any->aimage-by-filter (filter-name input)
