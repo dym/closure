@@ -1128,64 +1128,66 @@
           (t
            (values 20 20 0)))))
 
-(defmethod update-lazy-object (document (self ro/image))
-  (with-slots (url fixed-size-p) self
-    (let ((aim (document-fetch-image document self url)))
-      (with-slots (iwidth iheight (self.aimage aimage) awidth aheight) self
-        (setf iwidth (aimage-width aim)
-              iheight (aimage-height aim)
-              self.aimage aim)
-        (unless awidth (setf awidth (aimage-width aim)))
-        (unless aheight (setf aheight (aimage-height aim)))
-        ))
-    (cond (fixed-size-p
-           ;; **hack**
-           (with-slots (aimage awidth aheight) self
-             (let ((drawable (xlib:screen-root (xlib:display-default-screen clue-gui2::*dpy*))))
-               (with-slots (pixmap mask) self
-                 (unless pixmap
-                   (let ((q (clue-gui2::make-pixmap-from-aimage drawable aimage awidth aheight)))
-                     (setf pixmap (car q)
-                           mask   (cadr q)))))))     
-           ;; return
-           nil)
-          (t
-           ;; return
-           t))))
+;; apparently unused  --dfl
+;;;(defmethod update-lazy-object (document (self ro/image))
+;;;  (with-slots (url fixed-size-p) self
+;;;    (let ((aim (document-fetch-image document self url)))
+;;;      (with-slots (iwidth iheight (self.aimage aimage) awidth aheight) self
+;;;        (setf iwidth (aimage-width aim)
+;;;              iheight (aimage-height aim)
+;;;              self.aimage aim)
+;;;        (unless awidth (setf awidth (aimage-width aim)))
+;;;        (unless aheight (setf aheight (aimage-height aim)))
+;;;        ))
+;;;    (cond (fixed-size-p
+;;;           ;; **hack**
+;;;           (with-slots (aimage awidth aheight) self
+;;;             (let ((drawable (xlib:screen-root (xlib:display-default-screen clue-gui2::*dpy*))))
+;;;               (with-slots (pixmap mask) self
+;;;                 (unless pixmap
+;;;                   (let ((q (clue-gui2::make-design-from-aimage drawable aimage awidth aheight)))
+;;;                     (setf pixmap (car q)
+;;;                           mask   (cadr q)))))))     
+;;;           ;; return
+;;;           nil)
+;;;          (t
+;;;           ;; return
+;;;           t))))
 
-(defmethod x11-draw-robj (drawable gcontext (self ro/image) box x y)
-  (setf x (floor x))
-  (setf y (floor y))
-  (with-slots (alt awidth aheight aimage url) self
-    (cond (aimage
-           (unless awidth (setf awidth (aimage-width aimage)))
-           (unless aheight (setf aheight (aimage-height aimage)))
-           (with-slots (pixmap mask) self
-             (unless pixmap
-               (warn "Rendering pixmap while redisplay (~S)" 
-                     url)
-               (let ((q (clue-gui2::make-pixmap-from-aimage drawable aimage awidth aheight)))
-                 (setf pixmap (car q)
-                       mask   (cadr q))))
-               (cond ((not (null mask))
-                      (xlib:with-gcontext (gcontext :clip-mask mask
-                                                    :clip-x x
-                                                    :clip-y (- y aheight))
-                        (xlib:copy-area pixmap gcontext 0 0 awidth aheight
-                                        drawable x (- y aheight))) )
-                     (t
-                      (xlib:copy-area pixmap gcontext 0 0 awidth aheight
-                                      drawable x (- y aheight) )))))
-
-          (t
-           (multiple-value-bind (w h) (ro/size self)
-             (setf w (floor w))
-             (setf h (floor h))
-             (xlib:with-gcontext (gcontext 
-                                  :foreground (ws/x11::x11-find-color drawable :black)
-                                  )         
-               (xlib:draw-glyphs drawable gcontext x y (rod-string alt))
-               (xlib:draw-rectangle drawable gcontext x (- y h) w h)))) )))
+;; apparently unused  --dfl
+;;;(defmethod x11-draw-robj (drawable gcontext (self ro/image) box x y)
+;;;  (setf x (floor x))
+;;;  (setf y (floor y))
+;;;  (with-slots (alt awidth aheight aimage url) self
+;;;    (cond (aimage
+;;;           (unless awidth (setf awidth (aimage-width aimage)))
+;;;           (unless aheight (setf aheight (aimage-height aimage)))
+;;;           (with-slots (pixmap mask) self
+;;;             (unless pixmap
+;;;               (warn "Rendering pixmap while redisplay (~S)" 
+;;;                     url)
+;;;               (let ((q (clue-gui2::make-design-from-aimage drawable aimage awidth aheight)))
+;;;                 (setf pixmap (car q)
+;;;                       mask   (cadr q))))
+;;;               (cond ((not (null mask))
+;;;                      (xlib:with-gcontext (gcontext :clip-mask mask
+;;;                                                    :clip-x x
+;;;                                                    :clip-y (- y aheight))
+;;;                        (xlib:copy-area pixmap gcontext 0 0 awidth aheight
+;;;                                        drawable x (- y aheight))) )
+;;;                     (t
+;;;                      (xlib:copy-area pixmap gcontext 0 0 awidth aheight
+;;;                                      drawable x (- y aheight) )))))
+;;;
+;;;          (t
+;;;           (multiple-value-bind (w h) (ro/size self)
+;;;             (setf w (floor w))
+;;;             (setf h (floor h))
+;;;             (xlib:with-gcontext (gcontext 
+;;;                                  :foreground (ws/x11::x11-find-color drawable :black)
+;;;                                  )         
+;;;               (xlib:draw-glyphs drawable gcontext x y (rod-string alt))
+;;;               (xlib:draw-rectangle drawable gcontext x (- y h) w h)))) )))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

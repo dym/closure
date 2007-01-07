@@ -55,7 +55,7 @@
   (unless (url:url-p url)
     (setq url (url:parse-url url)))
   (multiple-value-bind (aimage condition)
-      (ignore-errors
+      (progn ;ignore-errors
        (netlib:with-open-document ((input mime-type) url
                                                      nil ;reload-p
                                                      t ;binary-p

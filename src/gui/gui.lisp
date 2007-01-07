@@ -403,29 +403,6 @@
 
 (defvar cl-user::*html-dtd* nil)
 
-(defun aimage->pixmap+mask/raw (drawable aim)
-  (let* ((width (r2::aimage-width aim))
-         (height (r2::aimage-height aim))
-         (depth (xlib:drawable-depth drawable))
-         (im  (ws/x11::aimage->ximage drawable aim)))
-    (setf width (max width 1))
-    (setf height (max height 1))
-    (values
-     (let* ((pixmap (xlib:create-pixmap :drawable drawable
-                                        :width width
-                                        :height height
-                                        :depth depth))
-            (gc     (xlib:create-gcontext :drawable pixmap)))
-       (unless (or (>= width 2048) (>= height 2048)) ;### CLX bug
-	 (xlib:put-image pixmap gc im 
-			 :src-x 0 :src-y 0
-			 :x 0 :y 0
-			 :width width :height height))
-       (xlib:free-gcontext gc)
-       pixmap)
-     (when (imagelib:aimage-alpha-p aim)
-       (ws/x11::make-mask-from-aimage drawable aim)))))
-
 (defun init-closure ()
   ;; Init general closure stuff
   #||

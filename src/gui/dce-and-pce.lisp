@@ -116,13 +116,13 @@
   aimage
   width
   height
-  pixmap
+  design
   refcount)
 
-(defun make-pixmap-from-aimage (drawable aimage width height)
+(defun make-design-from-aimage (medium aimage width height)
   (dolist (k *pixmap-cache*
-            (let ((res  (really-make-pixmap-from-aimage
-                         drawable aimage width height)))
+            (let ((res  (really-make-design-from-aimage
+                         medium aimage width height)))
               (when *debug-pixmap-cache-p*
                 (format T "~&;; ++ [init] ~A ~Dx~D "
                         (getf (imagelib:aimage-plist aimage) :url)
@@ -131,7 +131,7 @@
               (push (make-pce :aimage aimage
                               :width width
                               :height height
-                              :pixmap res
+                              :design res
                               :refcount 1)
                     *pixmap-cache*)
               res))
@@ -144,21 +144,22 @@
                 width 
                 height))
       (incf (pce-refcount k))
-      (return (pce-pixmap k)))))
+      (return (pce-design k)))))
 
-(defun really-make-pixmap-from-aimage (drawable aimage width height)
-  (multiple-value-list
-      (gui::aimage->pixmap+mask/raw drawable
-                                    (imagelib:scale-aimage aimage width height))))
+(defun really-make-design-from-aimage (medium aimage width height)
+  (climi::make-rgb-image-design medium
+				(imagelib::aimage-rgb-image
+				 (imagelib:scale-aimage aimage width height))))
 
 (defun reset-caches ()
   (setf *dcache* nil
         *pixmap-cache* nil))
 
-(defun ws/x11::aimage->pixmap+mask (drawable aimage)
-  (make-pixmap-from-aimage drawable aimage 
-                           (imagelib:aimage-width aimage)
-                           (imagelib:aimage-height aimage)))
+;; apparently unused  --dfl
+;;;(defun ws/x11::aimage->pixmap+mask (drawable aimage)
+;;;  (make-design-from-aimage drawable aimage 
+;;;                           (imagelib:aimage-width aimage)
+;;;                           (imagelib:aimage-height aimage)))
 
 (defclass r2::ro/img ()
   ((url                    :initarg :url)
@@ -166,8 +167,7 @@
    (aim      :initform nil)
    (width    :initform nil)
    (height   :initform nil)
-   (pixmap   :initform nil)
-   (mask     :initform nil)))
+   (design   :initform nil)))
 
 (defmethod print-object ((self r2::ro/img) sink)
   (format sink "#<~S url=~S>" (type-of self) 
@@ -176,15 +176,14 @@
             :unbound)))
 
 (defmethod deconstruct-robj ((self r2::ro/img))
-  (with-slots ((aim-orig aim-orig) (pixmap pixmap) (mask mask)) self
-    (when pixmap
-      (deref-aimage-pixmap aim-orig (list pixmap mask))
-      (setf pixmap nil
-            mask nil))))
+  (with-slots ((aim-orig aim-orig) (design design)) self
+    (when design
+      (deref-aimage-design aim-orig design)
+      (setf design nil))))
 
-(defun deref-aimage-pixmap (aimage pixmap)
+(defun deref-aimage-design (aimage design)
   (declare (ignore aimage))
-  (let ((pce (find pixmap *pixmap-cache* :key #'pce-pixmap :test #'equal)))
+  (let ((pce (find design *design-cache* :key #'pce-design :test #'equal)))
     (assert (not (null pce)))
     (assert (> (pce-refcount pce) 0))
     (when *debug-pixmap-cache-p*
@@ -198,19 +197,13 @@
   (let ((n 0))
     (setf *pixmap-cache*
       (mapcan (lambda (pce)
-                (cond ((eql (pce-refcount pce) 0)
-                       (and (car (pce-pixmap pce))
-                            (incf n (* (xlib:drawable-width (car (pce-pixmap pce))) 
-                                       (xlib:drawable-height (car (pce-pixmap pce)))))
-                            (xlib:free-pixmap (car (pce-pixmap pce))))
-                       (and (cadr (pce-pixmap pce))
-                            (incf n (* (xlib:drawable-width (cadr (pce-pixmap pce))) 
-                                       (xlib:drawable-height (cadr (pce-pixmap pce)))))
-                            (xlib:free-pixmap (cadr (pce-pixmap pce))))
-                     
-                       nil)
-                      (t
-                       (list pce))))
+		(cond 
+		  ((and (eql (pce-refcount pce) 0) (pce-design pce))
+		    (incf n (* (pce-width pce) (pce-height pce)))
+		    (climi::free-image-design (pce-design pce))
+		    nil)
+		  (t
+		    (list pce))))
               *pixmap-cache*))
     n))
 
@@ -226,7 +219,7 @@
     (values width height 0)))
 
 (defmethod r2::ro/resize ((self r2::ro/img) new-width new-height)
-  (with-slots (width height aim aim-orig pixmap mask) self
+  (with-slots (width height aim aim-orig design) self
     (cond ((and new-width new-height)
            (setf width (round new-width)
                  height (round new-height)) )
@@ -247,36 +240,34 @@
              (unless (and (eql new-width width) (eql new-height height))
                (setf width new-width
                      height new-height
-                     pixmap nil mask nil
+                     design nil
                      aim nil #+(OR) (if aim (imagelib:scale-aimage aim-orig new-width new-height) nil) ))))) ))
 
-(defun ensure-ro/img-pixmap (drawable self)
-  (with-slots (aim-orig width height pixmap mask) self
-    (when aim-orig
-      (unless pixmap
-        (let ((r (make-pixmap-from-aimage drawable aim-orig width height)))
-          (setf pixmap (car r)
-                mask   (cadr r)))))))
+;; apparently unused  --dfl
+;;;(defun ensure-ro/img-pixmap (drawable self)
+;;;  (with-slots (aim-orig width height design mask) self
+;;;    (when (and aim-orig (not design))
+;;;      (setf design (make-design-from-aimage drawable aim-orig width height)))))
 
-(defmethod r2::x11-draw-robj (drawable gcontext (self r2::ro/img) box x y)
-  (declare (ignore box))
-  (setq x (round x))
-  (setq y (round y))
-  (with-slots ((aim-orig aim-orig) (width width) (height height)
-               (pixmap pixmap)
-               (mask   mask)) 
-      self
-    (ensure-ro/img-pixmap drawable self)
-    (when aim-orig
-      (cond ((not (null mask))
-             (xlib:with-gcontext (gcontext :clip-mask mask
-                                           :clip-x x
-                                           :clip-y (- y height))
-               (xlib:copy-area pixmap gcontext 0 0 width height
-                               drawable x (- y height))) )
-            (t
-             (xlib:copy-area pixmap gcontext 0 0 width height
-                             drawable x (- y height) ))))))
+;; apparently unused  --dfl
+;;;(defmethod r2::x11-draw-robj (drawable gcontext (self r2::ro/img) box x y)
+;;;  (declare (ignore box))
+;;;  (setq x (round x))
+;;;  (setq y (round y))
+;;;  (with-slots ((aim-orig aim-orig) (width width) (height height)
+;;;               (design design)) 
+;;;      self
+;;;    (ensure-ro/img-pixmap drawable self)
+;;;    (when aim-orig
+;;;      (cond ((not (null mask))
+;;;             (xlib:with-gcontext (gcontext :clip-mask mask
+;;;                                           :clip-x x
+;;;                                           :clip-y (- y height))
+;;;               (xlib:copy-area pixmap gcontext 0 0 width height
+;;;                               drawable x (- y height))) )
+;;;            (t
+;;;             (xlib:copy-area pixmap gcontext 0 0 width height
+;;;                             drawable x (- y height) ))))))
 
 
 ;;; ----------------------------------------------------------------------------------------------------

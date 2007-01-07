@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: RENDERER; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: General image routines
 ;;;   Created: 1998-11-11
@@ -38,18 +38,28 @@
 
 (in-package :imagelib)
 
-(defstruct (aimage 
-            (:constructor make-aimage/low) 
-            (:copier nil)
-            (:print-function print-aimage))
-  (width  0 :type fixnum)
-  (height 0 :type fixnum)
-  (data   nil :type (or null (simple-array (unsigned-byte 32) (* *))))
-  alpha-p
-  plist)
+;;; AIMAGE has been moved into McCLIM under the name RGB-IMAGE, but
+;;; without a plist and with different slot accessors.  Here's a wrapper
+;;; class for now:
+(defclass aimage ()
+    ((rgb-image :initarg :rgb-image :accessor aimage-rgb-image)
+     (plist :initarg :plist :accessor aimage-plist)))
 
-(defun print-aimage (self sink depth)
-  (declare (ignore depth))
+(defun aimage-width (ai) (climi::image-width (aimage-rgb-image ai)))
+(defun aimage-height (ai) (climi::image-height (aimage-rgb-image ai)))
+(defun aimage-data (ai) (climi::image-data (aimage-rgb-image ai)))
+(defun aimage-alpha-p (ai) (climi::image-alpha-p (aimage-rgb-image ai)))
+
+(defun make-aimage/low (&key width height data alphap plist)
+  (make-instance 'aimage
+    :rgb-image (make-instance 'climi::rgb-image
+		 :width width
+		 :height height
+		 :data data
+		 :alphap alphap)
+    :plist plist))
+
+(defmethod print-object ((self aimage) sink)
   (format sink "<~S ~D x ~D from ~S>" 'aimage 
           (aimage-width self) (aimage-height self)
           (getf (aimage-plist self) :url)))
@@ -59,7 +69,7 @@
                    :height height
                    :data (make-array (list height width) 
                                      :element-type '(unsigned-byte 32))
-                   :alpha-p alpha-p))
+                   :alphap alpha-p))
 
 (defun scale-aimage (source new-width new-height)
   (when (or (zerop new-width) (zerop new-height))

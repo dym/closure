@@ -95,8 +95,7 @@
 
 (defpackage :ws/x11
   (:use :glisp :runes :cl)
-  (:export
-   #:aimage->ximage))
+  (:export))
 
 (defpackage :gif
   (:use :glisp :runes :cl)

@@ -190,8 +190,9 @@
 ;;;         (values (r2::background-%pixmap bg)
 ;;;                 (r2::background-%mask bg)))))
 
-(defmethod update-lazy-object (document (self null))
-  nil)
+;; apparently unused  --dfl
+;;;(defmethod update-lazy-object (document (self null))
+;;;  nil)
 
 (defun map-region-rectangles (fun region)
   (clim:map-over-region-set-regions
@@ -221,27 +222,29 @@
                                                (+ (second q) (fourth q))))))
     res))
 
-(defun background-pixmap+mask (document drawable bg)
-  (cond ((r2::background-%pixmap bg)
-         ;; already there
-         (values (r2::background-%pixmap bg)
-                 (r2::background-%mask bg)))
-        (t
-         (let ((aimage #+NIL(r2::document-fetch-image document nil (r2::background-image bg))
-                       (r2::url->aimage document (r2::background-image bg) nil)
-                       ))
-           ;; arg, jetzt haben wir wieder broken images
-           (cond ((eql nil aimage)
-                  (values :none))
-                 (t
-                  (cond ((eq aimage :error)
-                         (setf (r2::background-%pixmap bg) :none) )
-                        (t
-                         (let ((pm (ws/x11::aimage->pixmap+mask drawable aimage)))
-                           (setf (r2::background-%pixmap bg) (car pm)
-                                 (r2::background-%mask bg) (cadr pm)))))
-                  (values (r2::background-%pixmap bg)
-                          (r2::background-%mask bg)))))) ))
+;; apparently unused  --dfl
+
+;;;(defun background-pixmap+mask (document drawable bg)
+;;;  (cond ((r2::background-%pixmap bg)
+;;;         ;; already there
+;;;         (values (r2::background-%pixmap bg)
+;;;                 (r2::background-%mask bg)))
+;;;        (t
+;;;         (let ((aimage #+NIL(r2::document-fetch-image document nil (r2::background-image bg))
+;;;                       (r2::url->aimage document (r2::background-image bg) nil)
+;;;                       ))
+;;;           ;; arg, jetzt haben wir wieder broken images
+;;;           (cond ((eql nil aimage)
+;;;                  (values :none))
+;;;                 (t
+;;;                  (cond ((eq aimage :error)
+;;;                         (setf (r2::background-%pixmap bg) :none) )
+;;;                        (t
+;;;                         (let ((pm (ws/x11::aimage->pixmap+mask drawable aimage)))
+;;;                           (setf (r2::background-%pixmap bg) (car pm)
+;;;                                 (r2::background-%mask bg) (cadr pm)))))
+;;;                  (values (r2::background-%pixmap bg)
+;;;                          (r2::background-%mask bg)))))) ))
 
 (defun ws/x11::x11-put-pixmap-tiled (drawable ggc pixmap mask x y w h &optional (xo 0) (yo 0))
   (cond ((null mask) ;; xxx
@@ -357,43 +360,45 @@
                ;; and xlib:with-gcontext also is broken!
                (setf (xlib:gcontext-clip-mask ggc) old-clip-mask))))))
 
-(defun x11-draw-background (document medium bg x y width height
-                            &optional (bix x) (biy y) (biwidth width) (biheight height))
-  (when bg
-    ;; #+NIL
-    ;; (unless (eql (background-color bg) :transparent)
-    ;;   (ws/x11::fill-rectangle* drawable gcontext
-    ;;                            (round x) (round y) 
-    ;;                            (max 0 (round width))
-    ;;                            (max 0 (round height))
-    ;;                            (background-color bg)) )
-    (unless (eql (r2::background-image bg) :none)
-      (multiple-value-bind (pixmap mask)
-          (background-pixmap+mask document (sheet-direct-mirror (medium-sheet medium)) bg)
-        #+emarsden2005-07-15
-        (print (list 'x11-draw-background pixmap mask))
-        (unless (eql pixmap :none)
-          (let* ((iw (xlib:drawable-width pixmap))
-                 (ih (xlib:drawable-height pixmap))
-                 (w (ecase (r2::background-repeat bg)
-                      ((:repeat :repeat-x) width)
-                      ((:no-repeat :repeat-y) iw)))
-                 (h (ecase (r2::background-repeat bg)
-                      ((:repeat :repeat-y) height)
-                      ((:no-repeat :repeat-x) ih))) )
-            (let ((hp (car (r2::background-position bg)))
-                  (vp (cdr (r2::background-position bg))))
-              (let ((xo (+ bix (resolve-background-position hp iw biwidth)))
-                    (yo (+ biy (resolve-background-position vp ih biheight))))
-                (medium-draw-pm3-tiled* medium pixmap mask
-                               (round (ecase (r2::background-repeat bg)
-                                        ((:repeat :repeat-x) x)
-                                        ((:no-repeat :repeat-y) (+ xo))))
-                               (round (ecase (r2::background-repeat bg)
-                                        ((:repeat :repeat-y) y)
-                                        ((:no-repeat :repeat-x) (+ yo))))
-                               (round w) (round h)
-                               (round (+ xo)) (round (+ yo)))))) ))) ))
+;; apparently unused  --dfl
+
+;;;(defun x11-draw-background (document medium bg x y width height
+;;;                            &optional (bix x) (biy y) (biwidth width) (biheight height))
+;;;  (when bg
+;;;    ;; #+NIL
+;;;    ;; (unless (eql (background-color bg) :transparent)
+;;;    ;;   (ws/x11::fill-rectangle* drawable gcontext
+;;;    ;;                            (round x) (round y) 
+;;;    ;;                            (max 0 (round width))
+;;;    ;;                            (max 0 (round height))
+;;;    ;;                            (background-color bg)) )
+;;;    (unless (eql (r2::background-image bg) :none)
+;;;      (multiple-value-bind (pixmap mask)
+;;;          (background-pixmap+mask document (sheet-direct-mirror (medium-sheet medium)) bg)
+;;;        #+emarsden2005-07-15
+;;;        (print (list 'x11-draw-background pixmap mask))
+;;;        (unless (eql pixmap :none)
+;;;          (let* ((iw (xlib:drawable-width pixmap))
+;;;                 (ih (xlib:drawable-height pixmap))
+;;;                 (w (ecase (r2::background-repeat bg)
+;;;                      ((:repeat :repeat-x) width)
+;;;                      ((:no-repeat :repeat-y) iw)))
+;;;                 (h (ecase (r2::background-repeat bg)
+;;;                      ((:repeat :repeat-y) height)
+;;;                      ((:no-repeat :repeat-x) ih))) )
+;;;            (let ((hp (car (r2::background-position bg)))
+;;;                  (vp (cdr (r2::background-position bg))))
+;;;              (let ((xo (+ bix (resolve-background-position hp iw biwidth)))
+;;;                    (yo (+ biy (resolve-background-position vp ih biheight))))
+;;;                (medium-draw-pm3-tiled* medium pixmap mask
+;;;                               (round (ecase (r2::background-repeat bg)
+;;;                                        ((:repeat :repeat-x) x)
+;;;                                        ((:no-repeat :repeat-y) (+ xo))))
+;;;                               (round (ecase (r2::background-repeat bg)
+;;;                                        ((:repeat :repeat-y) y)
+;;;                                        ((:no-repeat :repeat-x) (+ yo))))
+;;;                               (round w) (round h)
+;;;                               (round (+ xo)) (round (+ yo)))))) ))) ))
 
 ;;;; --------------------------------------------------------------------------------
 
@@ -406,8 +411,7 @@
    (actual-height :initarg :actual-height
                  :initform nil
                  :documentation "The actual (scaled) height of this image.")
-   (pixmap :initform nil)
-   (mask :initform nil)))
+   (design :initform nil)))
 
 (defmethod gui::deconstruct-robj ((self ro/img))
   ;; no deconstructor for now ...
@@ -459,60 +463,41 @@
 
 
 (defmethod medium-draw-ro* ((medium clim:medium) (self ro/img) x y)
-  (progn ;; ignore-errors                        ;xxx
-    (progn
-      (assert (realp x))
-      (assert (realp y))
-      (with-slots (aim pixmap mask actual-width actual-height) self
-        (when aim                       ;only draw something, if the image is already there.
-          ;; xxx
-          (let ((da (sheet-direct-mirror (medium-sheet medium))))
-            (when (and aim actual-width actual-height) ;xxx
-              (unless pixmap
-                (let ((r (clue-gui2::make-pixmap-from-aimage da aim
-                                                             (max 1 (round actual-width))
-                                                             (max 1 (round actual-height)))))
-                  (setf pixmap (car r)
-                        mask   (cadr r)))))
-            (when aim
-              (multiple-value-bind (x y) (transform-position
-                                          (sheet-device-transformation (medium-sheet medium))
-                                          x y)
-                (setf x (round x))
-                (setf y (round y))
-                (let ((gcontext (xlib:create-gcontext :drawable da)))
-                  (cond ((not (null mask))
-                         (xlib:with-gcontext (gcontext 
-                                              :clip-mask mask
-                                              :clip-x x
-                                              :clip-y (- y actual-height))
-                          (xlib:copy-area pixmap gcontext 0 0 actual-width actual-height
-                           da x (- y actual-height))) )
-                        (t
-                         (xlib:copy-area pixmap gcontext 0 0 actual-width actual-height
-                          da x (- y actual-height) ))))))))))))
+  (assert (realp x))
+  (assert (realp y))
+  (with-slots (aim design actual-width actual-height) self
+    (when aim				;only draw something, if the image is already there.
+      ;; xxx
+      (when (and actual-width actual-height (not design)) ;xxx
+	(setf design
+	      (clue-gui2::make-design-from-aimage medium
+						  aim
+						  (max 1 (round actual-width))
+						  (max 1 (round actual-height)))))
+      (climi::medium-draw-image-design* medium design x y))))
 
-#+NIL
-(climi::def-grecording draw-pm3-tiled (() pixmap mask x1 y1 w h x0 y0)
-                       (values x1 y1 (+ x1 w) (+ y1 h)))
-
-(defmethod medium-draw-pm3-tiled* (medium pixmap mask x1 y1 w h x0 y0)
-  (let* ((da (sheet-direct-mirror (medium-sheet medium)))
-         #+NIL
-         (pixmap+mask (clue-gui2::make-pixmap-from-aimage da aim
-                                                          (r2::aimage-width aim)
-                                                          (r2::aimage-height aim)))
-         #+NIL
-         (pixmap (first pixmap+mask))
-         #+NIL
-         (mask   (second pixmap+mask)))
-    (multiple-value-bind (x1 y1) (transform-position (sheet-device-transformation (medium-sheet medium))
-                                                     x1 y1)
-      (setf x1 (round x1))
-      (setf y1 (round y1))
-      ;;;
-      (let ((gcontext (xlib:create-gcontext :drawable da)))
-        (ws/x11::x11-put-pixmap-tiled da gcontext pixmap mask x1 y1 w h x0 y0) ))))
+;; apparently unused  --dfl
+;;;#+NIL
+;;;(climi::def-grecording draw-pm3-tiled (() pixmap mask x1 y1 w h x0 y0)
+;;;                       (values x1 y1 (+ x1 w) (+ y1 h)))
+;;;
+;;;(defmethod medium-draw-pm3-tiled* (medium pixmap mask x1 y1 w h x0 y0)
+;;;  (let* ((da (sheet-direct-mirror (medium-sheet medium)))
+;;;         #+NIL
+;;;         (pixmap+mask (clue-gui2::make-pixmap-from-aimage da aim
+;;;                                                          (r2::aimage-width aim)
+;;;                                                          (r2::aimage-height aim)))
+;;;         #+NIL
+;;;         (pixmap (first pixmap+mask))
+;;;         #+NIL
+;;;         (mask   (second pixmap+mask)))
+;;;    (multiple-value-bind (x1 y1) (transform-position (sheet-device-transformation (medium-sheet medium))
+;;;                                                     x1 y1)
+;;;      (setf x1 (round x1))
+;;;      (setf y1 (round y1))
+;;;      ;;;
+;;;      (let ((gcontext (xlib:create-gcontext :drawable da)))
+;;;        (ws/x11::x11-put-pixmap-tiled da gcontext pixmap mask x1 y1 w h x0 y0) ))))
 
 
 #+NIL

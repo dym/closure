@@ -480,31 +480,6 @@
 
 ;;;; ==========================================================================================
 
-(defun make-ximage-for-aimage (aimage depth translator)
-  #+EXCL (declare (:explain :calls))
-  (let* ((width (imagelib:aimage-width aimage))
-         (height (imagelib:aimage-height aimage))
-         (idata (imagelib:aimage-data aimage))
-	 ;; FIXME: this (and the :BITS-PER-PIXEL, below) is a hack on
-	 ;; top of a hack.  At some point in the past, XFree86 and/or
-	 ;; X.org decided that they would no longer support pixmaps
-	 ;; with 24 bpp, which seems to be what most AIMAGEs want to
-	 ;; be.  For now, force everything to a 32-bit pixmap.
-         (xdata (make-array (list height width) :element-type '(unsigned-byte 32)))
-         (ximage (xlib:create-image :width  width
-                                    :height height
-                                    :depth  depth
-				    :bits-per-pixel 32
-                                    :data   xdata)))
-    (declare (type (simple-array (unsigned-byte 32) (* *)) idata)
-             #+NIL(type (simple-array (unsigned-byte 8) (* *)) xdata)
-             )
-    (loop for x fixnum from 0 below width do
-      (loop for y fixnum from 0 below height do
-        (setf (aref xdata y x) 
-          (funcall translator x y (ldb (byte 24 0) (aref idata y x))))))
-    ximage))
-
 (defun ximage-translator** (window)
   (ximage-translator* (pixel-translator-code (xlib:window-colormap window))
                       (xlib:drawable-depth window)))
@@ -569,40 +544,6 @@
   (or (getf (colormap-plist (xlib:window-colormap window)) 'ximage-translator)
       (setf (getf (colormap-plist (xlib:window-colormap window)) 'ximage-translator)
         (compile nil (ximage-translator** window)))))
-
-#+NIL ;; not yet trusted
-(defun aimage->ximage (drawable aimage)
-  (funcall (ximage-translator drawable) aimage))
-
-(defun aimage->ximage (drawable aimage)
-  (make-ximage-for-aimage aimage
-                          (xlib:drawable-depth drawable) 
-                          (pixel-translator (xlib:window-colormap drawable))))
-
-(defun make-mask-from-aimage (drawable aim)
-  (let* ((width (imagelib:aimage-width aim))
-         (height (imagelib:aimage-height aim))
-         (bitmap (xlib:create-pixmap :drawable drawable
-                                     :width width 
-                                     :height height
-                                     :depth 1))
-         (gc (xlib:create-gcontext :drawable bitmap :foreground 1 :background 0))
-         (idata (imagelib:aimage-data aim))
-         (xdata (make-array (list height width) :element-type '(unsigned-byte 1)))
-         (im (xlib:create-image :width width
-                                :height height
-                                :depth 1
-                                :data xdata)) )
-    (dotimes (y width)
-      (dotimes (x height)
-        (if (> (aref idata x y) #x80000000)
-            (setf (aref xdata x y) 0)
-          (setf (aref xdata x y) 1))))
-    (unless (or (>= width 2048) (>= height 2048)) ;### CLX breaks here
-      (xlib:put-image bitmap gc im :src-x 0 :src-y 0 :x 0 :y 0 :width width :height height
-		      :bitmap-p nil))
-    (xlib:free-gcontext gc)
-    bitmap))
 
 ;;;; --------------------------------------------------------------------------
 ;;;;  colours
