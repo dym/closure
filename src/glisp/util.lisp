@@ -325,8 +325,7 @@
 ;;;;  Homebrew stream classes
 ;;;;
 
-;; I am really tired of standard Common Lisp streams and thier incompatible
-implementations.
+;; I am really tired of standard Common Lisp streams and thier incompatible implementations.
 
 ;; A gstream is an objects with obeys to the following protocol:
 
