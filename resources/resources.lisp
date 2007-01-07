@@ -36,7 +36,7 @@
 #+NIL  (defparameter *resources-base-directory*
     *load-truename*)
 
-(let ((load-truename *load-truename*))
+(let ((load-truename (load-time-value (or #.*compile-file-pathname* *load-pathname*))))
   (setf (url:url-logical-host-translator "closure")
         (lambda (url)
           (let ((res (url:copy-url url)))
