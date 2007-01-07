@@ -57,7 +57,7 @@
                   (skippy:color-rgb
                    (skippy:color-table-entry gif-color-table color-index))))
           (setf (aref aimage-data y x)
-9D                (dpb r (byte 8 0)
+                (dpb r (byte 8 0)
                      (dpb g (byte 8 8)
                           (dpb b (byte 8 16)
                                (dpb (or a 0) (byte 8 24) 0))))))))
