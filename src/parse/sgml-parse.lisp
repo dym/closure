@@ -961,9 +961,9 @@
    (sgml::find-element dtd name nil nil)))
 
 (defun foofoo (r)
-  (cond ((integerp r) (map 'rod #'char-code (prin1-to-string r)))
-        ((symbolp r)  (map 'rod #'char-code (princ-to-string r)))
-        ((stringp r)  (map 'rod #'char-code r))
+  (cond ((integerp r) (string-rod (prin1-to-string r)))
+        ((symbolp r)  (string-rod (princ-to-string r)))
+        ((stringp r)  (string-rod r))
         (t
          (error "foofoo: Hmm ~S ?!" r))))
 
