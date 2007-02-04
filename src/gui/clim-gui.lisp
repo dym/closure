@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.31  2007/02/04 15:10:01  dlichteblau
+;; Tabbed browsing.
+;;
 ;; Revision 1.30  2007/01/07 19:32:06  emarsden
 ;; Follow HTTP redirects (HTML-level redirects still not supported).
 ;;
@@ -182,14 +185,31 @@
 (defvar *back-history* nil)
 (defvar *forw-history* nil)
 
+(defun make-canvas (&key (height 600) (min-height 600))
+  (scrolling (:width 830
+		     :max-height 20000
+		     :scroll-bar :vertical
+		     :height height
+		     :min-height min-height)
+    (make-pane 'closure-pane
+	       :height 2000
+	       :width 800
+	       :display-time nil)))
+
+(defmacro canvasly (&rest spacereqs)
+  `(let ((tabs
+	  (clim-tab-layout:with-tab-layout
+	      ('clim-tab-layout:tab-page :name 'tab-layout)
+	    ("(Untitled)"
+	     (make-canvas ,@spacereqs)))))
+     (assert *frame*)
+     (setf (slot-value *frame* 'tabs) tabs)
+     tabs))
+
 (define-application-frame closure ()
-  ()
+  ((tabs))
   (:menu-bar menubar-command-table)
   (:panes
-   (canvas (make-pane 'closure-pane
-            :height 2000
-            :width 800
-            :display-time nil))
    (aux :application
     :height 300
     :width 300
@@ -229,9 +249,7 @@
    (default
        (vertically ()
          (spacing (:thickness 5)
-                  (scrolling (:width 830 :height 600 :min-height 400 :max-height 20000
-                              :scroll-bar :vertical)
-                    canvas))
+	   (canvasly :height 600 :min-height 400))
          (spacing (:thickness 5)
                   interactor)
          (horizontally (:height 80 :min-height 80 :max-height 80)
@@ -241,9 +259,7 @@
    (hidden-listener
        (vertically ()
          (spacing (:thickness 5)
-                  (scrolling (:width 830 :height 600 :min-height 600 :max-height 20000
-                              :scroll-bar :vertical)
-                    canvas))
+	   (canvasly :height 600 :min-height 600))
          (horizontally (:height 80 :min-height 80 :max-height 80)
            wholine
            2
@@ -254,8 +270,7 @@
          menu-bar
          (horizontally ()
            (vertically ()
-             (climi::scrolling (:width 830 :height 600 :min-height 400 :max-height 20000)
-                               canvas)) )
+	     (canvasly :height 600 :min-height 400)))
          (horizontally ()
            wholine
            2
@@ -279,7 +294,8 @@
 
 (make-command-table 'file-command-table
                     :errorp nil
-                    :menu '(("Quit" :command com-quit)))
+                    :menu '(("New Tab" :command com-new-tab)
+			    ("Quit" :command com-quit)))
 
 (make-command-table 'go-command-table
 		    :errorp nil
@@ -351,11 +367,22 @@
 (define-presentation-type r2::pt ())
 (define-presentation-type r2::hyper-link ())
 
+(defun scroller-child (scroller)
+  (car (sheet-children
+	(find-if (lambda (x) (typep x 'climi::viewport-pane))
+		 (sheet-children scroller)))))
+
+(defun current-page ()
+  (clim-tab-layout:tab-layout-enabled-page (slot-value *frame* 'tabs)))
+
+(defun current-pane ()
+  (scroller-child (clim-tab-layout:tab-page-pane (current-page))))
+
 ;; renders LHTML as per http://opensource.franz.com/xmlutils/xmlutils-dist/phtml.htm
 (defun render-lhtml (location lhtml)
   (with-simple-restart (forget "Just forget rendering this page.")
     (let* ((*package* (find-package :r2))
-           (*pane* (find-pane-named *frame* 'canvas))
+           (*pane* (current-pane))
            (*medium* (sheet-medium *pane*))
            (device (make-instance 'closure/clim-device::clim-device :medium *pane*))
            (doc (make-instance 'r2::document
@@ -380,6 +407,10 @@
 ;;;; Commands
 ;;;;
 
+(define-closure-command (com-remove-tab :name t)
+    ((page 'clim-tab-layout:tab-page :prompt "Tab page" :gesture :delete))
+  (clim-tab-layout:remove-page page))
+
 (define-closure-command (com-show-listener :name t) ()
   (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) t))
 
@@ -397,6 +428,14 @@
         *back-history* (cons url *back-history*))
   (let ((*standard-output* *trace-output*))
     (foo url)))
+
+(define-gesture-name :visit-in-new-tab :pointer-button-press (:middle))
+
+(define-closure-command (com-visit-url-in-new-tab :name t)
+    ((url 'url :gesture :visit-in-new-tab))
+  (com-new-tab)
+  (setf *pane* (current-pane))
+  (com-visit-url url))
 
 (define-closure-command (com-reflow :name t) ()
   (reflow))
@@ -437,6 +476,17 @@
 
 (define-closure-command (com-quit :name t :keystroke (#\q :control)) ()
   (frame-exit *application-frame*))
+
+(defvar *open-new-tabs-in-background* nil)
+
+(define-closure-command (com-new-tab :name t :keystroke (#\t :control)) ()
+  (with-look-and-feel-realization
+      ((frame-manager *application-frame*) *application-frame*)
+    (clim-tab-layout:add-page (make-instance 'clim-tab-layout:tab-page
+				:title "(Untitled)"
+				:pane (make-canvas))
+			      (slot-value *frame* 'tabs)
+			      (not *open-new-tabs-in-background*))))
 
 (defun make-google-search-url (string)
   (url:merge-url
@@ -574,7 +624,7 @@
            (unwind-protect
                 (progn
                   (setf *frame* (make-application-frame 'closure))
-                  (setf *pane*  (find-pane-named *frame* 'canvas))
+                  (setf *pane*  nil)
                   (run-frame-top-level *frame*))
              (ignore-errors (ws/netlib::commit-cache))
              (setf *closure-process* nil)))
@@ -598,7 +648,7 @@
      (lambda ()
        (with-simple-restart (forget "Just forget rendering this page.")
          (let* ((*package* (find-package :r2))
-                (*pane* (find-pane-named *frame* 'canvas)))
+                (*pane* (current-pane)))
            (with-sheet-medium (*medium* *pane*)
              (let ((device (make-instance 'closure/clim-device::clim-device :medium *pane*)))
                (setf (sheet-pointer-cursor *pane*) :busy)
@@ -635,6 +685,8 @@
                         600           ;xxx width
                         t             ;?
                         0)
+		       (setf (clim-tab-layout:tab-page-title (current-page))
+			     (renderer::document-title *current-document*))
                        (write-wholine (format nil "Title: ~A~%~@[Modified: ~A~]"
                                               (renderer::document-title *current-document*)
                                               (or (netlib::get-header-field header :last-modified)
@@ -656,7 +708,7 @@
      (lambda ()
        (with-simple-restart (forget "Just forget rendering this page.")
          (let ((*package* (find-package :r2))
-               (*pane* (find-pane-named *frame* 'canvas)))
+               (*pane* (current-pane)))
            (window-clear *pane*)
            (with-sheet-medium (*medium* *pane*)
              (write-status "Rendering ...")
@@ -717,7 +769,7 @@
 
 (define-closure-command (com-page-up :name t
                                      :keystroke :prior) ()
-  (let* ((pane (find-pane-named *frame* 'canvas))
+  (let* ((pane (current-pane))
          (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar))
          (current-y (gadget-value scrollbar))
          (window-height (bounding-rectangle-height (pane-viewport-region pane))))
@@ -725,7 +777,7 @@
 
 (define-closure-command (com-page-down :name t
                                        :keystroke :next) ()
-  (let* ((pane (find-pane-named *frame* 'canvas))
+  (let* ((pane (current-pane))
          (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar))
          (current-y (gadget-value scrollbar))
          (window-height (bounding-rectangle-height (pane-viewport-region pane))))
@@ -734,18 +786,18 @@
 
 (define-closure-command (com-beginning-of-page :name t
                                                :keystroke (:home :control)) ()
-  (let* ((pane (find-pane-named *frame* 'canvas))
+  (let* ((pane (current-pane))
          (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar)))
     (scroll-extent pane 0 (gadget-min-value scrollbar))))
 
 (define-closure-command (com-end-of-page :name t
                                          :keystroke (:end :control)) ()
-  (let* ((pane (find-pane-named *frame* 'canvas))
+  (let* ((pane (current-pane))
          (scrollbar (slot-value (pane-scroller pane) 'climi::vscrollbar)))
     (scroll-extent pane 0 (gadget-max-value scrollbar))))
 
 (define-closure-command (com-redraw :name t :keystroke (#\r :control)) ()
-  (let* ((*pane* (find-pane-named *frame* 'canvas)) )
+  (let* ((*pane* (current-pane)))
     (handle-repaint *pane* (sheet-region (pane-viewport *pane*))))
   (clim-backend:port-force-output (find-port)))
 
