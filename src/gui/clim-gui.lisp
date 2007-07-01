@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.33  2007/07/01 12:16:43  dlichteblau
+;; Patch by Christophe Rhodes on closure-devel <87ejk2sngi.fsf@cantab.net>
+;;
 ;; Revision 1.32  2007/06/30 14:00:04  dlichteblau
 ;; New argument new-process to run-closure, which can be disabled to run
 ;; closure in a "blocking" mode.  Needed for clbuild, which wants to (quit)
@@ -579,7 +582,7 @@
       (send-closure-command 'com-quit))))
 
 (defvar *closure-inited-p* nil)
-(defmethod clim:read-frame-command :before ((frame closure)
+(defmethod clim:run-frame-top-level :before ((frame closure)
                                                &key &allow-other-keys)
   (unless *closure-inited-p*
     (setf *closure-inited-p* t)))

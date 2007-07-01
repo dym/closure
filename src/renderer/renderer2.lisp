@@ -1196,7 +1196,7 @@ mounted floating boxen."
 (defun format-block (item x1 x2 ss before-markers #||# pos-vertical-margin neg-vertical-margin yy)
   (let (res)
     (setf (block-box-output-record item)
-          (clim:with-new-output-record (clim-user::*pane*) foo
+          (clim:with-new-output-record (clim-user::*pane*) #+nil foo
               (setf res
                     (multiple-value-list
                         (case (cooked-style-display (block-box-style item))
@@ -4983,6 +4983,9 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.20  2007/07/01 12:16:44  dlichteblau
+;; Patch by Christophe Rhodes on closure-devel <87ejk2sngi.fsf@cantab.net>
+;;
 ;; Revision 1.19  2007/01/05 23:10:33  emarsden
 ;; Fix rendering of preformatted content.
 ;;
