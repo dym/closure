@@ -157,7 +157,7 @@
     (let ((input nil))
       (unwind-protect 
           (progn
-            (setf input (lisp:make-pipe-input-stream "hostname"))
+            (setf input (ext:make-pipe-input-stream "hostname"))
             (ignore-errors (read-line input)))
         (when input
           (close input)))))
@@ -277,6 +277,6 @@
 #+CLISP
 (progn
   (defun process-block (whostate predicate &rest predicate-args)
-    (apply #'mp::process-wait whostate predicate predicate-args)))
+    (apply #'clim-sys:process-wait whostate predicate predicate-args)))
 
 

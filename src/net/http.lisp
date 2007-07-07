@@ -738,7 +738,7 @@
 
 #+CLISP
 (defun is-directory-p (pathname)
-  (ignore-errors (lisp:probe-directory pathname)))
+  (ignore-errors (ext:probe-directory pathname)))
 
 #+CMU
 (defun is-directory-p (pathname)
