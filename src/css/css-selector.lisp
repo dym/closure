@@ -149,7 +149,7 @@
 
 ;; Diese ganze explicite Unterscheidung zwischen Author/User/Default
 ;; ist mir etwas zu speziell. (grade bei !important wird das alles
-;; doch etwas merkwürdig!).
+;; doch etwas merkwuerdig!).
 
 (defun find-style (sheet element implicit-style 
                    &optional (origin 0) (p 0) 

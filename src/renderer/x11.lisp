@@ -68,7 +68,7 @@
             (getf (xlib:display-plist (xlib:colormap-display colormap))
                   'colormap-plisten)))))
 
-;; static color is merkwürdig, denn es
+;; static color is merkwuerdig, denn es
 ;; hat red/green/blue masken
 
 (defun real-bits-per-rgb (vi)
@@ -966,7 +966,7 @@
               (r2::font-desc-weight fd)
               (r2::font-desc-style fd)
               (r2::font-desc-charset fd))))
-    ;;Warum ist das wieder von 'dpi' abhängig? 
+    ;;Warum ist das wieder von 'dpi' abhaengig? 
     (with-slots (scale-font-desc-cache) device
       (or (gethash (list (hash-key fd) size) scale-font-desc-cache)
           (progn

@@ -187,7 +187,7 @@
 (defsubst sloopy-name-rune-p (char)
   (or (name-rune-p char)
       (rune= char #/%)
-      (rune= char #//)      ;manche schreiben ganze urls ohne Gänsefüßchen
+      (rune= char #//)      ;manche schreiben ganze urls ohne Gaensefuesschen
       (rune= char #/:)
       (rune= char #/~)
       (rune= char #/#)      ;farben werden auch gerne genommen
