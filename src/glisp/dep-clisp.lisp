@@ -28,8 +28,6 @@
 
 (in-package :CL-USER)
 
-(setq lisp:*load-paths* '(#P"./"))
-
 (defmacro glisp::with-timeout ((&rest ignore) &body body)
   (declare (ignore ignore))
   `(progn
@@ -46,8 +44,8 @@
                    (error "What is the string element type of the day?")))
          options))
 
-(defun glisp:run-unix-shell-command (command)
-  (lisp:shell command))
+(defun glisp::run-unix-shell-command (command)
+  (ext:shell command))
 
 (export 'glisp::getenv :glisp)
 (defun glisp::getenv (var)
