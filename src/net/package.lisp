@@ -30,7 +30,7 @@
 
 (defpackage :ws/netlib
   (:nicknames :netlib)
-  (:use :cl :glisp :url :runes)
+  (:use :cl :glisp :url :runes :closure-mime-types)
   (:export #:*options/connection-timeout*
            #:open-document
            #:with-open-document

@@ -401,8 +401,6 @@
 
 ;;; --------------------------------------------------------------------------------
 
-(defvar cl-user::*html-dtd* nil)
-
 (defun init-closure ()
   ;; Init general closure stuff
   #||
@@ -411,18 +409,18 @@
     (setf *ht* (slurp-patterns "resources/patterns/english.ptn"))
     (princ " done.") )
   ||#
-  (unless cl-user::*html-dtd*
+  (unless closure-html:*html-dtd*
     (cond 
      ;; xxx hack
      ((probe-file (compile-file-pathname "html-dtd.lisp"))
       (format T "~&;; Loading DTD ")
-      (setf cl-user::*html-dtd* (sgml::undump-dtd "html-dtd"))
+      (setf closure-html:*html-dtd* (sgml::undump-dtd "html-dtd"))
       (princ " done.")
       (finish-output))
      (t
       (format T "~&;; Parsing DTD ")
       (sgml:slurp-catalog (url:parse-url "file://closure/resources/dtd/catalog"))
-      (setf cl-user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
+      (setf closure-html:*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
       (princ " done.")
       (finish-output))))
 

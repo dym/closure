@@ -1,11 +1,11 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CL-USER; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: SGML; -*-
 ;;; ---------------------------------------------------------------------------
-;;;     Title: Package definition for the SGML parser
-;;;   Created: perhaps 1996
+;;;     Title: Protocol integration of PT
+;;;   Created: Somewhen in 1996
 ;;;    Author: Gilbert Baumann <gilbert@base-engineering.com>
 ;;;   License: MIT style (see below)
 ;;; ---------------------------------------------------------------------------
-;;;  (c) copyright 2005 by Gilbert Baumann
+;;;  (c) copyright 1996-1999 by Gilbert Baumann
 
 ;;;  Permission is hereby granted, free of charge, to any person obtaining
 ;;;  a copy of this software and associated documentation files (the
@@ -26,32 +26,38 @@
 ;;;  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(in-package :CL-USER)
+;; Changes
+;;
+;;  When        Who     What
+;; ----------------------------------------------------------------------------
+;;  1999-08-24  GB      - PT structure: spend PLIST slot
+;;  1999-08-24  GB      - PT-ACCESS, PT-PATH: new functions
+;;                      - REMOVE-PT, DELETE-PT: new functions
+;;                      - ANCESTORP: new function
+;;
 
-(defpackage :sgml
-  (:use :cl :glisp :runes)
-  (:export #:SGML-PARSE 
-           #:PPT 
-           #:SGML-UNPARSE 
-           #:PARSE-DTD
-           #:*OPTIONS/PARSER-SILENT-P*
-           #:PT-NAME 
-           #:PT-CHILDREN 
-           #:PT-PARENT 
-           #:PT-ATTRS 
-           #:SLURP-CATALOG
-           ;; in pt-utils:
-           #:map-pt
-           #:pt-cdata
-           #:pt-attr
-           #:pt-root
-           #:pt-root-property
-           #:gi
-           #:flat-find-element
-           #:flat-find-elements
-           #:pt-full-name-path
-           #:lhtml->pt
-           ;;
-           #:html-parse-file
-           ))
+(in-package :r2)
 
+
+(defmethod closure-protocol:element-p ((object sgml:pt))
+  t)
+
+(defmethod closure-protocol:element-parent ((element sgml:pt))
+  (sgml:pt-parent element))
+
+(defmethod closure-protocol:element-children ((element sgml:pt))
+  (sgml:pt-children element))
+
+(defmethod closure-protocol:element-attribute
+    ((element sgml:pt) attribute-name)
+  (getf (sgml:pt-attrs element) attribute-name))
+
+(defmethod closure-protocol:element-gi ((element sgml:pt))
+  (sgml:gi element))
+
+(defmethod closure-protocol:text-element-p ((element sgml:pt))
+  (eql (sgml:gi element) :pcdata))
+
+(defmethod closure-protocol:element-text ((element sgml:pt))
+  (assert (eql (sgml:gi element) :pcdata))
+  (sgml:pt-attrs element))

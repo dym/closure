@@ -60,9 +60,11 @@
 			       (make-pathname :name nil :type nil
 					      :defaults *load-truename*))
     :default-component-class closure-source-file
-    :depends-on (:cxml ;; uncomment this if we actually need gray streams:
-		       ;; :trivial-gray-streams
-		       #+sbcl :sb-bsd-sockets)
+    :depends-on (:cxml
+		 :closure-html
+		 ;; uncomment this if we actually need gray streams:
+		 ;; :trivial-gray-streams
+		 #+sbcl :sb-bsd-sockets)
     :components
     ((:file dependent
 	    :pathname
@@ -128,38 +130,15 @@
 
 	       ;; Libraries
 
-	       ;; CLEX and LALR
-	       
-	       (:module clex
-			:pathname "util/"
-			:components
-			((:file "clex") ))
-               
-	       (:module lalr
-			:pathname "util/"
-			:components
-			((:file "lalr") ))
-
 	       ;; Networking stuff
      
 	       (:module net
 			:components
 			((:file "package"       :depends-on ("url"))
 			 (:file "common-parse"  :depends-on ("package"))
-			 (:file "mime"          :depends-on ("package"))
 			 (:file "url"           :depends-on ())
 			 (:file "http"          :depends-on ("package" "url"))
 			 (:file "ftp"           :depends-on ("package" "url")) ))
-
-	       ;; The HTML parser
-     
-	       (:module parse
-			:depends-on (clex lalr)
-			:components
-			((:file "package")
-			 (:file "pt"              :depends-on ("package"))
-			 (:file "sgml-dtd"        :depends-on ("package"))
-			 (:file "sgml-parse"      :depends-on ("package" "sgml-dtd" "pt")) ))
 
 	       ;; More Random Utilities
      
@@ -189,6 +168,8 @@
 			:components
 			(
 			 (:file "package")
+
+			 (:file "pt")
 
 			 (:file "device") ;Declaration of the device abstraction
 			 (:file "fonts")	;Font Databases

@@ -53,10 +53,3 @@
 (setf r2::*default-style-sheet* 
       (css::parse-style-sheet-from-url (url:parse-url "file://closure/resources/css/default.css")
                                        :name "Closure Default Style Sheet"))
-
-(format T "~&;; Parsing DTD~% ")
-(sgml:slurp-catalog (url:parse-url "file://closure/resources/dtd/catalog"))
-(setf cl-user::*html-dtd* (sgml:parse-dtd '(:public "-//W3C//DTD HTML 4.0 Frameset//EN")))
-(format T "~&;; done~%")
-
-
