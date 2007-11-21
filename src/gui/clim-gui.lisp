@@ -28,6 +28,10 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.34  2007/11/21 23:47:24  dlichteblau
+;; Renamed the command `Visit Url In New Tab' to just `Visit In New Tab' so that
+;; plain `Visit Url' followed by SPC in the interactor works again.
+;;
 ;; Revision 1.33  2007/07/01 12:16:43  dlichteblau
 ;; Patch by Christophe Rhodes on closure-devel <87ejk2sngi.fsf@cantab.net>
 ;;
@@ -439,7 +443,7 @@
 
 (define-gesture-name :visit-in-new-tab :pointer-button-press (:middle))
 
-(define-closure-command (com-visit-url-in-new-tab :name t)
+(define-closure-command (com-visit-in-new-tab :name t)
     ((url 'url :gesture :visit-in-new-tab))
   (com-new-tab)
   (setf *pane* (current-pane))
