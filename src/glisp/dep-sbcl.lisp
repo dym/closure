@@ -26,6 +26,8 @@
 ;;;  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+(in-package :cl-user)
+
 (defun glisp::read-byte-sequence (&rest ap)
   (apply #'read-sequence ap))
 
