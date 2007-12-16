@@ -117,7 +117,8 @@
   width
   height
   design
-  refcount)
+  refcount
+  medium)
 
 (defun make-design-from-aimage (medium aimage width height)
   (dolist (k *pixmap-cache*
@@ -137,7 +138,8 @@
               res))
     (when (and (eq (pce-aimage k) aimage)
                (eql (pce-width k) width)
-               (eql (pce-height k) height))
+               (eql (pce-height k) height)
+               (eql (pce-medium k) medium))
       (when *debug-pixmap-cache-p*
         (format T "~&;; ++ ~A ~Dx~D "
                 (getf (imagelib:aimage-plist aimage) :url)
