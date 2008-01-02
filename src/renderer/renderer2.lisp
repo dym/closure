@@ -450,8 +450,8 @@ used by the table renderer.")
                                                          (open-chunk-dy chunk))
                                                  )))
                                   (when (eql pass 1)
-                                    (clim:draw-text* clim-user::*pane* q x y))
-                                  (incf x (clim:text-size clim-user::*pane* q))))
+                                    (clim:draw-text* clim-gui:*pane* q x y))
+                                  (incf x (clim:text-size clim-gui:*pane* q))))
                               (push dy ys)
                               (setf dy (open-chunk-dy chunk))
                               (push (bounding-chunk-style chunk) ss)
@@ -466,10 +466,10 @@ used by the table renderer.")
                                 (let (p q res.text-seen-p)
                                   (cond (link
                                          (clim:with-output-as-presentation
-                                             (clim-user::*pane*
+                                             (clim-gui:*pane*
                                               (url:unparse-url
                                                (hyper-link-url (imap-area-link link)))
-                                              'clim-user::url
+                                              'clim-gui:url
                                               :record-type 'link-presentation)
                                            (setf (values p q res.text-seen-p)
                                                  (walk chunks))))
@@ -485,8 +485,8 @@ used by the table renderer.")
                                                      (chunk-debug-name q)
                                                      "")))
                                         (when (eql pass 1)
-                                          (clim:draw-text* clim-user::*pane* q x y))
-                                        (incf x (clim:text-size clim-user::*pane* q))
+                                          (clim:draw-text* clim-gui:*pane* q x y))
+                                        (incf x (clim:text-size clim-gui:*pane* q))
                                         )))
 
                                   (pop ss)
@@ -498,7 +498,7 @@ used by the table renderer.")
                                       ;; replaced objects are different to dimensions of regular
                                       ;; inline boxen.
                                       (cond (replaced-object-p
-                                             (draw-box-decoration clim-user::*pane*
+                                             (draw-box-decoration clim-gui:*pane*
                                                                      x1 (- (+ y dy) (open-chunk-height oc)
                                                                            (cooked-style-padding-top (bounding-chunk-style oc))
                                                                            (- (cooked-style-padding-top (bounding-chunk-style oc)))
@@ -514,7 +514,7 @@ used by the table renderer.")
                                                                      :right-halfp (not (bounding-chunk-halfp q))
                                                                      ))
                                             (t
-                                             (draw-box-decoration clim-user::*pane*
+                                             (draw-box-decoration clim-gui:*pane*
                                                                      x1 (- (+ y dy) (open-chunk-height oc)
                                                                            (cooked-style-padding-top (bounding-chunk-style oc)))
                                                                      x  (+ (+ y dy) (open-chunk-depth oc)
@@ -541,9 +541,9 @@ used by the table renderer.")
                             (setf text-seen-p t)
                             (when (and ss (car ss))
                               (when (eql pass 1)
-                                (setf (clim:medium-ink clim-user::*medium*)
+                                (setf (clim:medium-ink clim-gui:*medium*)
                                       (css-color-ink (cooked-style-color (black-chunk-style chunk))))
-                                (clim-draw-runes* clim-user::*pane*
+                                (clim-draw-runes* clim-gui:*pane*
                                                  x (+ dy y)
                                                  (black-chunk-data chunk)
                                                  0 (length (black-chunk-data chunk))
@@ -554,7 +554,7 @@ used by the table renderer.")
                             (let ((ro (replaced-object-chunk-object chunk)))
                               (when (eql pass 1)
                                 (closure/clim-device::draw-ro*
-                                 clim-user::*pane*
+                                 clim-gui:*pane*
                                  ro x (+ dy y)))
                               (incf x (chunk-width chunk))) )))))
                    ;;
@@ -1196,7 +1196,7 @@ mounted floating boxen."
 (defun format-block (item x1 x2 ss before-markers #||# pos-vertical-margin neg-vertical-margin yy)
   (let (res)
     (setf (block-box-output-record item)
-          (clim:with-new-output-record (clim-user::*pane*) #+nil foo
+          (clim:with-new-output-record (clim-gui:*pane*) #+nil foo
               (setf res
                     (multiple-value-list
                         (case (cooked-style-display (block-box-style item))
@@ -1236,7 +1236,7 @@ mounted floating boxen."
          (yy0 nil)      ;the inner top padding edge
                         ; NIL initially to indicate that we do not know it for now.
          (bg-record
-          (clim:with-new-output-record (clim-user::*pane*)
+          (clim:with-new-output-record (clim-gui:*pane*)
             )))
 
     ;; remember the output record of the decoration
@@ -1350,7 +1350,7 @@ mounted floating boxen."
                                         before-markers))))))
 
                  (setf (para-box-output-record item)
-                       (clim:with-new-output-record (clim-user::*pane*)
+                       (clim:with-new-output-record (clim-gui:*pane*)
                          (setf (values pos-vertical-margin neg-vertical-margin x1 x2 yy ss block-style)
                                (funcall (para-box-genesis item)))))
 
@@ -1461,9 +1461,9 @@ mounted floating boxen."
                 (minf neg-vertical-margin bm)))
 
           ;;
-          (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
+          (clim:with-output-recording-options (clim-gui:*pane* :record t :draw nil)
             (let ((new-record
-                   (clim:with-new-output-record (clim-user::*pane*)
+                   (clim:with-new-output-record (clim-gui:*pane*)
                      ;;
                      (multiple-value-bind (x1 y1 x2 y2)
                          (values (- x1 pl) (+ yy0
@@ -1472,7 +1472,7 @@ mounted floating boxen."
                                  (+ x2 pr) (- yy
                                               (cooked-style-border-bottom-width s)
                                               ))
-                       (draw-box-decoration clim-user::*pane* x1 y1 x2 y2 block-style)
+                       (draw-box-decoration clim-gui:*pane* x1 y1 x2 y2 block-style)
                        (incf y1 (cooked-style-padding-top s))
                        (decf y2 (cooked-style-padding-bottom s))
                        (when (realp (cooked-style-height s))
@@ -1481,7 +1481,7 @@ mounted floating boxen."
                            (error "Fubar")))
                        #+NIL
                        (unless (or (= x1 x2) (= y1 y2))
-                         (clim:draw-rectangle* clim-user::*pane* x1 y1 x2 y2
+                         (clim:draw-rectangle* clim-gui:*pane* x1 y1 x2 y2
                                                :ink clim:+red+
                                                :filled nil))
                        )
@@ -2033,7 +2033,7 @@ border-spacing between the spaned columns is included."
                       (values x1 (+ x1 actual-width))))))
 
 
-           (let ((bg-record (clim:with-new-output-record (clim-user::*pane*))))
+           (let ((bg-record (clim:with-new-output-record (clim-gui:*pane*))))
              (setf (table-decoration-output-record table) bg-record)
              (let ((yyy yy)
                    (dangling-cells nil)) ;a list of (rowspan total-rowspan cell) pairs of cells whose row span
@@ -2083,7 +2083,7 @@ border-spacing between the spaned columns is included."
                                        (unless (or (= x1 (+ x1 w))
                                                    (= yyy yy))
                                          #-NIL
-                                         (clim:draw-rectangle* clim-user::*pane*
+                                         (clim:draw-rectangle* clim-gui:*pane*
                                                                x1 yyy (+ x1 w) yy
                                                                :ink (elt *table-depth-color*
                                                                          (mod *table-depth* (length *table-depth-color*)))
@@ -2191,9 +2191,9 @@ border-spacing between the spaned columns is included."
                                   (clim:clear-output-record bg-record)
                                   (multiple-value-bind (xx1 xx2) (table-column-coordinates table column-widths ci (table-cell-colspan cell))
                                     (let ((new-record
-                                           (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
-                                             (clim:with-new-output-record (clim-user::*pane*)
-                                               (draw-box-decoration clim-user::*pane* (+ x1 xx1) y1 (+ x1 xx2) y2
+                                           (clim:with-output-recording-options (clim-gui:*pane* :record t :draw nil)
+                                             (clim:with-new-output-record (clim-gui:*pane*)
+                                               (draw-box-decoration clim-gui:*pane* (+ x1 xx1) y1 (+ x1 xx2) y2
                                                                        (block-box-style (table-cell-content cell)))))))
                                       (clim:delete-output-record new-record (clim:output-record-parent new-record))
                                       (clim:add-output-record new-record bg-record)))))))
@@ -2205,9 +2205,9 @@ border-spacing between the spaned columns is included."
                         (x1 x1)
                         (x2 x2))
                    (let ((new-record
-                          (clim:with-output-recording-options (clim-user::*pane* :record t :draw nil)
-                            (clim:with-new-output-record (clim-user::*pane*)
-                              (draw-box-decoration clim-user::*pane* x1 y1 x2 y2
+                          (clim:with-output-recording-options (clim-gui:*pane* :record t :draw nil)
+                            (clim:with-new-output-record (clim-gui:*pane*)
+                              (draw-box-decoration clim-gui:*pane* x1 y1 x2 y2
                                                       (table-style table))))))
                      (clim:delete-output-record new-record (clim:output-record-parent new-record))
                      (clim:add-output-record new-record bg-record)))
@@ -2224,7 +2224,7 @@ border-spacing between the spaned columns is included."
                                    (multiple-value-bind (x1 x2) (table-column-coordinates table column-widths j)
                                      (let* (
                                             (y1 (+ yy (loop for k below i sum (elt row-heights k)))))
-                                       (clim:draw-line* clim-user::*pane*
+                                       (clim:draw-line* clim-gui:*pane*
                                                         x1 y1 x2 y1
                                                         :ink (ws/x11::parse-x11-color color)
                                                         :line-thickness width)))))))
@@ -2238,7 +2238,7 @@ border-spacing between the spaned columns is included."
                                    (let* ((y1 (+ yy (loop for k below i sum (elt row-heights k))))
                                           (y2 (+ y1 (elt row-heights i)))
                                           (x1 (+ x1 (loop for k below j sum (elt column-widths k)))))
-                                     (clim:draw-line* clim-user::*pane*
+                                     (clim:draw-line* clim-gui:*pane*
                                                       x1 y1 x1 y2
                                                       :ink (ws/x11::parse-x11-color color)
                                                       :line-thickness width)))))) )
@@ -4983,6 +4983,11 @@ border-spacing between the spaned columns is included."
 
 
 ;; $Log$
+;; Revision 1.21  2008/01/02 08:54:12  thenriksen
+;; Created a new package, CLIM-GUI instead of putting everything in
+;; CLIM-USER. Also removed some stale code from clim-gui.lisp. Perhaps
+;; package prefixes would also be a good idea.
+;;
 ;; Revision 1.20  2007/07/01 12:16:44  dlichteblau
 ;; Patch by Christophe Rhodes on closure-devel <87ejk2sngi.fsf@cantab.net>
 ;;

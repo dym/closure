@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-USER; -*-
+;;; -*- Mode: Lisp; Syntax: Common-Lisp; Package: CLIM-GUI; -*-
 ;;; ---------------------------------------------------------------------------
 ;;;     Title: CLIM GUI
 ;;;   Created: 2002-07-22
@@ -28,6 +28,11 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.35  2008/01/02 08:54:12  thenriksen
+;; Created a new package, CLIM-GUI instead of putting everything in
+;; CLIM-USER. Also removed some stale code from clim-gui.lisp. Perhaps
+;; package prefixes would also be a good idea.
+;;
 ;; Revision 1.34  2007/11/21 23:47:24  dlichteblau
 ;; Renamed the command `Visit Url In New Tab' to just `Visit In New Tab' so that
 ;; plain `Visit Url' followed by SPC in the interactor works again.
@@ -176,14 +181,16 @@
 ;; imported sources
 ;;
 
-(in-package :CLIM-USER)
-(use-package :clim)
+(in-package :clim-gui)
 
 ;;;;;;;
 
-(defvar *medium*)
-(defvar *frame*)
-(defvar *pane*)
+(defvar *medium* nil
+  "The medium of the pane of the running Closure instance.")
+(defvar *frame* nil
+  "The frame of the running Closure instance.")
+(defvar *pane* nil
+  "The pane of the running Closure instance.")
 
 (defvar *initial-url* nil)
 
@@ -222,17 +229,6 @@
   ((tabs))
   (:menu-bar menubar-command-table)
   (:panes
-   (aux :application
-    :height 300
-    :width 300
-    :min-width 100
-    :min-height 100
-    :max-width 300
-    :max-height 20000
-    :incremental-redisplay t
-    :double-buffering t
-    :display-function 'aux-display
-    :display-time :command-loop)
    (status :pointer-documentation
     :text-style (make-text-style :sans-serif :roman :normal)
     :scroll-bar nil
@@ -254,9 +250,7 @@
     :height 25
     :text-style (make-text-style :sans-serif :roman 10)
     :foreground +white+
-    :background +black+)
-   ;;(menu-bar (climi::make-menu-bar 'menubar-command-table :height 25))
-   )
+    :background +black+))
   (:layouts
    (default
        (vertically ()
@@ -275,20 +269,7 @@
          (horizontally (:height 80 :min-height 80 :max-height 80)
            wholine
            2
-           (200 status))))
-   #+NIL
-   (hidden-listener
-       (vertically ()
-         menu-bar
-         (horizontally ()
-           (vertically ()
-	     (canvasly :height 600 :min-height 400)))
-         (horizontally ()
-           wholine
-           2
-           (200 status)))))
-  ;; (:top-level (closure-frame-top-level . nil))
-  )
+           (200 status))))))
 
 
 (make-command-table 'menubar-command-table

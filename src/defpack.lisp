@@ -195,6 +195,13 @@
    #:option-menu-option-group-children
    ))
 
+(defpackage :clim-gui
+  (:use :clim-lisp :clim)
+  (:export
+   #:*medium*
+   #:*frame*
+   #:*pane*
+   #:url))
 
 (defpackage :gtk-gui (:use :cl :glisp :runes))
 
