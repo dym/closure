@@ -28,6 +28,11 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.36  2008/01/02 09:10:00  thenriksen
+;; If we get an URI with no protocol specified, add http:// to it and
+;; reparse. This allows (closure:visit "planet.lisp.org"), though still
+;; not (closure:visit #u"planet.lisp.org").
+;;
 ;; Revision 1.35  2008/01/02 08:54:12  thenriksen
 ;; Created a new package, CLIM-GUI instead of putting everything in
 ;; CLIM-USER. Also removed some stale code from clim-gui.lisp. Perhaps
@@ -538,7 +543,11 @@
 
 (defun parse-url* (url)
   (etypecase url
-    (string (url:parse-url url))
+    (string
+     (let ((parsed-url (url:parse-url url)))
+       (if (url:url-protocol parsed-url)
+           parsed-url
+           (parse-url* (concatenate 'string "http://" url)))))
     (url:url url)))
 
 (defun send-closure-command (command &rest args)
