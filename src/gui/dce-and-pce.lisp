@@ -149,8 +149,8 @@
       (return (pce-design k)))))
 
 (defun really-make-design-from-aimage (medium aimage width height)
-  (climi::make-rgb-image-design medium
-				(imagelib::aimage-rgb-image
+  (declare (ignore medium))
+  (climi::make-rgb-image-design (imagelib::aimage-rgb-image
 				 (imagelib:scale-aimage aimage width height))))
 
 (defun reset-caches ()
