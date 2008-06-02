@@ -28,6 +28,9 @@
 ;;;  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ;; $Log$
+;; Revision 1.37  2008/06/02 21:39:28  dlichteblau
+;; removed dependency on clim-clx
+;;
 ;; Revision 1.36  2008/01/02 09:10:00  thenriksen
 ;; If we get an URI with no protocol specified, add http:// to it and
 ;; reparse. This allows (closure:visit "planet.lisp.org"), though still
@@ -610,14 +613,18 @@
   (setf climi::*3d-normal-color* (make-gray-color .75))
   (setf climi::*3d-light-color*  (make-gray-color .92))
   (setf climi::*3d-inner-color*  (make-gray-color .65))
-  (setf clim-clx::*clx-text-sizes*
-        '(:normal 12
-          :tiny 8
-          :very-small 10
-          :small 10
-          :large 14
-          :very-large 18
-          :huge 24))
+  ;; If this is necessary, it should be done in a portable way, without
+  ;; hardcoding backend data.  (Ideally, it should be a configuration option
+  ;; determined by the user.)  I am commenting it out, because it is the
+  ;; last dependency on CLIM-CLX that is left.  --dfl, June 2008
+;;;   (setf clim-clx::*clx-text-sizes*
+;;;         '(:normal 12
+;;;           :tiny 8
+;;;           :very-small 10
+;;;           :small 10
+;;;           :large 14
+;;;           :very-large 18
+;;;           :huge 24))
   (gui::init-closure)
   ;;
   (flet ((run-frame ()

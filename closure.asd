@@ -86,7 +86,6 @@
 
 (asdf:defsystem closure
     :depends-on (:mcclim
-                 :clim-clx
                  :glisp
 		 :bordeaux-threads
 		 :trivial-sockets
