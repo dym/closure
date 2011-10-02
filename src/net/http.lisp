@@ -322,10 +322,10 @@
     (values
      (cl-byte-stream->gstream
       (if proxyp
-	  (trivial-sockets:open-stream *http-proxy-host*
+	  (iolib.trivial-sockets:open-stream *http-proxy-host*
 				       *http-proxy-port*
 				       :element-type '(unsigned-byte 8))
-	  (trivial-sockets:open-stream host
+	  (iolib.trivial-sockets:open-stream host
 				       port
 				       :element-type '(unsigned-byte 8))))
      proxyp)))

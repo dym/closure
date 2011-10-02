@@ -256,7 +256,7 @@
      
 (defun g/open-inet-socket (host port)
   (cl-byte-stream->gstream
-   (trivial-sockets:open-stream host port :element-type '(unsigned-byte 8))))
+   (iolib.trivial-sockets:open-stream host port :element-type '(unsigned-byte 8))))
 
 (defmethod ftp/initiate-connection ((self ftp-connection))
   (with-slots (io host port) self

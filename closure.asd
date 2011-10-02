@@ -6,8 +6,8 @@
 
 ;;; Random early Lisp Implementation-specific fix ups:
 
-(eval-when (compile eval load)
-  (pushnew :DEBUG-CLOSURE *features*))
+;(eval-when (compile eval load)
+;  (pushnew :DEBUG-CLOSURE *features*))
 
 ;;;;
 ;;;; Optimization levels:
@@ -56,9 +56,7 @@
 
 (defpackage :glisp (:use))
 (asdf:defsystem glisp
-    :pathname (merge-pathnames "src/glisp/"
-			       (make-pathname :name nil :type nil
-					      :defaults *load-truename*))
+    :pathname "src/glisp/"
     :default-component-class closure-source-file
     :depends-on (:cxml
 		 :closure-html
@@ -88,7 +86,7 @@
     :depends-on (:mcclim
                  :glisp
 		 :bordeaux-threads
-		 :trivial-sockets
+		 :iolib.trivial-sockets
 		 :zip
 		 :flexi-streams
                  :skippy)
