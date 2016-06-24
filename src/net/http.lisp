@@ -139,7 +139,8 @@
        (let ((toks (split-by-member '(#\space #\tab #\newline #\return #\- #\,) string
                                     :nuke-empty-p t))
              day month year time)
-         (cond ((and (setq day (maybe-parse-day (elt toks 1)))
+         (cond ((and (>= (length toks) 4)
+		     (setq day (maybe-parse-day (elt toks 1)))
                      (setq month (maybe-parse-month (elt toks 2)))
                      (setq year (maybe-parse-year (elt toks 3)))
                      (setq time (maybe-parse-time (elt toks 4))))
@@ -195,7 +196,7 @@
 
 
 ;;; ---- basic http protocol ------------------------------------------------------------------
-
+#+nil
 (defun http-send-request-line (sink method uri http-version)
   (g/write-string method sink)
   (g/write-char #\space sink)
@@ -204,7 +205,7 @@
   (g/write-string http-version sink)
   (g/write-byte 13 sink)
   (g/write-byte 10 sink))
-
+#+nil
 (defun http-send-request-header (sink header)
   (dolist (k header)
     (g/write-string (car k) sink)
@@ -213,13 +214,13 @@
     (g/write-string (cdr k) sink)
     (g/write-byte 13 sink)
     (g/write-byte 10 sink)))
-
+#+nil
 (defun http-send-request (sink method uri http-version header)
   (http-send-request-line sink method uri http-version)
   (http-send-request-header sink (cons (cons "User-Agent" *user-agent*) header))
   (g/write-byte 13 sink)
   (g/write-byte 10 sink))
-
+#+nil
 (defun read-response-line (input)
   (finish-output (slot-value input 'glisp:cl-stream))
   (let ((res (g/read-line* input)))
@@ -228,7 +229,7 @@
        (format *http-trace-output* "~%;; <-- ~A." res)
        (finish-output *http-trace-output*)))
     (parse-response-line res)))
-
+#+nil
 (defun parse-response-line (string)
   (let* ((p0 (position #\space string))
          (p1 (position #\space string :start (+ p0 1))))
@@ -237,7 +238,7 @@
     (values (string-upcase (subseq string 0 p0))
             (parse-integer string :junk-allowed nil :start (+ 1 p0) :end p1)
             (subseq string (+ 1 p1)))))
-
+#+nil
 (defun make-http-request (io method uri http-version header &optional data)
   ;; -> version code explanation header
   (http-send-request io method uri http-version header)
@@ -264,7 +265,7 @@
   (multiple-value-bind (version code explanation) (read-response-line io)
     (values version code explanation
             (read-response-header io))))
-
+#+nil
 (defun read-response-header (input)
   (let ((res nil))
     (do ((line (g/read-line* input) (g/read-line* input)))
@@ -304,7 +305,7 @@
 	  (url:url-password url) nil
 	  (url:url-anchor url) nil)
     (url:unparse-url url)))
-
+#+nil
 (defun open-socket-for-http (url)
   "This is the basic switch to decide whether to use a proxy and which proxy to use."
   ;; -> io proxyp
@@ -330,6 +331,21 @@
 				       :element-type '(unsigned-byte 8))))
      proxyp)))
 
+(defun http-make-request (method url header post-data)
+  (assert (eq header nil))
+  (assert (eq post-data nil))
+
+	
+  (multiple-value-bind (body-or-stream status-code headers uri stream must-close reason-phrase)
+      (drakma:http-request (url:unparse-url url) :want-stream t)
+    (let ((io body-or-stream)
+	  (protocol-version "HTTP/1.1")
+	  (response-code status-code)
+	  (response-message reason-phrase)
+	  (response-header headers))
+      (values io protocol-version response-code response-message response-header))))
+  
+#+nil
 (defun http-make-request (method url header post-data)
   "Makes a single HTTP request for the URL url;
    Returns: io protocol-version response-code response-message response-header."
@@ -593,7 +609,7 @@
 
 (defmethod g/read-byte ((stream http-stream) &optional (eof-error-p t) eof-value)
   (with-slots (input eof-seen-p buffer cache-p) stream
-    (let ((ch (g/read-byte input nil :eof)))
+    (let ((ch (read-byte input nil :eof)))
       (cond ((eq ch :eof)
              (setf eof-seen-p t)
              (when eof-error-p
@@ -608,12 +624,12 @@
   (with-slots (input buffer cache-p) stream
     (when cache-p
       (decf (fill-pointer buffer)))
-    (g/unread-byte byte input)))
+    (unread-byte byte input)))
 
 (defmethod g/read-byte-sequence (sequence (stream http-stream) 
                                  &key (start 0) (end (length sequence)))
   (with-slots (input buffer eof-seen-p cache-p) stream
-    (let ((n (g/read-byte-sequence sequence input :start start :end end)))
+    (let ((n (read-sequence sequence input :start start :end end)))
       (when (= start n)
         (setf eof-seen-p t))
       (when cache-p
@@ -628,9 +644,12 @@
 (defmethod g/finish-output ((stream http-stream))
   nil)
 
+(defmethod g/close ((stream flexi-streams:flexi-io-stream) &key abort)
+  (close stream :abort abort))
+  
 (defmethod g/close ((stream http-stream) &key abort)
   (with-slots (cache-p eof-seen-p header url buffer input my-expires) stream
-    (g/close input :abort abort)
+    (close input :abort abort)
     (when (and (not abort) cache-p eof-seen-p)
       (let ((filename (invent-cache-filename (http-cache)))
             (filetype nil))

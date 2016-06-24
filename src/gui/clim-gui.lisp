@@ -237,13 +237,15 @@
   ((tabs))
   (:menu-bar menubar-command-table)
   (:panes
+   (canvas (canvasly))
    (status :pointer-documentation
     :text-style (make-text-style :sans-serif :roman :normal)
     :scroll-bar nil
-    :height 20
-    :min-height 20
-    :max-height 20
-    :width 300
+    ;;:height 20
+    ;;:min-height 20
+    ;;:max-height 20
+    ;;:width 400
+    :end-of-line-action :wrap
     :background +black+
     :foreground +white+)
    (interactor
@@ -251,33 +253,37 @@
     :foreground +black+
     :background (make-rgb-color 1 1 7/8)
     :text-style (make-text-style :sans-serif nil :normal)
-    :height 50 :min-height 50 :max-height 50
-    :scroll-bars t :border nil)
+    :vertical-spacing 4
+    ;;:height 150 :min-height 150 :max-height 150
+    :scroll-bars t)
    (wholine
-    :pointer-documentation :width 5 :max-width +fill+
-    :height 25
-    :text-style (make-text-style :sans-serif :roman 10)
+    :pointer-documentation
+    ;;:width 5 :max-width +fill+
+    ;;:height 30 :min-height 30
+    :text-style (make-text-style :sans-serif :roman 12)
+    ;;:vertical-spacing 40
     :foreground +white+
     :background +black+))
   (:layouts
    (default
        (vertically ()
-         (spacing (:thickness 5)
-	   (canvasly :height 600 :min-height 400))
-         (spacing (:thickness 5)
-                  interactor)
-         (horizontally (:height 80 :min-height 80 :max-height 80)
-           wholine
-           2
-           (200 status))))
+         (+fill+ (spacing (:thickness 5)
+			  canvas))
+         (200 (spacing (:thickness 5)
+	 	interactor))
+	 (50 (horizontally ()
+		(+fill+ wholine)
+		5
+		(300 status)))))
    (hidden-listener
-       (vertically ()
-         (spacing (:thickness 5)
-	   (canvasly :height 600 :min-height 600))
-         (horizontally (:height 80 :min-height 80 :max-height 80)
-           wholine
-           2
-           (200 status))))))
+    (vertically ()
+      (+fill+ (spacing (:thickness 5)
+		canvas))
+      (50 (horizontally ()
+	    (+fill+ wholine)
+	    5
+	    (300 status)))))))
+   
 
 
 (make-command-table 'menubar-command-table
@@ -413,20 +419,20 @@
   (clim-tab-layout:remove-page page))
 
 (define-closure-command (com-show-listener :name t) ()
-  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) t))
+  (setf (clim:frame-current-layout clim:*application-frame*) 'default))
 
 (define-closure-command (com-hide-listener :name t) ()
-  (setf (sheet-enabled-p (sheet-parent (find-pane-named *application-frame* 'interactor))) nil))
-
+  (setf (clim:frame-current-layout clim:*application-frame*) 'hidden-listener))
+  
 (define-closure-command (com-visit-url :name t) ((url 'url)) ;;; :gesture :select))
-  (let ((*standard-output* *query-io*)) ;;(find-pane-named *frame* 'interactor)))
+  (let ((*standard-output* (find-pane-named *frame* 'interactor))) ;;(find-pane-named *frame* 'interactor)))
     (with-text-style (*standard-output* (make-text-style :sans-serif :roman :normal))
       (format t "You are visiting "))
     (present url 'url)
     (with-text-style (*standard-output* (make-text-style :sans-serif :roman :normal))
       (format t ".~%")))
   (setf *forw-history* nil
-        *back-history* (cons url *back-history*))
+	*back-history* (cons url *back-history*))
   (let ((*standard-output* *trace-output*))
     (foo url)))
 
