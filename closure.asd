@@ -86,8 +86,9 @@
     :depends-on (:mcclim
                  :glisp
 		 :bordeaux-threads
-		 :iolib
-		 :iolib/trivial-sockets
+		 :drakma
+		 ;;:iolib
+		 ;;:iolib/trivial-sockets
 		 :zip
 		 :flexi-streams
                  :skippy)
@@ -133,10 +134,11 @@
 	       (:module net
 			:components
 			((:file "package"       :depends-on ("url"))
-			 (:file "common-parse"  :depends-on ("package"))
+			 ;;(:file "common-parse"  :depends-on ("package"))
 			 (:file "url"           :depends-on ())
 			 (:file "http"          :depends-on ("package" "url"))
-			 (:file "ftp"           :depends-on ("package" "url")) ))
+			 ;;	 (:file "ftp"           :depends-on ("package" "url")) ))
+			 ))
 
 	       ;; More Random Utilities
      
