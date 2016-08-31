@@ -298,7 +298,7 @@ used by the table renderer.")
           (disc-chunk-%after object)))
 
 (defmethod print-object ((object block-box) stream)
-  (format stream "#<~:2I~S ~S~{ ~_~S~}>"
+  (format stream "#<~2:I~S ~S~{ ~_~S~}>"
           (type-of object)
           (element-gi (block-box-element object))
           (block-box-content object) ))
